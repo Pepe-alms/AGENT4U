@@ -1,0 +1,13 @@
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.0
+    container_name: QdrantDatabase
+    ports:
+      - "6333:6333" #Puerto para la API de Qdrant
+      - "6334:6334" #Puerto gRPC para la API de Qdrant esto lo que hace es que permite que otros servicios se conecten a Qdrant a través de gRPC, lo cual es mucho mas eficiente que HTTP en términos de rendimiento y latencia.
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  qdrant_data:

@@ -11,6 +11,17 @@ dependencies = [
     "uvicorn[standard]>=0.51.0",
 ]
 
+# Definimos la cabecera de pytest para cuando se lance uv. 
+# Con la funcion auto, el plug in lo que va a hacer es ejecutar todas las funciones asyncornas
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+
+[tool.ruff]
+line-length = 200
+
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
