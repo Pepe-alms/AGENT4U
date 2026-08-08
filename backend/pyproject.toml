@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "docling>=2.118.1",
     "fastapi>=0.139.2",
     "pydantic-settings>=2.14.2",
     "qdrant-client>=1.18.0",
