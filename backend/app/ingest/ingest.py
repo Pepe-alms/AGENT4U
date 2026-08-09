@@ -33,7 +33,14 @@ chunks = chunker.chunk(dl_doc=resultado.document)
 #    print(f"Chunk {i} original: {chunk.text}")
 #    print(f"Chunk {i} contextualizado: {contextualizado}")
 
-chunks_contextualizados = [chunker.contextualize(chunk) for chunk in chunks]
+textos_para_embeber = []
+chunks_limpios = []
+
+for chunk in chunks:
+    texto = chunker.contextualize(chunk)
+    if len(texto) >= 100:
+        chunks_limpios.append(texto)
+        textos_para_embeber.append(f"passage: {texto}")
 
 # EXTRACCION DE VECTORES
 
@@ -44,7 +51,7 @@ embeder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
 #               "la lista de la compra 3 es: huevos, leche, pan, queso, jamón",
 #               "el coche es de color rojo y tiene 4 puertas",]
 
-embeder_generator = embeder.embed(chunks_contextualizados)
+embeder_generator = embeder.embed(textos_para_embeber)
 vectores = np.array(list(embeder_generator))
 
 # def similitud_coseno(a, b):
@@ -70,7 +77,7 @@ qdrant_client.create_collection(
     vectors_config=VectorParams(size= 1024, distance=Distance.COSINE)
     )
 
-for i, (chunk, vector) in enumerate(zip(chunks_contextualizados, vectores)):
+for i, (chunk, vector) in enumerate(zip(chunks_limpios, vectores)):
     punto =PointStruct(
         id=i,
         vector=vector.tolist(),
