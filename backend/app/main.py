@@ -53,7 +53,7 @@ from app.core.config import get_settings
 from app.retrieval.retrieval import buscar_chunks
 from app.rag.generation import generate_response, build_context
 
-from app.rag.indexation import indexar_documento, normalize_text
+from app.rag.indexation import embed_texts, normalize_text
 
 app = FastAPI(lifespan=lifespan)
 

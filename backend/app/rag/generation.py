@@ -1,14 +1,14 @@
 import litellm
 
-def build_context(chunks: list[str]) -> str:
+def build_context(chunks: list[dict]) -> str:
     optimal_vectors = []
     for i, chunk in enumerate(chunks):
-        optimal_vectors.append(f"[{i+1}]: {chunk}")
+        optimal_vectors.append(f"[{chunk['nombre']}]: {chunk['chunk']}")
 
     context = "\n\n".join(optimal_vectors)
     return context
 
-def generate_response(query: str, chunks: list[str], model: str) -> str:
+def generate_response(query: str, chunks: list[dict], model: str) -> str:
 
     context = build_context(chunks)
 
@@ -17,7 +17,7 @@ def generate_response(query: str, chunks: list[str], model: str) -> str:
     Reglas estrictas:
     - Responde solo con información presente en el contexto. No uses conocimiento previo.
     - Si el contexto no contiene la respuesta, di exactamente: "No encuentro esa información en el documento." No inventes ni completes con lo que sepas.
-    - Cita el número de fragmento del que sacas cada afirmación, con el formato [1], [2], etc."""
+    - Cita el documento del que sacas la informacion con [nombre del documento], con el formato [documento1], [documento2], etc."""
 
     consulta = f"Contexto:{context} Consulta:{query}"
 

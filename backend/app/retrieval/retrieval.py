@@ -65,4 +65,4 @@ def buscar_chunks (query: str, embedder, qdrant, limite: int = 5) -> list[str]:
         with_payload=True,
     ).points
 
-    return [result.payload['chunk'] for result in query_result]
+    return [{"chunk": result.payload['chunk'], "nombre": result.payload['nombre']} for result in query_result]
