@@ -12,6 +12,10 @@ from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.chunking import HybridChunker
 
+## Tokenizador
+from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
+from transformers import AutoTokenizer
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
@@ -22,8 +26,11 @@ async def lifespan(app: FastAPI):
     do_ocr=False,)
 
     app.state.converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opciones)})
-    app.state.chunker = HybridChunker()
 
+    tokenizer = HuggingFaceTokenizer(
+        tokenizer=AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large"),
+        max_tokens=500,)
+    app.state.chunker = HybridChunker(tokenizer=tokenizer)
 
     yield
     app.state.qdrant.close()

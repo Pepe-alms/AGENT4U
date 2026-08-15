@@ -78,8 +78,8 @@ def indexar(body: Indexar, request: Request):
     chunker = request.app.state.chunker
 
 
-    chunks = normalize_text(ruta_archivo=body.ruta_archivo, converter=converter, chunker=chunker)
-    embed_texts(chunks=chunks, embedder=embedder, qdrant=qdrant, nombre=body.nombre)
+    chunks, registros = normalize_text(ruta_archivo=body.ruta_archivo, converter=converter, chunker=chunker)
+    embed_texts(chunks=chunks, embedder=embedder, qdrant=qdrant, registros=registros)
 
 
 

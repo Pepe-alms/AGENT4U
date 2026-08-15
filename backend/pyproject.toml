@@ -13,6 +13,7 @@ dependencies = [
     "numpy>=2.5.1",
     "pydantic-settings>=2.14.2",
     "qdrant-client>=1.18.0",
+    "transformers>=5.8.1",
     "uvicorn[standard]>=0.51.0",
 ]
 
