@@ -1,0 +1,202 @@
+[
+  {
+    "id": 1,
+    "pregunta": "¿Qué tipo de dependencias elimina la tercera forma normal?",
+    "tipo": "semantica",
+    "documento_esperado": "01-normalizacion-bases-datos.md",
+    "debe_contener": "depende transitivamente",
+    "respuesta_esperada": "Las dependencias transitivas: ningún atributo no clave debe depender de otro atributo no clave."
+  },
+  {
+    "id": 2,
+    "pregunta": "¿Qué tres propiedades no pueden garantizarse a la vez según el teorema CAP?",
+    "tipo": "semantica",
+    "documento_esperado": "02-bases-datos-nosql.md",
+    "debe_contener": "tolerancia a particiones",
+    "respuesta_esperada": "Consistencia, disponibilidad y tolerancia a particiones de red."
+  },
+  {
+    "id": 3,
+    "pregunta": "¿En qué consiste la autólisis al hacer pan?",
+    "tipo": "semantica",
+    "documento_esperado": "07-masa-madre.md",
+    "debe_contener": "mezclar únicamente harina y agua",
+    "respuesta_esperada": "Mezclar solo harina y agua y dejar reposar entre 30 y 60 minutos antes de añadir sal y masa madre, para que el gluten se desarrolle sin trabajo mecánico."
+  },
+  {
+    "id": 4,
+    "pregunta": "¿Qué es un puente térmico en un edificio?",
+    "tipo": "semantica",
+    "documento_esperado": "09-eficiencia-energetica-edificios.md",
+    "debe_contener": "flujo de calor aumenta",
+    "respuesta_esperada": "Una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos por un cambio de material, espesor o geometría."
+  },
+  {
+    "id": 5,
+    "pregunta": "¿Por qué el nitrógeno y el oxígeno no son gases de efecto invernadero?",
+    "tipo": "semantica",
+    "documento_esperado": "10-efecto-invernadero.md",
+    "debe_contener": "tres o más átomos",
+    "respuesta_esperada": "Porque no absorben radiación infrarroja: solo lo hacen las moléculas con tres o más átomos o con enlaces asimétricos."
+  },
+  {
+    "id": 6,
+    "pregunta": "¿Qué diferencia hay entre control de flujo y control de congestión en TCP?",
+    "tipo": "semantica",
+    "documento_esperado": "03-protocolos-tcp-udp.md",
+    "debe_contener": "protege a la red, no al receptor",
+    "respuesta_esperada": "El control de flujo protege al receptor mediante la ventana deslizante; el control de congestión protege a la red."
+  },
+  {
+    "id": 7,
+    "pregunta": "¿En qué RFC se define PKCE?",
+    "tipo": "exacta",
+    "documento_esperado": "04-oauth2-autenticacion.md",
+    "debe_contener": "RFC 7636",
+    "respuesta_esperada": "En el RFC 7636, publicado en septiembre de 2015."
+  },
+  {
+    "id": 8,
+    "pregunta": "¿Qué RFC especifica el protocolo UDP?",
+    "tipo": "exacta",
+    "documento_esperado": "03-protocolos-tcp-udp.md",
+    "debe_contener": "RFC 768",
+    "respuesta_esperada": "El RFC 768, de agosto de 1980."
+  },
+  {
+    "id": 9,
+    "pregunta": "¿Qué real decreto actualizó el documento básico DB-HE?",
+    "tipo": "exacta",
+    "documento_esperado": "09-eficiencia-energetica-edificios.md",
+    "debe_contener": "Real Decreto 732/2019",
+    "respuesta_esperada": "El Real Decreto 732/2019."
+  },
+  {
+    "id": 10,
+    "pregunta": "¿Qué algoritmo de índice usan habitualmente las bases de datos vectoriales?",
+    "tipo": "exacta",
+    "documento_esperado": "02-bases-datos-nosql.md",
+    "debe_contener": "HNSW",
+    "respuesta_esperada": "El algoritmo HNSW, de vecino más cercano aproximado."
+  },
+  {
+    "id": 11,
+    "pregunta": "¿Dónde se mide la concentración de CO2 de forma continua desde 1958?",
+    "tipo": "exacta",
+    "documento_esperado": "10-efecto-invernadero.md",
+    "debe_contener": "Mauna Loa",
+    "respuesta_esperada": "En el observatorio de Mauna Loa, en Hawái, en la serie iniciada por Charles David Keeling."
+  },
+  {
+    "id": 12,
+    "pregunta": "¿Qué algoritmo de control de congestión impulsa Google desde 2016?",
+    "tipo": "exacta",
+    "documento_esperado": "03-protocolos-tcp-udp.md",
+    "debe_contener": "BBR",
+    "respuesta_esperada": "BBR, que estima ancho de banda y tiempo de ida y vuelta en lugar de reaccionar solo a la pérdida de paquetes."
+  },
+  {
+    "id": 13,
+    "pregunta": "¿Qué exige la forma normal de Boyce-Codd?",
+    "tipo": "exacta",
+    "documento_esperado": "01-normalizacion-bases-datos.md",
+    "debe_contener": "superclave",
+    "respuesta_esperada": "Que en toda dependencia funcional no trivial el determinante sea una superclave."
+  },
+  {
+    "id": 14,
+    "pregunta": "¿A qué presión se extrae un café espresso?",
+    "tipo": "tabla",
+    "documento_esperado": "06-cafe-espresso.md",
+    "debe_contener": "9 bares",
+    "respuesta_esperada": "A unos 9 bares."
+  },
+  {
+    "id": 15,
+    "pregunta": "¿Cuál es el par de apriete de los pedales al eje de bielas?",
+    "tipo": "tabla",
+    "documento_esperado": "08-mantenimiento-bicicleta.md",
+    "debe_contener": "35-40 Nm",
+    "respuesta_esperada": "Entre 35 y 40 Nm."
+  },
+  {
+    "id": 16,
+    "pregunta": "¿Cuál es el potencial de calentamiento global del hexafluoruro de azufre?",
+    "tipo": "tabla",
+    "documento_esperado": "10-efecto-invernadero.md",
+    "debe_contener": "23.500",
+    "respuesta_esperada": "23.500 veces el del CO2 en un horizonte de 100 años."
+  },
+  {
+    "id": 17,
+    "pregunta": "¿Cuánto dura como máximo el scrum diario?",
+    "tipo": "tabla",
+    "documento_esperado": "05-metodologias-agiles.md",
+    "debe_contener": "15 minutos",
+    "respuesta_esperada": "15 minutos."
+  },
+  {
+    "id": 18,
+    "pregunta": "¿A partir de qué porcentaje de alargamiento hay que sustituir la cadena en transmisiones de doce velocidades?",
+    "tipo": "tabla",
+    "documento_esperado": "08-mantenimiento-bicicleta.md",
+    "debe_contener": "0,5 por ciento",
+    "respuesta_esperada": "A partir del 0,5 por ciento de alargamiento."
+  },
+  {
+    "id": 19,
+    "pregunta": "¿Cuánto tarda en alcanzar su punto álgido un refresco de masa madre 1:5:5?",
+    "tipo": "tabla",
+    "documento_esperado": "07-masa-madre.md",
+    "debe_contener": "10-12 horas",
+    "respuesta_esperada": "Entre 10 y 12 horas a 24 °C."
+  },
+  {
+    "id": 20,
+    "pregunta": "¿Qué motor de base de datos utiliza el lenguaje de consulta Cypher?",
+    "tipo": "discriminacion",
+    "documento_esperado": "02-bases-datos-nosql.md",
+    "debe_contener": "Cypher",
+    "respuesta_esperada": "Neo4j, una base de datos de grafos."
+  },
+  {
+    "id": 21,
+    "pregunta": "¿Qué flujos de OAuth 2.0 se consideran obsoletos?",
+    "tipo": "discriminacion",
+    "documento_esperado": "04-oauth2-autenticacion.md",
+    "debe_contener": "Obsoleto, no debe usarse",
+    "respuesta_esperada": "El flujo implícito y el de contraseña del propietario del recurso."
+  },
+  {
+    "id": 22,
+    "pregunta": "¿Qué relación hay entre la temperatura y la duración de la fermentación en bloque?",
+    "tipo": "discriminacion",
+    "documento_esperado": "07-masa-madre.md",
+    "debe_contener": "descenso de dos grados",
+    "respuesta_esperada": "Es crítica: a 24 °C la fermentación tarda 4-5 horas y a 28 °C unas 3; bajar dos grados puede alargarla más de una hora."
+  },
+  {
+    "id": 23,
+    "pregunta": "¿Cuál es la capital de Australia?",
+    "tipo": "ausente",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que la información no está en los documentos disponibles."
+  },
+  {
+    "id": 24,
+    "pregunta": "¿Cuánto cuesta la licencia de Qdrant Cloud?",
+    "tipo": "ausente",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que la información no está en los documentos disponibles."
+  },
+  {
+    "id": 25,
+    "pregunta": "¿Qué versión de Python conviene usar para un proyecto de RAG?",
+    "tipo": "ausente",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que la información no está en los documentos disponibles."
+  }
+]

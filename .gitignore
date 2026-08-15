@@ -1,2 +1,3 @@
 .env
-/backend/data/*
+/backend/tests/data/
+/backend/tests/results/run_*
