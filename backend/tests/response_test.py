@@ -76,12 +76,15 @@ def evaluar_respuesta(item: dict, respuesta: str, documentos_recuperados: list[s
 
 def ejecutar_ronda(item: dict, embedder, qdrant, model: str, ronda: int, umbral: float) -> dict:
     t0 = time.perf_counter()
-    respuesta, documentos_recuperados, error = "", [], None
+    respuesta, documentos_recuperados, paginas_recuperadas, error = "", [], [], None
+    score_medio_retrieval = None
 
     for intento in range(REINTENTOS):
         try:
             chunks = buscar_chunks(query=item["pregunta"], embedder=embedder, qdrant=qdrant)
             documentos_recuperados = [c["nombre"] for c in chunks]
+            paginas_recuperadas = sorted({p for c in chunks for p in c.get("paginas", [])})
+            score_medio_retrieval = round(sum(c["score"] for c in chunks) / len(chunks), 3) if chunks else None
             respuesta = generate_response(query=item["pregunta"], chunks=chunks, model=model)
             error = None
             break
@@ -106,6 +109,8 @@ def ejecutar_ronda(item: dict, embedder, qdrant, model: str, ronda: int, umbral:
         "respuesta_esperada": item["respuesta_esperada"],
         "respuesta": respuesta,
         "documentos_recuperados": documentos_recuperados,
+        "paginas_recuperadas": paginas_recuperadas,
+        "score_medio_retrieval": score_medio_retrieval,
         "duracion_seg": duracion,
         "error": error,
         **evaluacion,
@@ -185,6 +190,7 @@ def main() -> None:
     df = pd.DataFrame(resultados)
     df["doc_recuperado_ok_num"] = df["doc_recuperado_ok"].map({True: 1, False: 0})
     df["documentos_recuperados_txt"] = df["documentos_recuperados"].apply(", ".join)
+    df["paginas_recuperadas_txt"] = df["paginas_recuperadas"].apply(lambda ps: ", ".join(str(p) for p in ps))
     df["error_corto"] = df["error"].fillna("").str.slice(0, 120)
 
     precision_global = df["acierto"].mean()
@@ -210,6 +216,7 @@ def main() -> None:
         df.groupby(["id", "pregunta", "tipo", "documento_esperado"], sort=False)
         .agg(
             retrieval_ok_rate=("doc_recuperado_ok_num", "mean"),
+            score_medio_retrieval=("score_medio_retrieval", "mean"),
             duracion_media_seg=("duracion_seg", "mean"),
             duracion_max_seg=("duracion_seg", "max"),
             errores=("error", lambda s: s.notna().sum()),
@@ -263,14 +270,20 @@ def main() -> None:
                 (
                     "Resumen por pregunta (peor retrieval primero)",
                     ejecucion_pregunta.style
-                    .format({"retrieval_ok_rate": "{:.0%}", "duracion_media_seg": "{:.2f}s", "duracion_max_seg": "{:.2f}s"})
+                    .format({
+                        "retrieval_ok_rate": "{:.0%}",
+                        "score_medio_retrieval": "{:.3f}",
+                        "duracion_media_seg": "{:.2f}s",
+                        "duracion_max_seg": "{:.2f}s",
+                    })
                     .map(color_valor, subset=["retrieval_ok_rate"])
                     .hide(axis="index").to_html(),
                 ),
                 (
                     "Log de todas las rondas",
-                    df[["id", "pregunta", "ronda", "documentos_recuperados_txt", "duracion_seg", "error_corto"]]
-                    .style.hide(axis="index").to_html(),
+                    df[["id", "pregunta", "ronda", "documentos_recuperados_txt", "paginas_recuperadas_txt", "score_medio_retrieval", "duracion_seg", "error_corto"]]
+                    .style.format({"score_medio_retrieval": "{:.3f}"})
+                    .hide(axis="index").to_html(),
                 ),
             ],
         ),

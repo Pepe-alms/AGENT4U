@@ -1,0 +1,1619 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Reporte de eficacia</title>
+<style>
+body { font-family: system-ui, -apple-system, sans-serif; max-width: 1100px; margin: 32px auto; padding: 0 16px; color: #222; }
+h1 { font-size: 20px; margin-bottom: 4px; }
+h2 { font-size: 15px; margin-top: 32px; }
+.subtitulo { color: #666; font-size: 13px; margin-bottom: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 8px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid #e1e0d9; text-align: left; vertical-align: top; }
+th { color: #666; font-weight: 600; }
+</style></head>
+<body>
+<h1>Reporte de eficacia</h1>
+<div class="subtitulo">20260815_182655 &middot; modelo gemini/gemini-flash-lite-latest &middot; 25 preguntas &times; 5 rondas &middot; umbral similitud 0.85 &middot; precision global 100% &middot; retrieval global 100% &middot; errores definitivos 0</div>
+<h2>Precision por tipo</h2><style type="text/css">
+#T_d7bae_row0_col0, #T_d7bae_row1_col0, #T_d7bae_row2_col0, #T_d7bae_row3_col0, #T_d7bae_row4_col0 {
+  background-color: #0ca30c22;
+  color: #0ca30c;
+  font-weight: 600;
+}
+</style>
+<table id="T_d7bae">
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_d7bae_level0_col0" class="col_heading level0 col0" >precision</th>
+    </tr>
+    <tr>
+      <th class="index_name level0" >tipo</th>
+      <th class="blank col0" >&nbsp;</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_d7bae_level0_row0" class="row_heading level0 row0" >ausente</th>
+      <td id="T_d7bae_row0_col0" class="data row0 col0" >100%</td>
+    </tr>
+    <tr>
+      <th id="T_d7bae_level0_row1" class="row_heading level0 row1" >discriminacion</th>
+      <td id="T_d7bae_row1_col0" class="data row1 col0" >100%</td>
+    </tr>
+    <tr>
+      <th id="T_d7bae_level0_row2" class="row_heading level0 row2" >exacta</th>
+      <td id="T_d7bae_row2_col0" class="data row2 col0" >100%</td>
+    </tr>
+    <tr>
+      <th id="T_d7bae_level0_row3" class="row_heading level0 row3" >semantica</th>
+      <td id="T_d7bae_row3_col0" class="data row3 col0" >100%</td>
+    </tr>
+    <tr>
+      <th id="T_d7bae_level0_row4" class="row_heading level0 row4" >tabla</th>
+      <td id="T_d7bae_row4_col0" class="data row4 col0" >100%</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Resumen por pregunta (peor precision primero)</h2><style type="text/css">
+#T_3b487_row0_col7, #T_3b487_row1_col7, #T_3b487_row2_col7, #T_3b487_row3_col7, #T_3b487_row4_col7, #T_3b487_row5_col7, #T_3b487_row6_col7, #T_3b487_row7_col7, #T_3b487_row8_col7, #T_3b487_row9_col7, #T_3b487_row10_col7, #T_3b487_row11_col7, #T_3b487_row12_col7, #T_3b487_row13_col7, #T_3b487_row14_col7, #T_3b487_row15_col7, #T_3b487_row16_col7, #T_3b487_row17_col7, #T_3b487_row18_col7, #T_3b487_row19_col7, #T_3b487_row20_col7, #T_3b487_row21_col7, #T_3b487_row22_col7, #T_3b487_row23_col7, #T_3b487_row24_col7 {
+  background-color: #0ca30c22;
+  color: #0ca30c;
+  font-weight: 600;
+}
+</style>
+<table id="T_3b487">
+  <thead>
+    <tr>
+      <th id="T_3b487_level0_col0" class="col_heading level0 col0" >id</th>
+      <th id="T_3b487_level0_col1" class="col_heading level0 col1" >pregunta</th>
+      <th id="T_3b487_level0_col2" class="col_heading level0 col2" >tipo</th>
+      <th id="T_3b487_level0_col3" class="col_heading level0 col3" >aciertos</th>
+      <th id="T_3b487_level0_col4" class="col_heading level0 col4" >rondas</th>
+      <th id="T_3b487_level0_col5" class="col_heading level0 col5" >similitud_media</th>
+      <th id="T_3b487_level0_col6" class="col_heading level0 col6" >consistente</th>
+      <th id="T_3b487_level0_col7" class="col_heading level0 col7" >precision</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td id="T_3b487_row0_col0" class="data row0 col0" >1</td>
+      <td id="T_3b487_row0_col1" class="data row0 col1" >¿Qué tipo de dependencias elimina la tercera forma normal?</td>
+      <td id="T_3b487_row0_col2" class="data row0 col2" >semantica</td>
+      <td id="T_3b487_row0_col3" class="data row0 col3" >5</td>
+      <td id="T_3b487_row0_col4" class="data row0 col4" >5</td>
+      <td id="T_3b487_row0_col5" class="data row0 col5" >0.90</td>
+      <td id="T_3b487_row0_col6" class="data row0 col6" >True</td>
+      <td id="T_3b487_row0_col7" class="data row0 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row1_col0" class="data row1 col0" >23</td>
+      <td id="T_3b487_row1_col1" class="data row1 col1" >¿Cuál es la capital de Australia?</td>
+      <td id="T_3b487_row1_col2" class="data row1 col2" >ausente</td>
+      <td id="T_3b487_row1_col3" class="data row1 col3" >5</td>
+      <td id="T_3b487_row1_col4" class="data row1 col4" >5</td>
+      <td id="T_3b487_row1_col5" class="data row1 col5" >nan</td>
+      <td id="T_3b487_row1_col6" class="data row1 col6" >True</td>
+      <td id="T_3b487_row1_col7" class="data row1 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row2_col0" class="data row2 col0" >22</td>
+      <td id="T_3b487_row2_col1" class="data row2 col1" >¿Qué relación hay entre la temperatura y la duración de la fermentación en bloque?</td>
+      <td id="T_3b487_row2_col2" class="data row2 col2" >discriminacion</td>
+      <td id="T_3b487_row2_col3" class="data row2 col3" >5</td>
+      <td id="T_3b487_row2_col4" class="data row2 col4" >5</td>
+      <td id="T_3b487_row2_col5" class="data row2 col5" >0.96</td>
+      <td id="T_3b487_row2_col6" class="data row2 col6" >True</td>
+      <td id="T_3b487_row2_col7" class="data row2 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row3_col0" class="data row3 col0" >21</td>
+      <td id="T_3b487_row3_col1" class="data row3 col1" >¿Qué flujos de OAuth 2.0 se consideran obsoletos?</td>
+      <td id="T_3b487_row3_col2" class="data row3 col2" >discriminacion</td>
+      <td id="T_3b487_row3_col3" class="data row3 col3" >5</td>
+      <td id="T_3b487_row3_col4" class="data row3 col4" >5</td>
+      <td id="T_3b487_row3_col5" class="data row3 col5" >0.88</td>
+      <td id="T_3b487_row3_col6" class="data row3 col6" >True</td>
+      <td id="T_3b487_row3_col7" class="data row3 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row4_col0" class="data row4 col0" >20</td>
+      <td id="T_3b487_row4_col1" class="data row4 col1" >¿Qué motor de base de datos utiliza el lenguaje de consulta Cypher?</td>
+      <td id="T_3b487_row4_col2" class="data row4 col2" >discriminacion</td>
+      <td id="T_3b487_row4_col3" class="data row4 col3" >5</td>
+      <td id="T_3b487_row4_col4" class="data row4 col4" >5</td>
+      <td id="T_3b487_row4_col5" class="data row4 col5" >0.90</td>
+      <td id="T_3b487_row4_col6" class="data row4 col6" >True</td>
+      <td id="T_3b487_row4_col7" class="data row4 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row5_col0" class="data row5 col0" >19</td>
+      <td id="T_3b487_row5_col1" class="data row5 col1" >¿Cuánto tarda en alcanzar su punto álgido un refresco de masa madre 1:5:5?</td>
+      <td id="T_3b487_row5_col2" class="data row5 col2" >tabla</td>
+      <td id="T_3b487_row5_col3" class="data row5 col3" >5</td>
+      <td id="T_3b487_row5_col4" class="data row5 col4" >5</td>
+      <td id="T_3b487_row5_col5" class="data row5 col5" >0.91</td>
+      <td id="T_3b487_row5_col6" class="data row5 col6" >True</td>
+      <td id="T_3b487_row5_col7" class="data row5 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row6_col0" class="data row6 col0" >18</td>
+      <td id="T_3b487_row6_col1" class="data row6 col1" >¿A partir de qué porcentaje de alargamiento hay que sustituir la cadena en transmisiones de doce velocidades?</td>
+      <td id="T_3b487_row6_col2" class="data row6 col2" >tabla</td>
+      <td id="T_3b487_row6_col3" class="data row6 col3" >5</td>
+      <td id="T_3b487_row6_col4" class="data row6 col4" >5</td>
+      <td id="T_3b487_row6_col5" class="data row6 col5" >0.88</td>
+      <td id="T_3b487_row6_col6" class="data row6 col6" >True</td>
+      <td id="T_3b487_row6_col7" class="data row6 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row7_col0" class="data row7 col0" >17</td>
+      <td id="T_3b487_row7_col1" class="data row7 col1" >¿Cuánto dura como máximo el scrum diario?</td>
+      <td id="T_3b487_row7_col2" class="data row7 col2" >tabla</td>
+      <td id="T_3b487_row7_col3" class="data row7 col3" >5</td>
+      <td id="T_3b487_row7_col4" class="data row7 col4" >5</td>
+      <td id="T_3b487_row7_col5" class="data row7 col5" >0.86</td>
+      <td id="T_3b487_row7_col6" class="data row7 col6" >True</td>
+      <td id="T_3b487_row7_col7" class="data row7 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row8_col0" class="data row8 col0" >16</td>
+      <td id="T_3b487_row8_col1" class="data row8 col1" >¿Cuál es el potencial de calentamiento global del hexafluoruro de azufre?</td>
+      <td id="T_3b487_row8_col2" class="data row8 col2" >tabla</td>
+      <td id="T_3b487_row8_col3" class="data row8 col3" >5</td>
+      <td id="T_3b487_row8_col4" class="data row8 col4" >5</td>
+      <td id="T_3b487_row8_col5" class="data row8 col5" >0.90</td>
+      <td id="T_3b487_row8_col6" class="data row8 col6" >True</td>
+      <td id="T_3b487_row8_col7" class="data row8 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row9_col0" class="data row9 col0" >15</td>
+      <td id="T_3b487_row9_col1" class="data row9 col1" >¿Cuál es el par de apriete de los pedales al eje de bielas?</td>
+      <td id="T_3b487_row9_col2" class="data row9 col2" >tabla</td>
+      <td id="T_3b487_row9_col3" class="data row9 col3" >5</td>
+      <td id="T_3b487_row9_col4" class="data row9 col4" >5</td>
+      <td id="T_3b487_row9_col5" class="data row9 col5" >0.88</td>
+      <td id="T_3b487_row9_col6" class="data row9 col6" >True</td>
+      <td id="T_3b487_row9_col7" class="data row9 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row10_col0" class="data row10 col0" >14</td>
+      <td id="T_3b487_row10_col1" class="data row10 col1" >¿A qué presión se extrae un café espresso?</td>
+      <td id="T_3b487_row10_col2" class="data row10 col2" >tabla</td>
+      <td id="T_3b487_row10_col3" class="data row10 col3" >5</td>
+      <td id="T_3b487_row10_col4" class="data row10 col4" >5</td>
+      <td id="T_3b487_row10_col5" class="data row10 col5" >0.87</td>
+      <td id="T_3b487_row10_col6" class="data row10 col6" >True</td>
+      <td id="T_3b487_row10_col7" class="data row10 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row11_col0" class="data row11 col0" >24</td>
+      <td id="T_3b487_row11_col1" class="data row11 col1" >¿Cuánto cuesta la licencia de Qdrant Cloud?</td>
+      <td id="T_3b487_row11_col2" class="data row11 col2" >ausente</td>
+      <td id="T_3b487_row11_col3" class="data row11 col3" >5</td>
+      <td id="T_3b487_row11_col4" class="data row11 col4" >5</td>
+      <td id="T_3b487_row11_col5" class="data row11 col5" >nan</td>
+      <td id="T_3b487_row11_col6" class="data row11 col6" >True</td>
+      <td id="T_3b487_row11_col7" class="data row11 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row12_col0" class="data row12 col0" >13</td>
+      <td id="T_3b487_row12_col1" class="data row12 col1" >¿Qué exige la forma normal de Boyce-Codd?</td>
+      <td id="T_3b487_row12_col2" class="data row12 col2" >exacta</td>
+      <td id="T_3b487_row12_col3" class="data row12 col3" >5</td>
+      <td id="T_3b487_row12_col4" class="data row12 col4" >5</td>
+      <td id="T_3b487_row12_col5" class="data row12 col5" >0.93</td>
+      <td id="T_3b487_row12_col6" class="data row12 col6" >True</td>
+      <td id="T_3b487_row12_col7" class="data row12 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row13_col0" class="data row13 col0" >11</td>
+      <td id="T_3b487_row13_col1" class="data row13 col1" >¿Dónde se mide la concentración de CO2 de forma continua desde 1958?</td>
+      <td id="T_3b487_row13_col2" class="data row13 col2" >exacta</td>
+      <td id="T_3b487_row13_col3" class="data row13 col3" >5</td>
+      <td id="T_3b487_row13_col4" class="data row13 col4" >5</td>
+      <td id="T_3b487_row13_col5" class="data row13 col5" >0.90</td>
+      <td id="T_3b487_row13_col6" class="data row13 col6" >True</td>
+      <td id="T_3b487_row13_col7" class="data row13 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row14_col0" class="data row14 col0" >10</td>
+      <td id="T_3b487_row14_col1" class="data row14 col1" >¿Qué algoritmo de índice usan habitualmente las bases de datos vectoriales?</td>
+      <td id="T_3b487_row14_col2" class="data row14 col2" >exacta</td>
+      <td id="T_3b487_row14_col3" class="data row14 col3" >5</td>
+      <td id="T_3b487_row14_col4" class="data row14 col4" >5</td>
+      <td id="T_3b487_row14_col5" class="data row14 col5" >0.94</td>
+      <td id="T_3b487_row14_col6" class="data row14 col6" >True</td>
+      <td id="T_3b487_row14_col7" class="data row14 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row15_col0" class="data row15 col0" >9</td>
+      <td id="T_3b487_row15_col1" class="data row15 col1" >¿Qué real decreto actualizó el documento básico DB-HE?</td>
+      <td id="T_3b487_row15_col2" class="data row15 col2" >exacta</td>
+      <td id="T_3b487_row15_col3" class="data row15 col3" >5</td>
+      <td id="T_3b487_row15_col4" class="data row15 col4" >5</td>
+      <td id="T_3b487_row15_col5" class="data row15 col5" >0.90</td>
+      <td id="T_3b487_row15_col6" class="data row15 col6" >True</td>
+      <td id="T_3b487_row15_col7" class="data row15 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row16_col0" class="data row16 col0" >8</td>
+      <td id="T_3b487_row16_col1" class="data row16 col1" >¿Qué RFC especifica el protocolo UDP?</td>
+      <td id="T_3b487_row16_col2" class="data row16 col2" >exacta</td>
+      <td id="T_3b487_row16_col3" class="data row16 col3" >5</td>
+      <td id="T_3b487_row16_col4" class="data row16 col4" >5</td>
+      <td id="T_3b487_row16_col5" class="data row16 col5" >0.89</td>
+      <td id="T_3b487_row16_col6" class="data row16 col6" >True</td>
+      <td id="T_3b487_row16_col7" class="data row16 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row17_col0" class="data row17 col0" >7</td>
+      <td id="T_3b487_row17_col1" class="data row17 col1" >¿En qué RFC se define PKCE?</td>
+      <td id="T_3b487_row17_col2" class="data row17 col2" >exacta</td>
+      <td id="T_3b487_row17_col3" class="data row17 col3" >5</td>
+      <td id="T_3b487_row17_col4" class="data row17 col4" >5</td>
+      <td id="T_3b487_row17_col5" class="data row17 col5" >0.88</td>
+      <td id="T_3b487_row17_col6" class="data row17 col6" >True</td>
+      <td id="T_3b487_row17_col7" class="data row17 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row18_col0" class="data row18 col0" >6</td>
+      <td id="T_3b487_row18_col1" class="data row18 col1" >¿Qué diferencia hay entre control de flujo y control de congestión en TCP?</td>
+      <td id="T_3b487_row18_col2" class="data row18 col2" >semantica</td>
+      <td id="T_3b487_row18_col3" class="data row18 col3" >5</td>
+      <td id="T_3b487_row18_col4" class="data row18 col4" >5</td>
+      <td id="T_3b487_row18_col5" class="data row18 col5" >0.94</td>
+      <td id="T_3b487_row18_col6" class="data row18 col6" >True</td>
+      <td id="T_3b487_row18_col7" class="data row18 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row19_col0" class="data row19 col0" >5</td>
+      <td id="T_3b487_row19_col1" class="data row19 col1" >¿Por qué el nitrógeno y el oxígeno no son gases de efecto invernadero?</td>
+      <td id="T_3b487_row19_col2" class="data row19 col2" >semantica</td>
+      <td id="T_3b487_row19_col3" class="data row19 col3" >5</td>
+      <td id="T_3b487_row19_col4" class="data row19 col4" >5</td>
+      <td id="T_3b487_row19_col5" class="data row19 col5" >0.93</td>
+      <td id="T_3b487_row19_col6" class="data row19 col6" >True</td>
+      <td id="T_3b487_row19_col7" class="data row19 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row20_col0" class="data row20 col0" >4</td>
+      <td id="T_3b487_row20_col1" class="data row20 col1" >¿Qué es un puente térmico en un edificio?</td>
+      <td id="T_3b487_row20_col2" class="data row20 col2" >semantica</td>
+      <td id="T_3b487_row20_col3" class="data row20 col3" >5</td>
+      <td id="T_3b487_row20_col4" class="data row20 col4" >5</td>
+      <td id="T_3b487_row20_col5" class="data row20 col5" >0.95</td>
+      <td id="T_3b487_row20_col6" class="data row20 col6" >True</td>
+      <td id="T_3b487_row20_col7" class="data row20 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row21_col0" class="data row21 col0" >3</td>
+      <td id="T_3b487_row21_col1" class="data row21 col1" >¿En qué consiste la autólisis al hacer pan?</td>
+      <td id="T_3b487_row21_col2" class="data row21 col2" >semantica</td>
+      <td id="T_3b487_row21_col3" class="data row21 col3" >5</td>
+      <td id="T_3b487_row21_col4" class="data row21 col4" >5</td>
+      <td id="T_3b487_row21_col5" class="data row21 col5" >0.94</td>
+      <td id="T_3b487_row21_col6" class="data row21 col6" >True</td>
+      <td id="T_3b487_row21_col7" class="data row21 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row22_col0" class="data row22 col0" >2</td>
+      <td id="T_3b487_row22_col1" class="data row22 col1" >¿Qué tres propiedades no pueden garantizarse a la vez según el teorema CAP?</td>
+      <td id="T_3b487_row22_col2" class="data row22 col2" >semantica</td>
+      <td id="T_3b487_row22_col3" class="data row22 col3" >5</td>
+      <td id="T_3b487_row22_col4" class="data row22 col4" >5</td>
+      <td id="T_3b487_row22_col5" class="data row22 col5" >0.90</td>
+      <td id="T_3b487_row22_col6" class="data row22 col6" >True</td>
+      <td id="T_3b487_row22_col7" class="data row22 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row23_col0" class="data row23 col0" >12</td>
+      <td id="T_3b487_row23_col1" class="data row23 col1" >¿Qué algoritmo de control de congestión impulsa Google desde 2016?</td>
+      <td id="T_3b487_row23_col2" class="data row23 col2" >exacta</td>
+      <td id="T_3b487_row23_col3" class="data row23 col3" >5</td>
+      <td id="T_3b487_row23_col4" class="data row23 col4" >5</td>
+      <td id="T_3b487_row23_col5" class="data row23 col5" >0.86</td>
+      <td id="T_3b487_row23_col6" class="data row23 col6" >True</td>
+      <td id="T_3b487_row23_col7" class="data row23 col7" >100%</td>
+    </tr>
+    <tr>
+      <td id="T_3b487_row24_col0" class="data row24 col0" >25</td>
+      <td id="T_3b487_row24_col1" class="data row24 col1" >¿Qué versión de Python conviene usar para un proyecto de RAG?</td>
+      <td id="T_3b487_row24_col2" class="data row24 col2" >ausente</td>
+      <td id="T_3b487_row24_col3" class="data row24 col3" >5</td>
+      <td id="T_3b487_row24_col4" class="data row24 col4" >5</td>
+      <td id="T_3b487_row24_col5" class="data row24 col5" >nan</td>
+      <td id="T_3b487_row24_col6" class="data row24 col6" >True</td>
+      <td id="T_3b487_row24_col7" class="data row24 col7" >100%</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Detalle de todas las rondas (revision manual)</h2><style type="text/css">
+</style>
+<table id="T_19406">
+  <thead>
+    <tr>
+      <th id="T_19406_level0_col0" class="col_heading level0 col0" >id</th>
+      <th id="T_19406_level0_col1" class="col_heading level0 col1" >pregunta</th>
+      <th id="T_19406_level0_col2" class="col_heading level0 col2" >ronda</th>
+      <th id="T_19406_level0_col3" class="col_heading level0 col3" >tipo</th>
+      <th id="T_19406_level0_col4" class="col_heading level0 col4" >respuesta_esperada</th>
+      <th id="T_19406_level0_col5" class="col_heading level0 col5" >respuesta</th>
+      <th id="T_19406_level0_col6" class="col_heading level0 col6" >similitud</th>
+      <th id="T_19406_level0_col7" class="col_heading level0 col7" >acierto</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td id="T_19406_row0_col0" class="data row0 col0" >1</td>
+      <td id="T_19406_row0_col1" class="data row0 col1" >¿Qué tipo de dependencias elimina la tercera forma normal?</td>
+      <td id="T_19406_row0_col2" class="data row0 col2" >1</td>
+      <td id="T_19406_row0_col3" class="data row0 col3" >semantica</td>
+      <td id="T_19406_row0_col4" class="data row0 col4" >Las dependencias transitivas: ningún atributo no clave debe depender de otro atributo no clave.</td>
+      <td id="T_19406_row0_col5" class="data row0 col5" >La tercera forma normal elimina las dependencias transitivas [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row0_col6" class="data row0 col6" >0.90</td>
+      <td id="T_19406_row0_col7" class="data row0 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row1_col0" class="data row1 col0" >1</td>
+      <td id="T_19406_row1_col1" class="data row1 col1" >¿Qué tipo de dependencias elimina la tercera forma normal?</td>
+      <td id="T_19406_row1_col2" class="data row1 col2" >2</td>
+      <td id="T_19406_row1_col3" class="data row1 col3" >semantica</td>
+      <td id="T_19406_row1_col4" class="data row1 col4" >Las dependencias transitivas: ningún atributo no clave debe depender de otro atributo no clave.</td>
+      <td id="T_19406_row1_col5" class="data row1 col5" >La tercera forma normal elimina las dependencias transitivas [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row1_col6" class="data row1 col6" >0.90</td>
+      <td id="T_19406_row1_col7" class="data row1 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row2_col0" class="data row2 col0" >1</td>
+      <td id="T_19406_row2_col1" class="data row2 col1" >¿Qué tipo de dependencias elimina la tercera forma normal?</td>
+      <td id="T_19406_row2_col2" class="data row2 col2" >3</td>
+      <td id="T_19406_row2_col3" class="data row2 col3" >semantica</td>
+      <td id="T_19406_row2_col4" class="data row2 col4" >Las dependencias transitivas: ningún atributo no clave debe depender de otro atributo no clave.</td>
+      <td id="T_19406_row2_col5" class="data row2 col5" >La tercera forma normal elimina las dependencias transitivas [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row2_col6" class="data row2 col6" >0.90</td>
+      <td id="T_19406_row2_col7" class="data row2 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row3_col0" class="data row3 col0" >1</td>
+      <td id="T_19406_row3_col1" class="data row3 col1" >¿Qué tipo de dependencias elimina la tercera forma normal?</td>
+      <td id="T_19406_row3_col2" class="data row3 col2" >4</td>
+      <td id="T_19406_row3_col3" class="data row3 col3" >semantica</td>
+      <td id="T_19406_row3_col4" class="data row3 col4" >Las dependencias transitivas: ningún atributo no clave debe depender de otro atributo no clave.</td>
+      <td id="T_19406_row3_col5" class="data row3 col5" >La tercera forma normal (3FN) elimina las dependencias transitivas [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row3_col6" class="data row3 col6" >0.90</td>
+      <td id="T_19406_row3_col7" class="data row3 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row4_col0" class="data row4 col0" >1</td>
+      <td id="T_19406_row4_col1" class="data row4 col1" >¿Qué tipo de dependencias elimina la tercera forma normal?</td>
+      <td id="T_19406_row4_col2" class="data row4 col2" >5</td>
+      <td id="T_19406_row4_col3" class="data row4 col3" >semantica</td>
+      <td id="T_19406_row4_col4" class="data row4 col4" >Las dependencias transitivas: ningún atributo no clave debe depender de otro atributo no clave.</td>
+      <td id="T_19406_row4_col5" class="data row4 col5" >La tercera forma normal (3FN) elimina las dependencias transitivas [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row4_col6" class="data row4 col6" >0.90</td>
+      <td id="T_19406_row4_col7" class="data row4 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row5_col0" class="data row5 col0" >2</td>
+      <td id="T_19406_row5_col1" class="data row5 col1" >¿Qué tres propiedades no pueden garantizarse a la vez según el teorema CAP?</td>
+      <td id="T_19406_row5_col2" class="data row5 col2" >1</td>
+      <td id="T_19406_row5_col3" class="data row5 col3" >semantica</td>
+      <td id="T_19406_row5_col4" class="data row5 col4" >Consistencia, disponibilidad y tolerancia a particiones de red.</td>
+      <td id="T_19406_row5_col5" class="data row5 col5" >Según el teorema CAP, un sistema distribuido no puede garantizar simultáneamente las siguientes tres propiedades: consistencia, disponibilidad y tolerancia a particiones de red [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row5_col6" class="data row5 col6" >0.90</td>
+      <td id="T_19406_row5_col7" class="data row5 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row6_col0" class="data row6 col0" >2</td>
+      <td id="T_19406_row6_col1" class="data row6 col1" >¿Qué tres propiedades no pueden garantizarse a la vez según el teorema CAP?</td>
+      <td id="T_19406_row6_col2" class="data row6 col2" >2</td>
+      <td id="T_19406_row6_col3" class="data row6 col3" >semantica</td>
+      <td id="T_19406_row6_col4" class="data row6 col4" >Consistencia, disponibilidad y tolerancia a particiones de red.</td>
+      <td id="T_19406_row6_col5" class="data row6 col5" >Según el teorema CAP, un sistema distribuido no puede garantizar simultáneamente las siguientes tres propiedades: consistencia, disponibilidad y tolerancia a particiones de red [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row6_col6" class="data row6 col6" >0.90</td>
+      <td id="T_19406_row6_col7" class="data row6 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row7_col0" class="data row7 col0" >2</td>
+      <td id="T_19406_row7_col1" class="data row7 col1" >¿Qué tres propiedades no pueden garantizarse a la vez según el teorema CAP?</td>
+      <td id="T_19406_row7_col2" class="data row7 col2" >3</td>
+      <td id="T_19406_row7_col3" class="data row7 col3" >semantica</td>
+      <td id="T_19406_row7_col4" class="data row7 col4" >Consistencia, disponibilidad y tolerancia a particiones de red.</td>
+      <td id="T_19406_row7_col5" class="data row7 col5" >Según el teorema CAP, un sistema distribuido no puede garantizar simultáneamente las siguientes tres propiedades: consistencia, disponibilidad y tolerancia a particiones de red [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row7_col6" class="data row7 col6" >0.90</td>
+      <td id="T_19406_row7_col7" class="data row7 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row8_col0" class="data row8 col0" >2</td>
+      <td id="T_19406_row8_col1" class="data row8 col1" >¿Qué tres propiedades no pueden garantizarse a la vez según el teorema CAP?</td>
+      <td id="T_19406_row8_col2" class="data row8 col2" >4</td>
+      <td id="T_19406_row8_col3" class="data row8 col3" >semantica</td>
+      <td id="T_19406_row8_col4" class="data row8 col4" >Consistencia, disponibilidad y tolerancia a particiones de red.</td>
+      <td id="T_19406_row8_col5" class="data row8 col5" >Según el teorema CAP, un sistema distribuido no puede garantizar simultáneamente las siguientes tres propiedades: consistencia, disponibilidad y tolerancia a particiones de red [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row8_col6" class="data row8 col6" >0.90</td>
+      <td id="T_19406_row8_col7" class="data row8 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row9_col0" class="data row9 col0" >2</td>
+      <td id="T_19406_row9_col1" class="data row9 col1" >¿Qué tres propiedades no pueden garantizarse a la vez según el teorema CAP?</td>
+      <td id="T_19406_row9_col2" class="data row9 col2" >5</td>
+      <td id="T_19406_row9_col3" class="data row9 col3" >semantica</td>
+      <td id="T_19406_row9_col4" class="data row9 col4" >Consistencia, disponibilidad y tolerancia a particiones de red.</td>
+      <td id="T_19406_row9_col5" class="data row9 col5" >Según el teorema CAP, un sistema distribuido no puede garantizar simultáneamente las siguientes tres propiedades: consistencia, disponibilidad y tolerancia a particiones de red [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row9_col6" class="data row9 col6" >0.90</td>
+      <td id="T_19406_row9_col7" class="data row9 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row10_col0" class="data row10 col0" >3</td>
+      <td id="T_19406_row10_col1" class="data row10 col1" >¿En qué consiste la autólisis al hacer pan?</td>
+      <td id="T_19406_row10_col2" class="data row10 col2" >1</td>
+      <td id="T_19406_row10_col3" class="data row10 col3" >semantica</td>
+      <td id="T_19406_row10_col4" class="data row10 col4" >Mezclar solo harina y agua y dejar reposar entre 30 y 60 minutos antes de añadir sal y masa madre, para que el gluten se desarrolle sin trabajo mecánico.</td>
+      <td id="T_19406_row10_col5" class="data row10 col5" >La autólisis consiste en mezclar únicamente harina y agua y dejar reposar entre treinta minutos y una hora antes de añadir la sal y la masa madre [07-masa-madre.md]. Durante este reposo, las enzimas de la harina rompen almidones y proteínas, y el gluten empieza a desarrollarse sin trabajo mecánico, lo que da como resultado una masa más extensible que requiere menos amasado [07-masa-madre.md].</td>
+      <td id="T_19406_row10_col6" class="data row10 col6" >0.94</td>
+      <td id="T_19406_row10_col7" class="data row10 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row11_col0" class="data row11 col0" >3</td>
+      <td id="T_19406_row11_col1" class="data row11 col1" >¿En qué consiste la autólisis al hacer pan?</td>
+      <td id="T_19406_row11_col2" class="data row11 col2" >2</td>
+      <td id="T_19406_row11_col3" class="data row11 col3" >semantica</td>
+      <td id="T_19406_row11_col4" class="data row11 col4" >Mezclar solo harina y agua y dejar reposar entre 30 y 60 minutos antes de añadir sal y masa madre, para que el gluten se desarrolle sin trabajo mecánico.</td>
+      <td id="T_19406_row11_col5" class="data row11 col5" >La autólisis consiste en mezclar únicamente harina y agua y dejar reposar entre treinta minutos y una hora antes de añadir la sal y la masa madre [07-masa-madre.md].</td>
+      <td id="T_19406_row11_col6" class="data row11 col6" >0.94</td>
+      <td id="T_19406_row11_col7" class="data row11 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row12_col0" class="data row12 col0" >3</td>
+      <td id="T_19406_row12_col1" class="data row12 col1" >¿En qué consiste la autólisis al hacer pan?</td>
+      <td id="T_19406_row12_col2" class="data row12 col2" >3</td>
+      <td id="T_19406_row12_col3" class="data row12 col3" >semantica</td>
+      <td id="T_19406_row12_col4" class="data row12 col4" >Mezclar solo harina y agua y dejar reposar entre 30 y 60 minutos antes de añadir sal y masa madre, para que el gluten se desarrolle sin trabajo mecánico.</td>
+      <td id="T_19406_row12_col5" class="data row12 col5" >La autólisis consiste en mezclar únicamente harina y agua y dejar reposar entre treinta minutos y una hora antes de añadir la sal y la masa madre [07-masa-madre.md].</td>
+      <td id="T_19406_row12_col6" class="data row12 col6" >0.94</td>
+      <td id="T_19406_row12_col7" class="data row12 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row13_col0" class="data row13 col0" >3</td>
+      <td id="T_19406_row13_col1" class="data row13 col1" >¿En qué consiste la autólisis al hacer pan?</td>
+      <td id="T_19406_row13_col2" class="data row13 col2" >4</td>
+      <td id="T_19406_row13_col3" class="data row13 col3" >semantica</td>
+      <td id="T_19406_row13_col4" class="data row13 col4" >Mezclar solo harina y agua y dejar reposar entre 30 y 60 minutos antes de añadir sal y masa madre, para que el gluten se desarrolle sin trabajo mecánico.</td>
+      <td id="T_19406_row13_col5" class="data row13 col5" >La autólisis consiste en mezclar únicamente harina y agua y dejar reposar entre treinta minutos y una hora antes de añadir la sal y la masa madre [07-masa-madre.md]. Durante este reposo, las enzimas de la harina rompen almidones y proteínas, y el gluten empieza a desarrollarse sin trabajo mecánico, lo que da como resultado una masa más extensible que requiere menos amasado [07-masa-madre.md].</td>
+      <td id="T_19406_row13_col6" class="data row13 col6" >0.94</td>
+      <td id="T_19406_row13_col7" class="data row13 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row14_col0" class="data row14 col0" >3</td>
+      <td id="T_19406_row14_col1" class="data row14 col1" >¿En qué consiste la autólisis al hacer pan?</td>
+      <td id="T_19406_row14_col2" class="data row14 col2" >5</td>
+      <td id="T_19406_row14_col3" class="data row14 col3" >semantica</td>
+      <td id="T_19406_row14_col4" class="data row14 col4" >Mezclar solo harina y agua y dejar reposar entre 30 y 60 minutos antes de añadir sal y masa madre, para que el gluten se desarrolle sin trabajo mecánico.</td>
+      <td id="T_19406_row14_col5" class="data row14 col5" >La autólisis consiste en mezclar únicamente harina y agua y dejar reposar entre treinta minutos y una hora antes de añadir la sal y la masa madre [07-masa-madre.md].</td>
+      <td id="T_19406_row14_col6" class="data row14 col6" >0.94</td>
+      <td id="T_19406_row14_col7" class="data row14 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row15_col0" class="data row15 col0" >4</td>
+      <td id="T_19406_row15_col1" class="data row15 col1" >¿Qué es un puente térmico en un edificio?</td>
+      <td id="T_19406_row15_col2" class="data row15 col2" >1</td>
+      <td id="T_19406_row15_col3" class="data row15 col3" >semantica</td>
+      <td id="T_19406_row15_col4" class="data row15 col4" >Una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos por un cambio de material, espesor o geometría.</td>
+      <td id="T_19406_row15_col5" class="data row15 col5" >Un puente térmico es una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos, debido a un cambio de material, de espesor o de geometría [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row15_col6" class="data row15 col6" >0.95</td>
+      <td id="T_19406_row15_col7" class="data row15 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row16_col0" class="data row16 col0" >4</td>
+      <td id="T_19406_row16_col1" class="data row16 col1" >¿Qué es un puente térmico en un edificio?</td>
+      <td id="T_19406_row16_col2" class="data row16 col2" >2</td>
+      <td id="T_19406_row16_col3" class="data row16 col3" >semantica</td>
+      <td id="T_19406_row16_col4" class="data row16 col4" >Una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos por un cambio de material, espesor o geometría.</td>
+      <td id="T_19406_row16_col5" class="data row16 col5" >Un puente térmico es una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos, debido a un cambio de material, de espesor o de geometría [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row16_col6" class="data row16 col6" >0.95</td>
+      <td id="T_19406_row16_col7" class="data row16 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row17_col0" class="data row17 col0" >4</td>
+      <td id="T_19406_row17_col1" class="data row17 col1" >¿Qué es un puente térmico en un edificio?</td>
+      <td id="T_19406_row17_col2" class="data row17 col2" >3</td>
+      <td id="T_19406_row17_col3" class="data row17 col3" >semantica</td>
+      <td id="T_19406_row17_col4" class="data row17 col4" >Una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos por un cambio de material, espesor o geometría.</td>
+      <td id="T_19406_row17_col5" class="data row17 col5" >Un puente térmico es una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos, debido a un cambio de material, de espesor o de geometría [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row17_col6" class="data row17 col6" >0.95</td>
+      <td id="T_19406_row17_col7" class="data row17 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row18_col0" class="data row18 col0" >4</td>
+      <td id="T_19406_row18_col1" class="data row18 col1" >¿Qué es un puente térmico en un edificio?</td>
+      <td id="T_19406_row18_col2" class="data row18 col2" >4</td>
+      <td id="T_19406_row18_col3" class="data row18 col3" >semantica</td>
+      <td id="T_19406_row18_col4" class="data row18 col4" >Una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos por un cambio de material, espesor o geometría.</td>
+      <td id="T_19406_row18_col5" class="data row18 col5" >Un puente térmico es una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos, debido a un cambio de material, de espesor o de geometría [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row18_col6" class="data row18 col6" >0.95</td>
+      <td id="T_19406_row18_col7" class="data row18 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row19_col0" class="data row19 col0" >4</td>
+      <td id="T_19406_row19_col1" class="data row19 col1" >¿Qué es un puente térmico en un edificio?</td>
+      <td id="T_19406_row19_col2" class="data row19 col2" >5</td>
+      <td id="T_19406_row19_col3" class="data row19 col3" >semantica</td>
+      <td id="T_19406_row19_col4" class="data row19 col4" >Una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos por un cambio de material, espesor o geometría.</td>
+      <td id="T_19406_row19_col5" class="data row19 col5" >Un puente térmico es una zona de la envolvente donde el flujo de calor aumenta respecto a los elementos contiguos, debido a un cambio de material, de espesor o de geometría [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row19_col6" class="data row19 col6" >0.95</td>
+      <td id="T_19406_row19_col7" class="data row19 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row20_col0" class="data row20 col0" >5</td>
+      <td id="T_19406_row20_col1" class="data row20 col1" >¿Por qué el nitrógeno y el oxígeno no son gases de efecto invernadero?</td>
+      <td id="T_19406_row20_col2" class="data row20 col2" >1</td>
+      <td id="T_19406_row20_col3" class="data row20 col3" >semantica</td>
+      <td id="T_19406_row20_col4" class="data row20 col4" >Porque no absorben radiación infrarroja: solo lo hacen las moléculas con tres o más átomos o con enlaces asimétricos.</td>
+      <td id="T_19406_row20_col5" class="data row20 col5" >El nitrógeno y el oxígeno no son gases de efecto invernadero porque sus moléculas no tienen tres o más átomos ni enlaces asimétricos que puedan vibrar de modo que absorban la radiación infrarroja emitida por la superficie terrestre [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row20_col6" class="data row20 col6" >0.93</td>
+      <td id="T_19406_row20_col7" class="data row20 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row21_col0" class="data row21 col0" >5</td>
+      <td id="T_19406_row21_col1" class="data row21 col1" >¿Por qué el nitrógeno y el oxígeno no son gases de efecto invernadero?</td>
+      <td id="T_19406_row21_col2" class="data row21 col2" >2</td>
+      <td id="T_19406_row21_col3" class="data row21 col3" >semantica</td>
+      <td id="T_19406_row21_col4" class="data row21 col4" >Porque no absorben radiación infrarroja: solo lo hacen las moléculas con tres o más átomos o con enlaces asimétricos.</td>
+      <td id="T_19406_row21_col5" class="data row21 col5" >El nitrógeno y el oxígeno no son gases de efecto invernadero porque están formados por moléculas que no tienen tres o más átomos ni enlaces asimétricos, por lo que no pueden vibrar de modo que absorban la radiación infrarroja [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row21_col6" class="data row21 col6" >0.94</td>
+      <td id="T_19406_row21_col7" class="data row21 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row22_col0" class="data row22 col0" >5</td>
+      <td id="T_19406_row22_col1" class="data row22 col1" >¿Por qué el nitrógeno y el oxígeno no son gases de efecto invernadero?</td>
+      <td id="T_19406_row22_col2" class="data row22 col2" >3</td>
+      <td id="T_19406_row22_col3" class="data row22 col3" >semantica</td>
+      <td id="T_19406_row22_col4" class="data row22 col4" >Porque no absorben radiación infrarroja: solo lo hacen las moléculas con tres o más átomos o con enlaces asimétricos.</td>
+      <td id="T_19406_row22_col5" class="data row22 col5" >El nitrógeno y el oxígeno no son gases de efecto invernadero porque sus moléculas no tienen tres o más átomos ni enlaces asimétricos que puedan vibrar de modo que absorban la radiación infrarroja [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row22_col6" class="data row22 col6" >0.93</td>
+      <td id="T_19406_row22_col7" class="data row22 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row23_col0" class="data row23 col0" >5</td>
+      <td id="T_19406_row23_col1" class="data row23 col1" >¿Por qué el nitrógeno y el oxígeno no son gases de efecto invernadero?</td>
+      <td id="T_19406_row23_col2" class="data row23 col2" >4</td>
+      <td id="T_19406_row23_col3" class="data row23 col3" >semantica</td>
+      <td id="T_19406_row23_col4" class="data row23 col4" >Porque no absorben radiación infrarroja: solo lo hacen las moléculas con tres o más átomos o con enlaces asimétricos.</td>
+      <td id="T_19406_row23_col5" class="data row23 col5" >El nitrógeno y el oxígeno no son gases de efecto invernadero porque sus moléculas no tienen tres o más átomos, ni enlaces asimétricos, que les permitan vibrar de modo que absorban la radiación infrarroja [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row23_col6" class="data row23 col6" >0.93</td>
+      <td id="T_19406_row23_col7" class="data row23 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row24_col0" class="data row24 col0" >5</td>
+      <td id="T_19406_row24_col1" class="data row24 col1" >¿Por qué el nitrógeno y el oxígeno no son gases de efecto invernadero?</td>
+      <td id="T_19406_row24_col2" class="data row24 col2" >5</td>
+      <td id="T_19406_row24_col3" class="data row24 col3" >semantica</td>
+      <td id="T_19406_row24_col4" class="data row24 col4" >Porque no absorben radiación infrarroja: solo lo hacen las moléculas con tres o más átomos o con enlaces asimétricos.</td>
+      <td id="T_19406_row24_col5" class="data row24 col5" >El nitrógeno y el oxígeno no son gases de efecto invernadero porque están formados por moléculas que no tienen tres o más átomos ni enlaces asimétricos, por lo que no pueden vibrar de modo que absorban la radiación infrarroja [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row24_col6" class="data row24 col6" >0.94</td>
+      <td id="T_19406_row24_col7" class="data row24 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row25_col0" class="data row25 col0" >6</td>
+      <td id="T_19406_row25_col1" class="data row25 col1" >¿Qué diferencia hay entre control de flujo y control de congestión en TCP?</td>
+      <td id="T_19406_row25_col2" class="data row25 col2" >1</td>
+      <td id="T_19406_row25_col3" class="data row25 col3" >semantica</td>
+      <td id="T_19406_row25_col4" class="data row25 col4" >El control de flujo protege al receptor mediante la ventana deslizante; el control de congestión protege a la red.</td>
+      <td id="T_19406_row25_col5" class="data row25 col5" >Basado en el contexto proporcionado, la diferencia es que el control de flujo protege al receptor (evitando que un emisor rápido sature a un receptor lento mediante una ventana deslizante), mientras que el control de congestión protege a la red [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row25_col6" class="data row25 col6" >0.94</td>
+      <td id="T_19406_row25_col7" class="data row25 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row26_col0" class="data row26 col0" >6</td>
+      <td id="T_19406_row26_col1" class="data row26 col1" >¿Qué diferencia hay entre control de flujo y control de congestión en TCP?</td>
+      <td id="T_19406_row26_col2" class="data row26 col2" >2</td>
+      <td id="T_19406_row26_col3" class="data row26 col3" >semantica</td>
+      <td id="T_19406_row26_col4" class="data row26 col4" >El control de flujo protege al receptor mediante la ventana deslizante; el control de congestión protege a la red.</td>
+      <td id="T_19406_row26_col5" class="data row26 col5" >La diferencia principal es que el control de flujo protege al receptor (evitando que un emisor rápido sature a un receptor lento mediante el uso de una ventana deslizante), mientras que el control de congestión protege a la red [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row26_col6" class="data row26 col6" >0.96</td>
+      <td id="T_19406_row26_col7" class="data row26 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row27_col0" class="data row27 col0" >6</td>
+      <td id="T_19406_row27_col1" class="data row27 col1" >¿Qué diferencia hay entre control de flujo y control de congestión en TCP?</td>
+      <td id="T_19406_row27_col2" class="data row27 col2" >3</td>
+      <td id="T_19406_row27_col3" class="data row27 col3" >semantica</td>
+      <td id="T_19406_row27_col4" class="data row27 col4" >El control de flujo protege al receptor mediante la ventana deslizante; el control de congestión protege a la red.</td>
+      <td id="T_19406_row27_col5" class="data row27 col5" >Según el documento, el control de flujo y el control de congestión se diferencian en lo siguiente:
+
+* **Control de flujo:** Se implementa con una ventana deslizante que el receptor anuncia en cada segmento para evitar que un emisor rápido sature a un receptor lento [03-protocolos-tcp-udp.md].
+* **Control de congestión:** Es distinto del control de flujo, ya que protege a la red en lugar de al receptor [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row27_col6" class="data row27 col6" >0.94</td>
+      <td id="T_19406_row27_col7" class="data row27 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row28_col0" class="data row28 col0" >6</td>
+      <td id="T_19406_row28_col1" class="data row28 col1" >¿Qué diferencia hay entre control de flujo y control de congestión en TCP?</td>
+      <td id="T_19406_row28_col2" class="data row28 col2" >4</td>
+      <td id="T_19406_row28_col3" class="data row28 col3" >semantica</td>
+      <td id="T_19406_row28_col4" class="data row28 col4" >El control de flujo protege al receptor mediante la ventana deslizante; el control de congestión protege a la red.</td>
+      <td id="T_19406_row28_col5" class="data row28 col5" >El control de congestión protege a la red (no al receptor), mientras que el control de flujo se implementa con una ventana deslizante que el receptor anuncia en cada segmento para evitar que un emisor rápido sature a un receptor lento [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row28_col6" class="data row28 col6" >0.96</td>
+      <td id="T_19406_row28_col7" class="data row28 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row29_col0" class="data row29 col0" >6</td>
+      <td id="T_19406_row29_col1" class="data row29 col1" >¿Qué diferencia hay entre control de flujo y control de congestión en TCP?</td>
+      <td id="T_19406_row29_col2" class="data row29 col2" >5</td>
+      <td id="T_19406_row29_col3" class="data row29 col3" >semantica</td>
+      <td id="T_19406_row29_col4" class="data row29 col4" >El control de flujo protege al receptor mediante la ventana deslizante; el control de congestión protege a la red.</td>
+      <td id="T_19406_row29_col5" class="data row29 col5" >Basándose en el documento proporcionado, el control de flujo y el control de congestión se diferencian en lo siguiente:
+
+* El **control de flujo** se implementa con una ventana deslizante que el receptor anuncia en cada segmento, evitando que un emisor rápido sature a un receptor lento [03-protocolos-tcp-udp.md].
+* El **control de congestión** protege a la red (no al receptor). Utiliza algoritmos clásicos como arranque lento, evitación de congestión, retransmisión rápida y recuperación rápida (descritos en el RFC 5681), o el algoritmo BBR impulsado por Google desde 2016, que estima el ancho de banda y el tiempo de ida y vuelta [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row29_col6" class="data row29 col6" >0.92</td>
+      <td id="T_19406_row29_col7" class="data row29 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row30_col0" class="data row30 col0" >7</td>
+      <td id="T_19406_row30_col1" class="data row30 col1" >¿En qué RFC se define PKCE?</td>
+      <td id="T_19406_row30_col2" class="data row30 col2" >1</td>
+      <td id="T_19406_row30_col3" class="data row30 col3" >exacta</td>
+      <td id="T_19406_row30_col4" class="data row30 col4" >En el RFC 7636, publicado en septiembre de 2015.</td>
+      <td id="T_19406_row30_col5" class="data row30 col5" >PKCE se define en el RFC 7636 [04-oauth2-autenticacion.md].</td>
+      <td id="T_19406_row30_col6" class="data row30 col6" >0.88</td>
+      <td id="T_19406_row30_col7" class="data row30 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row31_col0" class="data row31 col0" >7</td>
+      <td id="T_19406_row31_col1" class="data row31 col1" >¿En qué RFC se define PKCE?</td>
+      <td id="T_19406_row31_col2" class="data row31 col2" >2</td>
+      <td id="T_19406_row31_col3" class="data row31 col3" >exacta</td>
+      <td id="T_19406_row31_col4" class="data row31 col4" >En el RFC 7636, publicado en septiembre de 2015.</td>
+      <td id="T_19406_row31_col5" class="data row31 col5" >PKCE se define en el RFC 7636 [04-oauth2-autenticacion.md].</td>
+      <td id="T_19406_row31_col6" class="data row31 col6" >0.88</td>
+      <td id="T_19406_row31_col7" class="data row31 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row32_col0" class="data row32 col0" >7</td>
+      <td id="T_19406_row32_col1" class="data row32 col1" >¿En qué RFC se define PKCE?</td>
+      <td id="T_19406_row32_col2" class="data row32 col2" >3</td>
+      <td id="T_19406_row32_col3" class="data row32 col3" >exacta</td>
+      <td id="T_19406_row32_col4" class="data row32 col4" >En el RFC 7636, publicado en septiembre de 2015.</td>
+      <td id="T_19406_row32_col5" class="data row32 col5" >PKCE se define en el RFC 7636 [04-oauth2-autenticacion.md].</td>
+      <td id="T_19406_row32_col6" class="data row32 col6" >0.88</td>
+      <td id="T_19406_row32_col7" class="data row32 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row33_col0" class="data row33 col0" >7</td>
+      <td id="T_19406_row33_col1" class="data row33 col1" >¿En qué RFC se define PKCE?</td>
+      <td id="T_19406_row33_col2" class="data row33 col2" >4</td>
+      <td id="T_19406_row33_col3" class="data row33 col3" >exacta</td>
+      <td id="T_19406_row33_col4" class="data row33 col4" >En el RFC 7636, publicado en septiembre de 2015.</td>
+      <td id="T_19406_row33_col5" class="data row33 col5" >PKCE se define en el RFC 7636 [04-oauth2-autenticacion.md].</td>
+      <td id="T_19406_row33_col6" class="data row33 col6" >0.88</td>
+      <td id="T_19406_row33_col7" class="data row33 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row34_col0" class="data row34 col0" >7</td>
+      <td id="T_19406_row34_col1" class="data row34 col1" >¿En qué RFC se define PKCE?</td>
+      <td id="T_19406_row34_col2" class="data row34 col2" >5</td>
+      <td id="T_19406_row34_col3" class="data row34 col3" >exacta</td>
+      <td id="T_19406_row34_col4" class="data row34 col4" >En el RFC 7636, publicado en septiembre de 2015.</td>
+      <td id="T_19406_row34_col5" class="data row34 col5" >PKCE se define en el RFC 7636 [04-oauth2-autenticacion.md].</td>
+      <td id="T_19406_row34_col6" class="data row34 col6" >0.88</td>
+      <td id="T_19406_row34_col7" class="data row34 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row35_col0" class="data row35 col0" >8</td>
+      <td id="T_19406_row35_col1" class="data row35 col1" >¿Qué RFC especifica el protocolo UDP?</td>
+      <td id="T_19406_row35_col2" class="data row35 col2" >1</td>
+      <td id="T_19406_row35_col3" class="data row35 col3" >exacta</td>
+      <td id="T_19406_row35_col4" class="data row35 col4" >El RFC 768, de agosto de 1980.</td>
+      <td id="T_19406_row35_col5" class="data row35 col5" >El protocolo UDP fue especificado en el RFC 768 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row35_col6" class="data row35 col6" >0.89</td>
+      <td id="T_19406_row35_col7" class="data row35 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row36_col0" class="data row36 col0" >8</td>
+      <td id="T_19406_row36_col1" class="data row36 col1" >¿Qué RFC especifica el protocolo UDP?</td>
+      <td id="T_19406_row36_col2" class="data row36 col2" >2</td>
+      <td id="T_19406_row36_col3" class="data row36 col3" >exacta</td>
+      <td id="T_19406_row36_col4" class="data row36 col4" >El RFC 768, de agosto de 1980.</td>
+      <td id="T_19406_row36_col5" class="data row36 col5" >El protocolo UDP se especificó en el RFC 768 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row36_col6" class="data row36 col6" >0.90</td>
+      <td id="T_19406_row36_col7" class="data row36 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row37_col0" class="data row37 col0" >8</td>
+      <td id="T_19406_row37_col1" class="data row37 col1" >¿Qué RFC especifica el protocolo UDP?</td>
+      <td id="T_19406_row37_col2" class="data row37 col2" >3</td>
+      <td id="T_19406_row37_col3" class="data row37 col3" >exacta</td>
+      <td id="T_19406_row37_col4" class="data row37 col4" >El RFC 768, de agosto de 1980.</td>
+      <td id="T_19406_row37_col5" class="data row37 col5" >El protocolo UDP se especificó en el RFC 768 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row37_col6" class="data row37 col6" >0.90</td>
+      <td id="T_19406_row37_col7" class="data row37 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row38_col0" class="data row38 col0" >8</td>
+      <td id="T_19406_row38_col1" class="data row38 col1" >¿Qué RFC especifica el protocolo UDP?</td>
+      <td id="T_19406_row38_col2" class="data row38 col2" >4</td>
+      <td id="T_19406_row38_col3" class="data row38 col3" >exacta</td>
+      <td id="T_19406_row38_col4" class="data row38 col4" >El RFC 768, de agosto de 1980.</td>
+      <td id="T_19406_row38_col5" class="data row38 col5" >El protocolo UDP se especificó en el RFC 768 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row38_col6" class="data row38 col6" >0.90</td>
+      <td id="T_19406_row38_col7" class="data row38 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row39_col0" class="data row39 col0" >8</td>
+      <td id="T_19406_row39_col1" class="data row39 col1" >¿Qué RFC especifica el protocolo UDP?</td>
+      <td id="T_19406_row39_col2" class="data row39 col2" >5</td>
+      <td id="T_19406_row39_col3" class="data row39 col3" >exacta</td>
+      <td id="T_19406_row39_col4" class="data row39 col4" >El RFC 768, de agosto de 1980.</td>
+      <td id="T_19406_row39_col5" class="data row39 col5" >El protocolo UDP se especificó en el RFC 768 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row39_col6" class="data row39 col6" >0.90</td>
+      <td id="T_19406_row39_col7" class="data row39 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row40_col0" class="data row40 col0" >9</td>
+      <td id="T_19406_row40_col1" class="data row40 col1" >¿Qué real decreto actualizó el documento básico DB-HE?</td>
+      <td id="T_19406_row40_col2" class="data row40 col2" >1</td>
+      <td id="T_19406_row40_col3" class="data row40 col3" >exacta</td>
+      <td id="T_19406_row40_col4" class="data row40 col4" >El Real Decreto 732/2019.</td>
+      <td id="T_19406_row40_col5" class="data row40 col5" >El documento básico DB-HE fue actualizado mediante el Real Decreto 732/2019 [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row40_col6" class="data row40 col6" >0.90</td>
+      <td id="T_19406_row40_col7" class="data row40 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row41_col0" class="data row41 col0" >9</td>
+      <td id="T_19406_row41_col1" class="data row41 col1" >¿Qué real decreto actualizó el documento básico DB-HE?</td>
+      <td id="T_19406_row41_col2" class="data row41 col2" >2</td>
+      <td id="T_19406_row41_col3" class="data row41 col3" >exacta</td>
+      <td id="T_19406_row41_col4" class="data row41 col4" >El Real Decreto 732/2019.</td>
+      <td id="T_19406_row41_col5" class="data row41 col5" >El documento básico DB-HE fue actualizado mediante el Real Decreto 732/2019 [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row41_col6" class="data row41 col6" >0.90</td>
+      <td id="T_19406_row41_col7" class="data row41 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row42_col0" class="data row42 col0" >9</td>
+      <td id="T_19406_row42_col1" class="data row42 col1" >¿Qué real decreto actualizó el documento básico DB-HE?</td>
+      <td id="T_19406_row42_col2" class="data row42 col2" >3</td>
+      <td id="T_19406_row42_col3" class="data row42 col3" >exacta</td>
+      <td id="T_19406_row42_col4" class="data row42 col4" >El Real Decreto 732/2019.</td>
+      <td id="T_19406_row42_col5" class="data row42 col5" >El documento básico DB-HE fue actualizado mediante el Real Decreto 732/2019 [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row42_col6" class="data row42 col6" >0.90</td>
+      <td id="T_19406_row42_col7" class="data row42 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row43_col0" class="data row43 col0" >9</td>
+      <td id="T_19406_row43_col1" class="data row43 col1" >¿Qué real decreto actualizó el documento básico DB-HE?</td>
+      <td id="T_19406_row43_col2" class="data row43 col2" >4</td>
+      <td id="T_19406_row43_col3" class="data row43 col3" >exacta</td>
+      <td id="T_19406_row43_col4" class="data row43 col4" >El Real Decreto 732/2019.</td>
+      <td id="T_19406_row43_col5" class="data row43 col5" >El documento básico DB-HE se actualizó mediante el Real Decreto 732/2019 [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row43_col6" class="data row43 col6" >0.90</td>
+      <td id="T_19406_row43_col7" class="data row43 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row44_col0" class="data row44 col0" >9</td>
+      <td id="T_19406_row44_col1" class="data row44 col1" >¿Qué real decreto actualizó el documento básico DB-HE?</td>
+      <td id="T_19406_row44_col2" class="data row44 col2" >5</td>
+      <td id="T_19406_row44_col3" class="data row44 col3" >exacta</td>
+      <td id="T_19406_row44_col4" class="data row44 col4" >El Real Decreto 732/2019.</td>
+      <td id="T_19406_row44_col5" class="data row44 col5" >El documento básico DB-HE fue actualizado mediante el Real Decreto 732/2019 [09-eficiencia-energetica-edificios.md].</td>
+      <td id="T_19406_row44_col6" class="data row44 col6" >0.90</td>
+      <td id="T_19406_row44_col7" class="data row44 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row45_col0" class="data row45 col0" >10</td>
+      <td id="T_19406_row45_col1" class="data row45 col1" >¿Qué algoritmo de índice usan habitualmente las bases de datos vectoriales?</td>
+      <td id="T_19406_row45_col2" class="data row45 col2" >1</td>
+      <td id="T_19406_row45_col3" class="data row45 col3" >exacta</td>
+      <td id="T_19406_row45_col4" class="data row45 col4" >El algoritmo HNSW, de vecino más cercano aproximado.</td>
+      <td id="T_19406_row45_col5" class="data row45 col5" >Las bases de datos vectoriales se apoyan habitualmente en el algoritmo de vecino más cercano aproximado HNSW [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row45_col6" class="data row45 col6" >0.94</td>
+      <td id="T_19406_row45_col7" class="data row45 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row46_col0" class="data row46 col0" >10</td>
+      <td id="T_19406_row46_col1" class="data row46 col1" >¿Qué algoritmo de índice usan habitualmente las bases de datos vectoriales?</td>
+      <td id="T_19406_row46_col2" class="data row46 col2" >2</td>
+      <td id="T_19406_row46_col3" class="data row46 col3" >exacta</td>
+      <td id="T_19406_row46_col4" class="data row46 col4" >El algoritmo HNSW, de vecino más cercano aproximado.</td>
+      <td id="T_19406_row46_col5" class="data row46 col5" >Las bases de datos vectoriales se apoyan habitualmente en índices de vecino más cercano aproximado, típicamente el algoritmo HNSW [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row46_col6" class="data row46 col6" >0.94</td>
+      <td id="T_19406_row46_col7" class="data row46 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row47_col0" class="data row47 col0" >10</td>
+      <td id="T_19406_row47_col1" class="data row47 col1" >¿Qué algoritmo de índice usan habitualmente las bases de datos vectoriales?</td>
+      <td id="T_19406_row47_col2" class="data row47 col2" >3</td>
+      <td id="T_19406_row47_col3" class="data row47 col3" >exacta</td>
+      <td id="T_19406_row47_col4" class="data row47 col4" >El algoritmo HNSW, de vecino más cercano aproximado.</td>
+      <td id="T_19406_row47_col5" class="data row47 col5" >Las bases de datos vectoriales se apoyan habitualmente en el algoritmo HNSW de vecino más cercano aproximado [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row47_col6" class="data row47 col6" >0.94</td>
+      <td id="T_19406_row47_col7" class="data row47 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row48_col0" class="data row48 col0" >10</td>
+      <td id="T_19406_row48_col1" class="data row48 col1" >¿Qué algoritmo de índice usan habitualmente las bases de datos vectoriales?</td>
+      <td id="T_19406_row48_col2" class="data row48 col2" >4</td>
+      <td id="T_19406_row48_col3" class="data row48 col3" >exacta</td>
+      <td id="T_19406_row48_col4" class="data row48 col4" >El algoritmo HNSW, de vecino más cercano aproximado.</td>
+      <td id="T_19406_row48_col5" class="data row48 col5" >Las bases de datos vectoriales se apoyan habitualmente en índices de vecino más cercano aproximado, típicamente el algoritmo HNSW [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row48_col6" class="data row48 col6" >0.94</td>
+      <td id="T_19406_row48_col7" class="data row48 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row49_col0" class="data row49 col0" >10</td>
+      <td id="T_19406_row49_col1" class="data row49 col1" >¿Qué algoritmo de índice usan habitualmente las bases de datos vectoriales?</td>
+      <td id="T_19406_row49_col2" class="data row49 col2" >5</td>
+      <td id="T_19406_row49_col3" class="data row49 col3" >exacta</td>
+      <td id="T_19406_row49_col4" class="data row49 col4" >El algoritmo HNSW, de vecino más cercano aproximado.</td>
+      <td id="T_19406_row49_col5" class="data row49 col5" >Las bases de datos vectoriales se apoyan habitualmente en el algoritmo HNSW (vecino más cercano aproximado) [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row49_col6" class="data row49 col6" >0.94</td>
+      <td id="T_19406_row49_col7" class="data row49 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row50_col0" class="data row50 col0" >11</td>
+      <td id="T_19406_row50_col1" class="data row50 col1" >¿Dónde se mide la concentración de CO2 de forma continua desde 1958?</td>
+      <td id="T_19406_row50_col2" class="data row50 col2" >1</td>
+      <td id="T_19406_row50_col3" class="data row50 col3" >exacta</td>
+      <td id="T_19406_row50_col4" class="data row50 col4" >En el observatorio de Mauna Loa, en Hawái, en la serie iniciada por Charles David Keeling.</td>
+      <td id="T_19406_row50_col5" class="data row50 col5" >La concentración de dióxido de carbono se mide de forma continua desde 1958 en el observatorio de Mauna Loa, en Hawái [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row50_col6" class="data row50 col6" >0.90</td>
+      <td id="T_19406_row50_col7" class="data row50 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row51_col0" class="data row51 col0" >11</td>
+      <td id="T_19406_row51_col1" class="data row51 col1" >¿Dónde se mide la concentración de CO2 de forma continua desde 1958?</td>
+      <td id="T_19406_row51_col2" class="data row51 col2" >2</td>
+      <td id="T_19406_row51_col3" class="data row51 col3" >exacta</td>
+      <td id="T_19406_row51_col4" class="data row51 col4" >En el observatorio de Mauna Loa, en Hawái, en la serie iniciada por Charles David Keeling.</td>
+      <td id="T_19406_row51_col5" class="data row51 col5" >La concentración de dióxido de carbono se mide de forma continua desde 1958 en el observatorio de Mauna Loa, en Hawái [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row51_col6" class="data row51 col6" >0.90</td>
+      <td id="T_19406_row51_col7" class="data row51 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row52_col0" class="data row52 col0" >11</td>
+      <td id="T_19406_row52_col1" class="data row52 col1" >¿Dónde se mide la concentración de CO2 de forma continua desde 1958?</td>
+      <td id="T_19406_row52_col2" class="data row52 col2" >3</td>
+      <td id="T_19406_row52_col3" class="data row52 col3" >exacta</td>
+      <td id="T_19406_row52_col4" class="data row52 col4" >En el observatorio de Mauna Loa, en Hawái, en la serie iniciada por Charles David Keeling.</td>
+      <td id="T_19406_row52_col5" class="data row52 col5" >La concentración de dióxido de carbono se mide de forma continua desde 1958 en el observatorio de Mauna Loa, en Hawái [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row52_col6" class="data row52 col6" >0.90</td>
+      <td id="T_19406_row52_col7" class="data row52 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row53_col0" class="data row53 col0" >11</td>
+      <td id="T_19406_row53_col1" class="data row53 col1" >¿Dónde se mide la concentración de CO2 de forma continua desde 1958?</td>
+      <td id="T_19406_row53_col2" class="data row53 col2" >4</td>
+      <td id="T_19406_row53_col3" class="data row53 col3" >exacta</td>
+      <td id="T_19406_row53_col4" class="data row53 col4" >En el observatorio de Mauna Loa, en Hawái, en la serie iniciada por Charles David Keeling.</td>
+      <td id="T_19406_row53_col5" class="data row53 col5" >La concentración de dióxido de carbono se mide de forma continua desde 1958 en el observatorio de Mauna Loa, en Hawái [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row53_col6" class="data row53 col6" >0.90</td>
+      <td id="T_19406_row53_col7" class="data row53 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row54_col0" class="data row54 col0" >11</td>
+      <td id="T_19406_row54_col1" class="data row54 col1" >¿Dónde se mide la concentración de CO2 de forma continua desde 1958?</td>
+      <td id="T_19406_row54_col2" class="data row54 col2" >5</td>
+      <td id="T_19406_row54_col3" class="data row54 col3" >exacta</td>
+      <td id="T_19406_row54_col4" class="data row54 col4" >En el observatorio de Mauna Loa, en Hawái, en la serie iniciada por Charles David Keeling.</td>
+      <td id="T_19406_row54_col5" class="data row54 col5" >La concentración de dióxido de carbono se mide de forma continua desde 1958 en el observatorio de Mauna Loa, en Hawái [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row54_col6" class="data row54 col6" >0.90</td>
+      <td id="T_19406_row54_col7" class="data row54 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row55_col0" class="data row55 col0" >12</td>
+      <td id="T_19406_row55_col1" class="data row55 col1" >¿Qué algoritmo de control de congestión impulsa Google desde 2016?</td>
+      <td id="T_19406_row55_col2" class="data row55 col2" >1</td>
+      <td id="T_19406_row55_col3" class="data row55 col3" >exacta</td>
+      <td id="T_19406_row55_col4" class="data row55 col4" >BBR, que estima ancho de banda y tiempo de ida y vuelta en lugar de reaccionar solo a la pérdida de paquetes.</td>
+      <td id="T_19406_row55_col5" class="data row55 col5" >Google impulsa el algoritmo BBR desde 2016 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row55_col6" class="data row55 col6" >0.85</td>
+      <td id="T_19406_row55_col7" class="data row55 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row56_col0" class="data row56 col0" >12</td>
+      <td id="T_19406_row56_col1" class="data row56 col1" >¿Qué algoritmo de control de congestión impulsa Google desde 2016?</td>
+      <td id="T_19406_row56_col2" class="data row56 col2" >2</td>
+      <td id="T_19406_row56_col3" class="data row56 col3" >exacta</td>
+      <td id="T_19406_row56_col4" class="data row56 col4" >BBR, que estima ancho de banda y tiempo de ida y vuelta en lugar de reaccionar solo a la pérdida de paquetes.</td>
+      <td id="T_19406_row56_col5" class="data row56 col5" >Google impulsa el algoritmo BBR desde 2016 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row56_col6" class="data row56 col6" >0.85</td>
+      <td id="T_19406_row56_col7" class="data row56 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row57_col0" class="data row57 col0" >12</td>
+      <td id="T_19406_row57_col1" class="data row57 col1" >¿Qué algoritmo de control de congestión impulsa Google desde 2016?</td>
+      <td id="T_19406_row57_col2" class="data row57 col2" >3</td>
+      <td id="T_19406_row57_col3" class="data row57 col3" >exacta</td>
+      <td id="T_19406_row57_col4" class="data row57 col4" >BBR, que estima ancho de banda y tiempo de ida y vuelta en lugar de reaccionar solo a la pérdida de paquetes.</td>
+      <td id="T_19406_row57_col5" class="data row57 col5" >Google impulsa el algoritmo BBR desde 2016 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row57_col6" class="data row57 col6" >0.85</td>
+      <td id="T_19406_row57_col7" class="data row57 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row58_col0" class="data row58 col0" >12</td>
+      <td id="T_19406_row58_col1" class="data row58 col1" >¿Qué algoritmo de control de congestión impulsa Google desde 2016?</td>
+      <td id="T_19406_row58_col2" class="data row58 col2" >4</td>
+      <td id="T_19406_row58_col3" class="data row58 col3" >exacta</td>
+      <td id="T_19406_row58_col4" class="data row58 col4" >BBR, que estima ancho de banda y tiempo de ida y vuelta en lugar de reaccionar solo a la pérdida de paquetes.</td>
+      <td id="T_19406_row58_col5" class="data row58 col5" >Google impulsa el algoritmo BBR desde 2016 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row58_col6" class="data row58 col6" >0.85</td>
+      <td id="T_19406_row58_col7" class="data row58 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row59_col0" class="data row59 col0" >12</td>
+      <td id="T_19406_row59_col1" class="data row59 col1" >¿Qué algoritmo de control de congestión impulsa Google desde 2016?</td>
+      <td id="T_19406_row59_col2" class="data row59 col2" >5</td>
+      <td id="T_19406_row59_col3" class="data row59 col3" >exacta</td>
+      <td id="T_19406_row59_col4" class="data row59 col4" >BBR, que estima ancho de banda y tiempo de ida y vuelta en lugar de reaccionar solo a la pérdida de paquetes.</td>
+      <td id="T_19406_row59_col5" class="data row59 col5" >Google impulsa el algoritmo BBR desde 2016 [03-protocolos-tcp-udp.md].</td>
+      <td id="T_19406_row59_col6" class="data row59 col6" >0.85</td>
+      <td id="T_19406_row59_col7" class="data row59 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row60_col0" class="data row60 col0" >13</td>
+      <td id="T_19406_row60_col1" class="data row60 col1" >¿Qué exige la forma normal de Boyce-Codd?</td>
+      <td id="T_19406_row60_col2" class="data row60 col2" >1</td>
+      <td id="T_19406_row60_col3" class="data row60 col3" >exacta</td>
+      <td id="T_19406_row60_col4" class="data row60 col4" >Que en toda dependencia funcional no trivial el determinante sea una superclave.</td>
+      <td id="T_19406_row60_col5" class="data row60 col5" >La forma normal de Boyce-Codd (BCNF) exige que para toda dependencia funcional no trivial, el determinante sea una superclave [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row60_col6" class="data row60 col6" >0.93</td>
+      <td id="T_19406_row60_col7" class="data row60 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row61_col0" class="data row61 col0" >13</td>
+      <td id="T_19406_row61_col1" class="data row61 col1" >¿Qué exige la forma normal de Boyce-Codd?</td>
+      <td id="T_19406_row61_col2" class="data row61 col2" >2</td>
+      <td id="T_19406_row61_col3" class="data row61 col3" >exacta</td>
+      <td id="T_19406_row61_col4" class="data row61 col4" >Que en toda dependencia funcional no trivial el determinante sea una superclave.</td>
+      <td id="T_19406_row61_col5" class="data row61 col5" >La forma normal de Boyce-Codd (BCNF) exige que para toda dependencia funcional no trivial, el determinante sea una superclave [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row61_col6" class="data row61 col6" >0.93</td>
+      <td id="T_19406_row61_col7" class="data row61 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row62_col0" class="data row62 col0" >13</td>
+      <td id="T_19406_row62_col1" class="data row62 col1" >¿Qué exige la forma normal de Boyce-Codd?</td>
+      <td id="T_19406_row62_col2" class="data row62 col2" >3</td>
+      <td id="T_19406_row62_col3" class="data row62 col3" >exacta</td>
+      <td id="T_19406_row62_col4" class="data row62 col4" >Que en toda dependencia funcional no trivial el determinante sea una superclave.</td>
+      <td id="T_19406_row62_col5" class="data row62 col5" >La forma normal de Boyce-Codd (BCNF) exige que para toda dependencia funcional no trivial, el determinante sea una superclave [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row62_col6" class="data row62 col6" >0.93</td>
+      <td id="T_19406_row62_col7" class="data row62 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row63_col0" class="data row63 col0" >13</td>
+      <td id="T_19406_row63_col1" class="data row63 col1" >¿Qué exige la forma normal de Boyce-Codd?</td>
+      <td id="T_19406_row63_col2" class="data row63 col2" >4</td>
+      <td id="T_19406_row63_col3" class="data row63 col3" >exacta</td>
+      <td id="T_19406_row63_col4" class="data row63 col4" >Que en toda dependencia funcional no trivial el determinante sea una superclave.</td>
+      <td id="T_19406_row63_col5" class="data row63 col5" >La forma normal de Boyce-Codd (BCNF) exige que para toda dependencia funcional no trivial, el determinante sea una superclave [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row63_col6" class="data row63 col6" >0.93</td>
+      <td id="T_19406_row63_col7" class="data row63 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row64_col0" class="data row64 col0" >13</td>
+      <td id="T_19406_row64_col1" class="data row64 col1" >¿Qué exige la forma normal de Boyce-Codd?</td>
+      <td id="T_19406_row64_col2" class="data row64 col2" >5</td>
+      <td id="T_19406_row64_col3" class="data row64 col3" >exacta</td>
+      <td id="T_19406_row64_col4" class="data row64 col4" >Que en toda dependencia funcional no trivial el determinante sea una superclave.</td>
+      <td id="T_19406_row64_col5" class="data row64 col5" >La forma normal de Boyce-Codd (BCNF) exige que para toda dependencia funcional no trivial, el determinante sea una superclave [01-normalizacion-bases-datos.md].</td>
+      <td id="T_19406_row64_col6" class="data row64 col6" >0.93</td>
+      <td id="T_19406_row64_col7" class="data row64 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row65_col0" class="data row65 col0" >14</td>
+      <td id="T_19406_row65_col1" class="data row65 col1" >¿A qué presión se extrae un café espresso?</td>
+      <td id="T_19406_row65_col2" class="data row65 col2" >1</td>
+      <td id="T_19406_row65_col3" class="data row65 col3" >tabla</td>
+      <td id="T_19406_row65_col4" class="data row65 col4" >A unos 9 bares.</td>
+      <td id="T_19406_row65_col5" class="data row65 col5" >El agua entra a una presión de aproximadamente 9 bares [06-cafe-espresso.md].</td>
+      <td id="T_19406_row65_col6" class="data row65 col6" >0.88</td>
+      <td id="T_19406_row65_col7" class="data row65 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row66_col0" class="data row66 col0" >14</td>
+      <td id="T_19406_row66_col1" class="data row66 col1" >¿A qué presión se extrae un café espresso?</td>
+      <td id="T_19406_row66_col2" class="data row66 col2" >2</td>
+      <td id="T_19406_row66_col3" class="data row66 col3" >tabla</td>
+      <td id="T_19406_row66_col4" class="data row66 col4" >A unos 9 bares.</td>
+      <td id="T_19406_row66_col5" class="data row66 col5" >El café espresso se extrae a una presión de aproximadamente 9 bares [06-cafe-espresso.md].</td>
+      <td id="T_19406_row66_col6" class="data row66 col6" >0.86</td>
+      <td id="T_19406_row66_col7" class="data row66 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row67_col0" class="data row67 col0" >14</td>
+      <td id="T_19406_row67_col1" class="data row67 col1" >¿A qué presión se extrae un café espresso?</td>
+      <td id="T_19406_row67_col2" class="data row67 col2" >3</td>
+      <td id="T_19406_row67_col3" class="data row67 col3" >tabla</td>
+      <td id="T_19406_row67_col4" class="data row67 col4" >A unos 9 bares.</td>
+      <td id="T_19406_row67_col5" class="data row67 col5" >El café espresso se extrae a una presión de aproximadamente 9 bares [06-cafe-espresso.md].</td>
+      <td id="T_19406_row67_col6" class="data row67 col6" >0.86</td>
+      <td id="T_19406_row67_col7" class="data row67 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row68_col0" class="data row68 col0" >14</td>
+      <td id="T_19406_row68_col1" class="data row68 col1" >¿A qué presión se extrae un café espresso?</td>
+      <td id="T_19406_row68_col2" class="data row68 col2" >4</td>
+      <td id="T_19406_row68_col3" class="data row68 col3" >tabla</td>
+      <td id="T_19406_row68_col4" class="data row68 col4" >A unos 9 bares.</td>
+      <td id="T_19406_row68_col5" class="data row68 col5" >El agua entra a una presión de aproximadamente 9 bares [06-cafe-espresso.md].</td>
+      <td id="T_19406_row68_col6" class="data row68 col6" >0.88</td>
+      <td id="T_19406_row68_col7" class="data row68 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row69_col0" class="data row69 col0" >14</td>
+      <td id="T_19406_row69_col1" class="data row69 col1" >¿A qué presión se extrae un café espresso?</td>
+      <td id="T_19406_row69_col2" class="data row69 col2" >5</td>
+      <td id="T_19406_row69_col3" class="data row69 col3" >tabla</td>
+      <td id="T_19406_row69_col4" class="data row69 col4" >A unos 9 bares.</td>
+      <td id="T_19406_row69_col5" class="data row69 col5" >El agua entra a una presión de aproximadamente 9 bares [06-cafe-espresso.md].</td>
+      <td id="T_19406_row69_col6" class="data row69 col6" >0.88</td>
+      <td id="T_19406_row69_col7" class="data row69 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row70_col0" class="data row70 col0" >15</td>
+      <td id="T_19406_row70_col1" class="data row70 col1" >¿Cuál es el par de apriete de los pedales al eje de bielas?</td>
+      <td id="T_19406_row70_col2" class="data row70 col2" >1</td>
+      <td id="T_19406_row70_col3" class="data row70 col3" >tabla</td>
+      <td id="T_19406_row70_col4" class="data row70 col4" >Entre 35 y 40 Nm.</td>
+      <td id="T_19406_row70_col5" class="data row70 col5" >El par de apriete típico de los pedales al eje de bielas es de 35-40 Nm [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row70_col6" class="data row70 col6" >0.88</td>
+      <td id="T_19406_row70_col7" class="data row70 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row71_col0" class="data row71 col0" >15</td>
+      <td id="T_19406_row71_col1" class="data row71 col1" >¿Cuál es el par de apriete de los pedales al eje de bielas?</td>
+      <td id="T_19406_row71_col2" class="data row71 col2" >2</td>
+      <td id="T_19406_row71_col3" class="data row71 col3" >tabla</td>
+      <td id="T_19406_row71_col4" class="data row71 col4" >Entre 35 y 40 Nm.</td>
+      <td id="T_19406_row71_col5" class="data row71 col5" >El par de apriete típico de los pedales al eje de bielas es de 35-40 Nm [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row71_col6" class="data row71 col6" >0.88</td>
+      <td id="T_19406_row71_col7" class="data row71 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row72_col0" class="data row72 col0" >15</td>
+      <td id="T_19406_row72_col1" class="data row72 col1" >¿Cuál es el par de apriete de los pedales al eje de bielas?</td>
+      <td id="T_19406_row72_col2" class="data row72 col2" >3</td>
+      <td id="T_19406_row72_col3" class="data row72 col3" >tabla</td>
+      <td id="T_19406_row72_col4" class="data row72 col4" >Entre 35 y 40 Nm.</td>
+      <td id="T_19406_row72_col5" class="data row72 col5" >El par de apriete típico de los pedales al eje de bielas es de 35-40 Nm [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row72_col6" class="data row72 col6" >0.88</td>
+      <td id="T_19406_row72_col7" class="data row72 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row73_col0" class="data row73 col0" >15</td>
+      <td id="T_19406_row73_col1" class="data row73 col1" >¿Cuál es el par de apriete de los pedales al eje de bielas?</td>
+      <td id="T_19406_row73_col2" class="data row73 col2" >4</td>
+      <td id="T_19406_row73_col3" class="data row73 col3" >tabla</td>
+      <td id="T_19406_row73_col4" class="data row73 col4" >Entre 35 y 40 Nm.</td>
+      <td id="T_19406_row73_col5" class="data row73 col5" >El par de apriete típico de los pedales al eje de bielas es de 35-40 Nm [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row73_col6" class="data row73 col6" >0.88</td>
+      <td id="T_19406_row73_col7" class="data row73 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row74_col0" class="data row74 col0" >15</td>
+      <td id="T_19406_row74_col1" class="data row74 col1" >¿Cuál es el par de apriete de los pedales al eje de bielas?</td>
+      <td id="T_19406_row74_col2" class="data row74 col2" >5</td>
+      <td id="T_19406_row74_col3" class="data row74 col3" >tabla</td>
+      <td id="T_19406_row74_col4" class="data row74 col4" >Entre 35 y 40 Nm.</td>
+      <td id="T_19406_row74_col5" class="data row74 col5" >El par de apriete típico de los pedales al eje de bielas es de 35-40 Nm [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row74_col6" class="data row74 col6" >0.88</td>
+      <td id="T_19406_row74_col7" class="data row74 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row75_col0" class="data row75 col0" >16</td>
+      <td id="T_19406_row75_col1" class="data row75 col1" >¿Cuál es el potencial de calentamiento global del hexafluoruro de azufre?</td>
+      <td id="T_19406_row75_col2" class="data row75 col2" >1</td>
+      <td id="T_19406_row75_col3" class="data row75 col3" >tabla</td>
+      <td id="T_19406_row75_col4" class="data row75 col4" >23.500 veces el del CO2 en un horizonte de 100 años.</td>
+      <td id="T_19406_row75_col5" class="data row75 col5" >El potencial de calentamiento global a 100 años del hexafluoruro de azufre (SF6) es de 23.500 [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row75_col6" class="data row75 col6" >0.91</td>
+      <td id="T_19406_row75_col7" class="data row75 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row76_col0" class="data row76 col0" >16</td>
+      <td id="T_19406_row76_col1" class="data row76 col1" >¿Cuál es el potencial de calentamiento global del hexafluoruro de azufre?</td>
+      <td id="T_19406_row76_col2" class="data row76 col2" >2</td>
+      <td id="T_19406_row76_col3" class="data row76 col3" >tabla</td>
+      <td id="T_19406_row76_col4" class="data row76 col4" >23.500 veces el del CO2 en un horizonte de 100 años.</td>
+      <td id="T_19406_row76_col5" class="data row76 col5" >El potencial de calentamiento global del hexafluoruro de azufre (SF6) a 100 años es de 23.500 [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row76_col6" class="data row76 col6" >0.90</td>
+      <td id="T_19406_row76_col7" class="data row76 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row77_col0" class="data row77 col0" >16</td>
+      <td id="T_19406_row77_col1" class="data row77 col1" >¿Cuál es el potencial de calentamiento global del hexafluoruro de azufre?</td>
+      <td id="T_19406_row77_col2" class="data row77 col2" >3</td>
+      <td id="T_19406_row77_col3" class="data row77 col3" >tabla</td>
+      <td id="T_19406_row77_col4" class="data row77 col4" >23.500 veces el del CO2 en un horizonte de 100 años.</td>
+      <td id="T_19406_row77_col5" class="data row77 col5" >El potencial de calentamiento global del hexafluoruro de azufre (SF6) a 100 años es de 23.500 [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row77_col6" class="data row77 col6" >0.90</td>
+      <td id="T_19406_row77_col7" class="data row77 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row78_col0" class="data row78 col0" >16</td>
+      <td id="T_19406_row78_col1" class="data row78 col1" >¿Cuál es el potencial de calentamiento global del hexafluoruro de azufre?</td>
+      <td id="T_19406_row78_col2" class="data row78 col2" >4</td>
+      <td id="T_19406_row78_col3" class="data row78 col3" >tabla</td>
+      <td id="T_19406_row78_col4" class="data row78 col4" >23.500 veces el del CO2 en un horizonte de 100 años.</td>
+      <td id="T_19406_row78_col5" class="data row78 col5" >El potencial de calentamiento global a 100 años del hexafluoruro de azufre (SF6) es de 23.500 [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row78_col6" class="data row78 col6" >0.91</td>
+      <td id="T_19406_row78_col7" class="data row78 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row79_col0" class="data row79 col0" >16</td>
+      <td id="T_19406_row79_col1" class="data row79 col1" >¿Cuál es el potencial de calentamiento global del hexafluoruro de azufre?</td>
+      <td id="T_19406_row79_col2" class="data row79 col2" >5</td>
+      <td id="T_19406_row79_col3" class="data row79 col3" >tabla</td>
+      <td id="T_19406_row79_col4" class="data row79 col4" >23.500 veces el del CO2 en un horizonte de 100 años.</td>
+      <td id="T_19406_row79_col5" class="data row79 col5" >El potencial de calentamiento global a 100 años del hexafluoruro de azufre (SF6) es de 23.500 [10-efecto-invernadero.md].</td>
+      <td id="T_19406_row79_col6" class="data row79 col6" >0.91</td>
+      <td id="T_19406_row79_col7" class="data row79 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row80_col0" class="data row80 col0" >17</td>
+      <td id="T_19406_row80_col1" class="data row80 col1" >¿Cuánto dura como máximo el scrum diario?</td>
+      <td id="T_19406_row80_col2" class="data row80 col2" >1</td>
+      <td id="T_19406_row80_col3" class="data row80 col3" >tabla</td>
+      <td id="T_19406_row80_col4" class="data row80 col4" >15 minutos.</td>
+      <td id="T_19406_row80_col5" class="data row80 col5" >El scrum diario tiene una duración máxima de 15 minutos para un sprint de un mes [05-metodologias-agiles.md].</td>
+      <td id="T_19406_row80_col6" class="data row80 col6" >0.86</td>
+      <td id="T_19406_row80_col7" class="data row80 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row81_col0" class="data row81 col0" >17</td>
+      <td id="T_19406_row81_col1" class="data row81 col1" >¿Cuánto dura como máximo el scrum diario?</td>
+      <td id="T_19406_row81_col2" class="data row81 col2" >2</td>
+      <td id="T_19406_row81_col3" class="data row81 col3" >tabla</td>
+      <td id="T_19406_row81_col4" class="data row81 col4" >15 minutos.</td>
+      <td id="T_19406_row81_col5" class="data row81 col5" >El scrum diario tiene una duración máxima de 15 minutos para un sprint de un mes [05-metodologias-agiles.md].</td>
+      <td id="T_19406_row81_col6" class="data row81 col6" >0.86</td>
+      <td id="T_19406_row81_col7" class="data row81 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row82_col0" class="data row82 col0" >17</td>
+      <td id="T_19406_row82_col1" class="data row82 col1" >¿Cuánto dura como máximo el scrum diario?</td>
+      <td id="T_19406_row82_col2" class="data row82 col2" >3</td>
+      <td id="T_19406_row82_col3" class="data row82 col3" >tabla</td>
+      <td id="T_19406_row82_col4" class="data row82 col4" >15 minutos.</td>
+      <td id="T_19406_row82_col5" class="data row82 col5" >El scrum diario tiene una duración máxima de 15 minutos para un sprint de un mes [05-metodologias-agiles.md].</td>
+      <td id="T_19406_row82_col6" class="data row82 col6" >0.86</td>
+      <td id="T_19406_row82_col7" class="data row82 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row83_col0" class="data row83 col0" >17</td>
+      <td id="T_19406_row83_col1" class="data row83 col1" >¿Cuánto dura como máximo el scrum diario?</td>
+      <td id="T_19406_row83_col2" class="data row83 col2" >4</td>
+      <td id="T_19406_row83_col3" class="data row83 col3" >tabla</td>
+      <td id="T_19406_row83_col4" class="data row83 col4" >15 minutos.</td>
+      <td id="T_19406_row83_col5" class="data row83 col5" >El scrum diario tiene una duración máxima de 15 minutos para un sprint de un mes [05-metodologias-agiles.md].</td>
+      <td id="T_19406_row83_col6" class="data row83 col6" >0.86</td>
+      <td id="T_19406_row83_col7" class="data row83 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row84_col0" class="data row84 col0" >17</td>
+      <td id="T_19406_row84_col1" class="data row84 col1" >¿Cuánto dura como máximo el scrum diario?</td>
+      <td id="T_19406_row84_col2" class="data row84 col2" >5</td>
+      <td id="T_19406_row84_col3" class="data row84 col3" >tabla</td>
+      <td id="T_19406_row84_col4" class="data row84 col4" >15 minutos.</td>
+      <td id="T_19406_row84_col5" class="data row84 col5" >El scrum diario tiene una duración máxima de 15 minutos para un sprint de un mes [05-metodologias-agiles.md].</td>
+      <td id="T_19406_row84_col6" class="data row84 col6" >0.86</td>
+      <td id="T_19406_row84_col7" class="data row84 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row85_col0" class="data row85 col0" >18</td>
+      <td id="T_19406_row85_col1" class="data row85 col1" >¿A partir de qué porcentaje de alargamiento hay que sustituir la cadena en transmisiones de doce velocidades?</td>
+      <td id="T_19406_row85_col2" class="data row85 col2" >1</td>
+      <td id="T_19406_row85_col3" class="data row85 col3" >tabla</td>
+      <td id="T_19406_row85_col4" class="data row85 col4" >A partir del 0,5 por ciento de alargamiento.</td>
+      <td id="T_19406_row85_col5" class="data row85 col5" >En transmisiones de doce velocidades, hay que sustituir la cadena a partir del 0,5 por ciento de alargamiento [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row85_col6" class="data row85 col6" >0.88</td>
+      <td id="T_19406_row85_col7" class="data row85 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row86_col0" class="data row86 col0" >18</td>
+      <td id="T_19406_row86_col1" class="data row86 col1" >¿A partir de qué porcentaje de alargamiento hay que sustituir la cadena en transmisiones de doce velocidades?</td>
+      <td id="T_19406_row86_col2" class="data row86 col2" >2</td>
+      <td id="T_19406_row86_col3" class="data row86 col3" >tabla</td>
+      <td id="T_19406_row86_col4" class="data row86 col4" >A partir del 0,5 por ciento de alargamiento.</td>
+      <td id="T_19406_row86_col5" class="data row86 col5" >En transmisiones de doce velocidades, hay que sustituir la cadena a partir del 0,5 por ciento de alargamiento [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row86_col6" class="data row86 col6" >0.88</td>
+      <td id="T_19406_row86_col7" class="data row86 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row87_col0" class="data row87 col0" >18</td>
+      <td id="T_19406_row87_col1" class="data row87 col1" >¿A partir de qué porcentaje de alargamiento hay que sustituir la cadena en transmisiones de doce velocidades?</td>
+      <td id="T_19406_row87_col2" class="data row87 col2" >3</td>
+      <td id="T_19406_row87_col3" class="data row87 col3" >tabla</td>
+      <td id="T_19406_row87_col4" class="data row87 col4" >A partir del 0,5 por ciento de alargamiento.</td>
+      <td id="T_19406_row87_col5" class="data row87 col5" >En transmisiones de doce velocidades, hay que sustituir la cadena a partir del 0,5 por ciento de alargamiento [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row87_col6" class="data row87 col6" >0.88</td>
+      <td id="T_19406_row87_col7" class="data row87 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row88_col0" class="data row88 col0" >18</td>
+      <td id="T_19406_row88_col1" class="data row88 col1" >¿A partir de qué porcentaje de alargamiento hay que sustituir la cadena en transmisiones de doce velocidades?</td>
+      <td id="T_19406_row88_col2" class="data row88 col2" >4</td>
+      <td id="T_19406_row88_col3" class="data row88 col3" >tabla</td>
+      <td id="T_19406_row88_col4" class="data row88 col4" >A partir del 0,5 por ciento de alargamiento.</td>
+      <td id="T_19406_row88_col5" class="data row88 col5" >En transmisiones de doce velocidades, hay que sustituir la cadena a partir del 0,5 por ciento de alargamiento [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row88_col6" class="data row88 col6" >0.88</td>
+      <td id="T_19406_row88_col7" class="data row88 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row89_col0" class="data row89 col0" >18</td>
+      <td id="T_19406_row89_col1" class="data row89 col1" >¿A partir de qué porcentaje de alargamiento hay que sustituir la cadena en transmisiones de doce velocidades?</td>
+      <td id="T_19406_row89_col2" class="data row89 col2" >5</td>
+      <td id="T_19406_row89_col3" class="data row89 col3" >tabla</td>
+      <td id="T_19406_row89_col4" class="data row89 col4" >A partir del 0,5 por ciento de alargamiento.</td>
+      <td id="T_19406_row89_col5" class="data row89 col5" >En transmisiones de doce velocidades, hay que sustituir la cadena a partir del 0,5 por ciento de alargamiento [08-mantenimiento-bicicleta.md].</td>
+      <td id="T_19406_row89_col6" class="data row89 col6" >0.88</td>
+      <td id="T_19406_row89_col7" class="data row89 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row90_col0" class="data row90 col0" >19</td>
+      <td id="T_19406_row90_col1" class="data row90 col1" >¿Cuánto tarda en alcanzar su punto álgido un refresco de masa madre 1:5:5?</td>
+      <td id="T_19406_row90_col2" class="data row90 col2" >1</td>
+      <td id="T_19406_row90_col3" class="data row90 col3" >tabla</td>
+      <td id="T_19406_row90_col4" class="data row90 col4" >Entre 10 y 12 horas a 24 °C.</td>
+      <td id="T_19406_row90_col5" class="data row90 col5" >Un refresco 1:5:5 tarda de 10 a 12 horas en alcanzar su punto álgido a 24 °C [07-masa-madre.md].</td>
+      <td id="T_19406_row90_col6" class="data row90 col6" >0.91</td>
+      <td id="T_19406_row90_col7" class="data row90 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row91_col0" class="data row91 col0" >19</td>
+      <td id="T_19406_row91_col1" class="data row91 col1" >¿Cuánto tarda en alcanzar su punto álgido un refresco de masa madre 1:5:5?</td>
+      <td id="T_19406_row91_col2" class="data row91 col2" >2</td>
+      <td id="T_19406_row91_col3" class="data row91 col3" >tabla</td>
+      <td id="T_19406_row91_col4" class="data row91 col4" >Entre 10 y 12 horas a 24 °C.</td>
+      <td id="T_19406_row91_col5" class="data row91 col5" >Un refresco 1:5:5 tarda entre 10 y 12 horas en alcanzar su punto álgido a 24 °C [07-masa-madre.md].</td>
+      <td id="T_19406_row91_col6" class="data row91 col6" >0.90</td>
+      <td id="T_19406_row91_col7" class="data row91 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row92_col0" class="data row92 col0" >19</td>
+      <td id="T_19406_row92_col1" class="data row92 col1" >¿Cuánto tarda en alcanzar su punto álgido un refresco de masa madre 1:5:5?</td>
+      <td id="T_19406_row92_col2" class="data row92 col2" >3</td>
+      <td id="T_19406_row92_col3" class="data row92 col3" >tabla</td>
+      <td id="T_19406_row92_col4" class="data row92 col4" >Entre 10 y 12 horas a 24 °C.</td>
+      <td id="T_19406_row92_col5" class="data row92 col5" >Un refresco 1:5:5 tarda entre 10 y 12 horas en alcanzar su punto álgido a 24 °C [07-masa-madre.md].</td>
+      <td id="T_19406_row92_col6" class="data row92 col6" >0.90</td>
+      <td id="T_19406_row92_col7" class="data row92 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row93_col0" class="data row93 col0" >19</td>
+      <td id="T_19406_row93_col1" class="data row93 col1" >¿Cuánto tarda en alcanzar su punto álgido un refresco de masa madre 1:5:5?</td>
+      <td id="T_19406_row93_col2" class="data row93 col2" >4</td>
+      <td id="T_19406_row93_col3" class="data row93 col3" >tabla</td>
+      <td id="T_19406_row93_col4" class="data row93 col4" >Entre 10 y 12 horas a 24 °C.</td>
+      <td id="T_19406_row93_col5" class="data row93 col5" >Un refresco 1:5:5 tarda de 10 a 12 horas en alcanzar su punto álgido a 24 °C [07-masa-madre.md].</td>
+      <td id="T_19406_row93_col6" class="data row93 col6" >0.91</td>
+      <td id="T_19406_row93_col7" class="data row93 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row94_col0" class="data row94 col0" >19</td>
+      <td id="T_19406_row94_col1" class="data row94 col1" >¿Cuánto tarda en alcanzar su punto álgido un refresco de masa madre 1:5:5?</td>
+      <td id="T_19406_row94_col2" class="data row94 col2" >5</td>
+      <td id="T_19406_row94_col3" class="data row94 col3" >tabla</td>
+      <td id="T_19406_row94_col4" class="data row94 col4" >Entre 10 y 12 horas a 24 °C.</td>
+      <td id="T_19406_row94_col5" class="data row94 col5" >Un refresco 1:5:5 tarda entre 10 y 12 horas en alcanzar su punto álgido a 24 °C [07-masa-madre.md].</td>
+      <td id="T_19406_row94_col6" class="data row94 col6" >0.90</td>
+      <td id="T_19406_row94_col7" class="data row94 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row95_col0" class="data row95 col0" >20</td>
+      <td id="T_19406_row95_col1" class="data row95 col1" >¿Qué motor de base de datos utiliza el lenguaje de consulta Cypher?</td>
+      <td id="T_19406_row95_col2" class="data row95 col2" >1</td>
+      <td id="T_19406_row95_col3" class="data row95 col3" >discriminacion</td>
+      <td id="T_19406_row95_col4" class="data row95 col4" >Neo4j, una base de datos de grafos.</td>
+      <td id="T_19406_row95_col5" class="data row95 col5" >El motor de base de datos que utiliza el lenguaje de consulta Cypher es Neo4j [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row95_col6" class="data row95 col6" >0.90</td>
+      <td id="T_19406_row95_col7" class="data row95 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row96_col0" class="data row96 col0" >20</td>
+      <td id="T_19406_row96_col1" class="data row96 col1" >¿Qué motor de base de datos utiliza el lenguaje de consulta Cypher?</td>
+      <td id="T_19406_row96_col2" class="data row96 col2" >2</td>
+      <td id="T_19406_row96_col3" class="data row96 col3" >discriminacion</td>
+      <td id="T_19406_row96_col4" class="data row96 col4" >Neo4j, una base de datos de grafos.</td>
+      <td id="T_19406_row96_col5" class="data row96 col5" >El motor de base de datos que utiliza el lenguaje de consulta Cypher es Neo4j [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row96_col6" class="data row96 col6" >0.90</td>
+      <td id="T_19406_row96_col7" class="data row96 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row97_col0" class="data row97 col0" >20</td>
+      <td id="T_19406_row97_col1" class="data row97 col1" >¿Qué motor de base de datos utiliza el lenguaje de consulta Cypher?</td>
+      <td id="T_19406_row97_col2" class="data row97 col2" >3</td>
+      <td id="T_19406_row97_col3" class="data row97 col3" >discriminacion</td>
+      <td id="T_19406_row97_col4" class="data row97 col4" >Neo4j, una base de datos de grafos.</td>
+      <td id="T_19406_row97_col5" class="data row97 col5" >El motor de base de datos que utiliza el lenguaje de consulta Cypher es Neo4j [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row97_col6" class="data row97 col6" >0.90</td>
+      <td id="T_19406_row97_col7" class="data row97 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row98_col0" class="data row98 col0" >20</td>
+      <td id="T_19406_row98_col1" class="data row98 col1" >¿Qué motor de base de datos utiliza el lenguaje de consulta Cypher?</td>
+      <td id="T_19406_row98_col2" class="data row98 col2" >4</td>
+      <td id="T_19406_row98_col3" class="data row98 col3" >discriminacion</td>
+      <td id="T_19406_row98_col4" class="data row98 col4" >Neo4j, una base de datos de grafos.</td>
+      <td id="T_19406_row98_col5" class="data row98 col5" >El motor de base de datos que utiliza el lenguaje de consulta Cypher es Neo4j [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row98_col6" class="data row98 col6" >0.90</td>
+      <td id="T_19406_row98_col7" class="data row98 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row99_col0" class="data row99 col0" >20</td>
+      <td id="T_19406_row99_col1" class="data row99 col1" >¿Qué motor de base de datos utiliza el lenguaje de consulta Cypher?</td>
+      <td id="T_19406_row99_col2" class="data row99 col2" >5</td>
+      <td id="T_19406_row99_col3" class="data row99 col3" >discriminacion</td>
+      <td id="T_19406_row99_col4" class="data row99 col4" >Neo4j, una base de datos de grafos.</td>
+      <td id="T_19406_row99_col5" class="data row99 col5" >Neo4j es el motor que utiliza el lenguaje de consulta Cypher [02-bases-datos-nosql.md].</td>
+      <td id="T_19406_row99_col6" class="data row99 col6" >0.90</td>
+      <td id="T_19406_row99_col7" class="data row99 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row100_col0" class="data row100 col0" >21</td>
+      <td id="T_19406_row100_col1" class="data row100 col1" >¿Qué flujos de OAuth 2.0 se consideran obsoletos?</td>
+      <td id="T_19406_row100_col2" class="data row100 col2" >1</td>
+      <td id="T_19406_row100_col3" class="data row100 col3" >discriminacion</td>
+      <td id="T_19406_row100_col4" class="data row100 col4" >El flujo implícito y el de contraseña del propietario del recurso.</td>
+      <td id="T_19406_row100_col5" class="data row100 col5" >Basándonos en el documento proporcionado, los flujos de OAuth 2.0 que se consideran obsoletos (y que no deben usarse) son [04-oauth2-autenticacion.md]:
+
+* El flujo **Implícito** [04-oauth2-autenticacion.md].
+* El flujo de **Contraseña del propietario** [04-oauth2-autenticacion.md].</td>
+      <td id="T_19406_row100_col6" class="data row100 col6" >0.87</td>
+      <td id="T_19406_row100_col7" class="data row100 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row101_col0" class="data row101 col0" >21</td>
+      <td id="T_19406_row101_col1" class="data row101 col1" >¿Qué flujos de OAuth 2.0 se consideran obsoletos?</td>
+      <td id="T_19406_row101_col2" class="data row101 col2" >2</td>
+      <td id="T_19406_row101_col3" class="data row101 col3" >discriminacion</td>
+      <td id="T_19406_row101_col4" class="data row101 col4" >El flujo implícito y el de contraseña del propietario del recurso.</td>
+      <td id="T_19406_row101_col5" class="data row101 col5" >Los flujos que se consideran obsoletos son:
+
+* Implícito [04-oauth2-autenticacion.md]
+* Contraseña del propietario [04-oauth2-autenticacion.md]</td>
+      <td id="T_19406_row101_col6" class="data row101 col6" >0.88</td>
+      <td id="T_19406_row101_col7" class="data row101 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row102_col0" class="data row102 col0" >21</td>
+      <td id="T_19406_row102_col1" class="data row102 col1" >¿Qué flujos de OAuth 2.0 se consideran obsoletos?</td>
+      <td id="T_19406_row102_col2" class="data row102 col2" >3</td>
+      <td id="T_19406_row102_col3" class="data row102 col3" >discriminacion</td>
+      <td id="T_19406_row102_col4" class="data row102 col4" >El flujo implícito y el de contraseña del propietario del recurso.</td>
+      <td id="T_19406_row102_col5" class="data row102 col5" >Basado en el documento proporcionado, los flujos de OAuth 2.0 que se consideran obsoletos (y que no deben usarse) son:
+
+* **Implícito** [04-oauth2-autenticacion.md]
+* **Contraseña del propietario** [04-oauth2-autenticacion.md]</td>
+      <td id="T_19406_row102_col6" class="data row102 col6" >0.86</td>
+      <td id="T_19406_row102_col7" class="data row102 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row103_col0" class="data row103 col0" >21</td>
+      <td id="T_19406_row103_col1" class="data row103 col1" >¿Qué flujos de OAuth 2.0 se consideran obsoletos?</td>
+      <td id="T_19406_row103_col2" class="data row103 col2" >4</td>
+      <td id="T_19406_row103_col3" class="data row103 col3" >discriminacion</td>
+      <td id="T_19406_row103_col4" class="data row103 col4" >El flujo implícito y el de contraseña del propietario del recurso.</td>
+      <td id="T_19406_row103_col5" class="data row103 col5" >Los flujos de OAuth 2.0 que se consideran obsoletos son [04-oauth2-autenticacion.md]:
+
+* El flujo **Implícito**.
+* El flujo de **Contraseña del propietario**.</td>
+      <td id="T_19406_row103_col6" class="data row103 col6" >0.89</td>
+      <td id="T_19406_row103_col7" class="data row103 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row104_col0" class="data row104 col0" >21</td>
+      <td id="T_19406_row104_col1" class="data row104 col1" >¿Qué flujos de OAuth 2.0 se consideran obsoletos?</td>
+      <td id="T_19406_row104_col2" class="data row104 col2" >5</td>
+      <td id="T_19406_row104_col3" class="data row104 col3" >discriminacion</td>
+      <td id="T_19406_row104_col4" class="data row104 col4" >El flujo implícito y el de contraseña del propietario del recurso.</td>
+      <td id="T_19406_row104_col5" class="data row104 col5" >Basándose en el documento proporcionado, los flujos de OAuth 2.0 que se consideran obsoletos son:
+
+* Implícito [04-oauth2-autenticacion.md]
+* Contraseña del propietario [04-oauth2-autenticacion.md]</td>
+      <td id="T_19406_row104_col6" class="data row104 col6" >0.88</td>
+      <td id="T_19406_row104_col7" class="data row104 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row105_col0" class="data row105 col0" >22</td>
+      <td id="T_19406_row105_col1" class="data row105 col1" >¿Qué relación hay entre la temperatura y la duración de la fermentación en bloque?</td>
+      <td id="T_19406_row105_col2" class="data row105 col2" >1</td>
+      <td id="T_19406_row105_col3" class="data row105 col3" >discriminacion</td>
+      <td id="T_19406_row105_col4" class="data row105 col4" >Es crítica: a 24 °C la fermentación tarda 4-5 horas y a 28 °C unas 3; bajar dos grados puede alargarla más de una hora.</td>
+      <td id="T_19406_row105_col5" class="data row105 col5" >La duración de la fermentación en bloque depende críticamente de la temperatura: a 24 grados centígrados puede requerir de cuatro a cinco horas, mientras que a 28 grados se acorta a unas tres horas. Además, un descenso de dos grados puede alargar la fermentación en más de una hora [07-masa-madre.md].</td>
+      <td id="T_19406_row105_col6" class="data row105 col6" >0.96</td>
+      <td id="T_19406_row105_col7" class="data row105 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row106_col0" class="data row106 col0" >22</td>
+      <td id="T_19406_row106_col1" class="data row106 col1" >¿Qué relación hay entre la temperatura y la duración de la fermentación en bloque?</td>
+      <td id="T_19406_row106_col2" class="data row106 col2" >2</td>
+      <td id="T_19406_row106_col3" class="data row106 col3" >discriminacion</td>
+      <td id="T_19406_row106_col4" class="data row106 col4" >Es crítica: a 24 °C la fermentación tarda 4-5 horas y a 28 °C unas 3; bajar dos grados puede alargarla más de una hora.</td>
+      <td id="T_19406_row106_col5" class="data row106 col5" >La duración de la fermentación en bloque depende críticamente de la temperatura: a 24 grados centígrados puede requerir de cuatro a cinco horas, mientras que a 28 grados se acorta a unas tres. Además, un descenso de dos grados puede alargar la fermentación en más de una hora [07-masa-madre.md].</td>
+      <td id="T_19406_row106_col6" class="data row106 col6" >0.96</td>
+      <td id="T_19406_row106_col7" class="data row106 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row107_col0" class="data row107 col0" >22</td>
+      <td id="T_19406_row107_col1" class="data row107 col1" >¿Qué relación hay entre la temperatura y la duración de la fermentación en bloque?</td>
+      <td id="T_19406_row107_col2" class="data row107 col2" >3</td>
+      <td id="T_19406_row107_col3" class="data row107 col3" >discriminacion</td>
+      <td id="T_19406_row107_col4" class="data row107 col4" >Es crítica: a 24 °C la fermentación tarda 4-5 horas y a 28 °C unas 3; bajar dos grados puede alargarla más de una hora.</td>
+      <td id="T_19406_row107_col5" class="data row107 col5" >La duración de la fermentación en bloque depende críticamente de la temperatura: a 24 grados centígrados puede requerir de cuatro a cinco horas, mientras que a 28 grados se acorta a unas tres horas. Además, un descenso de dos grados puede alargar la fermentación en más de una hora [07-masa-madre.md].</td>
+      <td id="T_19406_row107_col6" class="data row107 col6" >0.96</td>
+      <td id="T_19406_row107_col7" class="data row107 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row108_col0" class="data row108 col0" >22</td>
+      <td id="T_19406_row108_col1" class="data row108 col1" >¿Qué relación hay entre la temperatura y la duración de la fermentación en bloque?</td>
+      <td id="T_19406_row108_col2" class="data row108 col2" >4</td>
+      <td id="T_19406_row108_col3" class="data row108 col3" >discriminacion</td>
+      <td id="T_19406_row108_col4" class="data row108 col4" >Es crítica: a 24 °C la fermentación tarda 4-5 horas y a 28 °C unas 3; bajar dos grados puede alargarla más de una hora.</td>
+      <td id="T_19406_row108_col5" class="data row108 col5" >La duración de la fermentación en bloque depende críticamente de la temperatura: a 24 grados centígrados puede requerir de cuatro a cinco horas, mientras que a 28 grados se acorta a unas tres. Además, un descenso de dos grados puede alargar la fermentación en más de una hora [07-masa-madre.md].</td>
+      <td id="T_19406_row108_col6" class="data row108 col6" >0.96</td>
+      <td id="T_19406_row108_col7" class="data row108 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row109_col0" class="data row109 col0" >22</td>
+      <td id="T_19406_row109_col1" class="data row109 col1" >¿Qué relación hay entre la temperatura y la duración de la fermentación en bloque?</td>
+      <td id="T_19406_row109_col2" class="data row109 col2" >5</td>
+      <td id="T_19406_row109_col3" class="data row109 col3" >discriminacion</td>
+      <td id="T_19406_row109_col4" class="data row109 col4" >Es crítica: a 24 °C la fermentación tarda 4-5 horas y a 28 °C unas 3; bajar dos grados puede alargarla más de una hora.</td>
+      <td id="T_19406_row109_col5" class="data row109 col5" >La duración de la fermentación en bloque depende críticamente de la temperatura: a 24 grados centígrados puede requerir de cuatro a cinco horas, mientras que a 28 grados se acorta a unas tres. Además, un descenso de dos grados puede alargar la fermentación en más de una hora [07-masa-madre.md].</td>
+      <td id="T_19406_row109_col6" class="data row109 col6" >0.96</td>
+      <td id="T_19406_row109_col7" class="data row109 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row110_col0" class="data row110 col0" >23</td>
+      <td id="T_19406_row110_col1" class="data row110 col1" >¿Cuál es la capital de Australia?</td>
+      <td id="T_19406_row110_col2" class="data row110 col2" >1</td>
+      <td id="T_19406_row110_col3" class="data row110 col3" >ausente</td>
+      <td id="T_19406_row110_col4" class="data row110 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row110_col5" class="data row110 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row110_col6" class="data row110 col6" >nan</td>
+      <td id="T_19406_row110_col7" class="data row110 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row111_col0" class="data row111 col0" >23</td>
+      <td id="T_19406_row111_col1" class="data row111 col1" >¿Cuál es la capital de Australia?</td>
+      <td id="T_19406_row111_col2" class="data row111 col2" >2</td>
+      <td id="T_19406_row111_col3" class="data row111 col3" >ausente</td>
+      <td id="T_19406_row111_col4" class="data row111 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row111_col5" class="data row111 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row111_col6" class="data row111 col6" >nan</td>
+      <td id="T_19406_row111_col7" class="data row111 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row112_col0" class="data row112 col0" >23</td>
+      <td id="T_19406_row112_col1" class="data row112 col1" >¿Cuál es la capital de Australia?</td>
+      <td id="T_19406_row112_col2" class="data row112 col2" >3</td>
+      <td id="T_19406_row112_col3" class="data row112 col3" >ausente</td>
+      <td id="T_19406_row112_col4" class="data row112 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row112_col5" class="data row112 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row112_col6" class="data row112 col6" >nan</td>
+      <td id="T_19406_row112_col7" class="data row112 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row113_col0" class="data row113 col0" >23</td>
+      <td id="T_19406_row113_col1" class="data row113 col1" >¿Cuál es la capital de Australia?</td>
+      <td id="T_19406_row113_col2" class="data row113 col2" >4</td>
+      <td id="T_19406_row113_col3" class="data row113 col3" >ausente</td>
+      <td id="T_19406_row113_col4" class="data row113 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row113_col5" class="data row113 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row113_col6" class="data row113 col6" >nan</td>
+      <td id="T_19406_row113_col7" class="data row113 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row114_col0" class="data row114 col0" >23</td>
+      <td id="T_19406_row114_col1" class="data row114 col1" >¿Cuál es la capital de Australia?</td>
+      <td id="T_19406_row114_col2" class="data row114 col2" >5</td>
+      <td id="T_19406_row114_col3" class="data row114 col3" >ausente</td>
+      <td id="T_19406_row114_col4" class="data row114 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row114_col5" class="data row114 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row114_col6" class="data row114 col6" >nan</td>
+      <td id="T_19406_row114_col7" class="data row114 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row115_col0" class="data row115 col0" >24</td>
+      <td id="T_19406_row115_col1" class="data row115 col1" >¿Cuánto cuesta la licencia de Qdrant Cloud?</td>
+      <td id="T_19406_row115_col2" class="data row115 col2" >1</td>
+      <td id="T_19406_row115_col3" class="data row115 col3" >ausente</td>
+      <td id="T_19406_row115_col4" class="data row115 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row115_col5" class="data row115 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row115_col6" class="data row115 col6" >nan</td>
+      <td id="T_19406_row115_col7" class="data row115 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row116_col0" class="data row116 col0" >24</td>
+      <td id="T_19406_row116_col1" class="data row116 col1" >¿Cuánto cuesta la licencia de Qdrant Cloud?</td>
+      <td id="T_19406_row116_col2" class="data row116 col2" >2</td>
+      <td id="T_19406_row116_col3" class="data row116 col3" >ausente</td>
+      <td id="T_19406_row116_col4" class="data row116 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row116_col5" class="data row116 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row116_col6" class="data row116 col6" >nan</td>
+      <td id="T_19406_row116_col7" class="data row116 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row117_col0" class="data row117 col0" >24</td>
+      <td id="T_19406_row117_col1" class="data row117 col1" >¿Cuánto cuesta la licencia de Qdrant Cloud?</td>
+      <td id="T_19406_row117_col2" class="data row117 col2" >3</td>
+      <td id="T_19406_row117_col3" class="data row117 col3" >ausente</td>
+      <td id="T_19406_row117_col4" class="data row117 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row117_col5" class="data row117 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row117_col6" class="data row117 col6" >nan</td>
+      <td id="T_19406_row117_col7" class="data row117 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row118_col0" class="data row118 col0" >24</td>
+      <td id="T_19406_row118_col1" class="data row118 col1" >¿Cuánto cuesta la licencia de Qdrant Cloud?</td>
+      <td id="T_19406_row118_col2" class="data row118 col2" >4</td>
+      <td id="T_19406_row118_col3" class="data row118 col3" >ausente</td>
+      <td id="T_19406_row118_col4" class="data row118 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row118_col5" class="data row118 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row118_col6" class="data row118 col6" >nan</td>
+      <td id="T_19406_row118_col7" class="data row118 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row119_col0" class="data row119 col0" >24</td>
+      <td id="T_19406_row119_col1" class="data row119 col1" >¿Cuánto cuesta la licencia de Qdrant Cloud?</td>
+      <td id="T_19406_row119_col2" class="data row119 col2" >5</td>
+      <td id="T_19406_row119_col3" class="data row119 col3" >ausente</td>
+      <td id="T_19406_row119_col4" class="data row119 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row119_col5" class="data row119 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row119_col6" class="data row119 col6" >nan</td>
+      <td id="T_19406_row119_col7" class="data row119 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row120_col0" class="data row120 col0" >25</td>
+      <td id="T_19406_row120_col1" class="data row120 col1" >¿Qué versión de Python conviene usar para un proyecto de RAG?</td>
+      <td id="T_19406_row120_col2" class="data row120 col2" >1</td>
+      <td id="T_19406_row120_col3" class="data row120 col3" >ausente</td>
+      <td id="T_19406_row120_col4" class="data row120 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row120_col5" class="data row120 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row120_col6" class="data row120 col6" >nan</td>
+      <td id="T_19406_row120_col7" class="data row120 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row121_col0" class="data row121 col0" >25</td>
+      <td id="T_19406_row121_col1" class="data row121 col1" >¿Qué versión de Python conviene usar para un proyecto de RAG?</td>
+      <td id="T_19406_row121_col2" class="data row121 col2" >2</td>
+      <td id="T_19406_row121_col3" class="data row121 col3" >ausente</td>
+      <td id="T_19406_row121_col4" class="data row121 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row121_col5" class="data row121 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row121_col6" class="data row121 col6" >nan</td>
+      <td id="T_19406_row121_col7" class="data row121 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row122_col0" class="data row122 col0" >25</td>
+      <td id="T_19406_row122_col1" class="data row122 col1" >¿Qué versión de Python conviene usar para un proyecto de RAG?</td>
+      <td id="T_19406_row122_col2" class="data row122 col2" >3</td>
+      <td id="T_19406_row122_col3" class="data row122 col3" >ausente</td>
+      <td id="T_19406_row122_col4" class="data row122 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row122_col5" class="data row122 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row122_col6" class="data row122 col6" >nan</td>
+      <td id="T_19406_row122_col7" class="data row122 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row123_col0" class="data row123 col0" >25</td>
+      <td id="T_19406_row123_col1" class="data row123 col1" >¿Qué versión de Python conviene usar para un proyecto de RAG?</td>
+      <td id="T_19406_row123_col2" class="data row123 col2" >4</td>
+      <td id="T_19406_row123_col3" class="data row123 col3" >ausente</td>
+      <td id="T_19406_row123_col4" class="data row123 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row123_col5" class="data row123 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row123_col6" class="data row123 col6" >nan</td>
+      <td id="T_19406_row123_col7" class="data row123 col7" >True</td>
+    </tr>
+    <tr>
+      <td id="T_19406_row124_col0" class="data row124 col0" >25</td>
+      <td id="T_19406_row124_col1" class="data row124 col1" >¿Qué versión de Python conviene usar para un proyecto de RAG?</td>
+      <td id="T_19406_row124_col2" class="data row124 col2" >5</td>
+      <td id="T_19406_row124_col3" class="data row124 col3" >ausente</td>
+      <td id="T_19406_row124_col4" class="data row124 col4" >El sistema debe indicar que la información no está en los documentos disponibles.</td>
+      <td id="T_19406_row124_col5" class="data row124 col5" >No encuentro esa información en el documento.</td>
+      <td id="T_19406_row124_col6" class="data row124 col6" >nan</td>
+      <td id="T_19406_row124_col7" class="data row124 col7" >True</td>
+    </tr>
+  </tbody>
+</table>
+
+</body></html>
