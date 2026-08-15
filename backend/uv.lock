@@ -51,6 +51,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pydantic-settings" },
     { name = "qdrant-client" },
+    { name = "transformers" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -74,6 +75,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.5.1" },
     { name = "pydantic-settings", specifier = ">=2.14.2" },
     { name = "qdrant-client", specifier = ">=1.18.0" },
+    { name = "transformers", specifier = ">=5.8.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.51.0" },
 ]
 
