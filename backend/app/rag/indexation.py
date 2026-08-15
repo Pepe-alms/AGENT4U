@@ -24,13 +24,12 @@ def embed_texts(chunks: list, embedder: str, qdrant, nombre: str):
     embeder_generator = embedder.embed(chunks)
     vectores = np.array(list(embeder_generator))
 
-    if qdrant.collection_exists(collection_name="Test_1"):
-        qdrant.delete_collection(collection_name="Test_1")
-
-    qdrant.create_collection(
+    if qdrant.collection_exists(collection_name="Test_1") == False:
+        qdrant.create_collection(
         collection_name="Test_1", 
-        vectors_config=VectorParams(size= 1024, distance=Distance.COSINE)
-    )
+        vectors_config=VectorParams(size= 1024, distance=Distance.COSINE))
+
+
 
     for i, (chunk, vector) in enumerate(zip(chunks, vectores)):
         punto =PointStruct(

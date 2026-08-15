@@ -31,6 +31,7 @@ line-length = 200
 dev = [
     "httpx>=0.28.1",
     "mypy>=2.3.0",
+    "pandas>=3.0.5",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.15.22",
