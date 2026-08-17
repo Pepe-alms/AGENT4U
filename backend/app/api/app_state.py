@@ -2,7 +2,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 ## Embeder y QdrantClient
+
+# Embeder Denso
 from fastembed import TextEmbedding
+# Embeder Dispersa
+from fastembed import SparseTextEmbedding
+
 from qdrant_client import QdrantClient
 from app.core.config import get_settings
 
@@ -16,10 +21,13 @@ from docling.chunking import HybridChunker
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from transformers import AutoTokenizer
 
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    app.state.embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
+    app.state.dense_embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
+    app.state.sparse_embedder = SparseTextEmbedding(model_name= "Qdrant/bm25", language= "spanish")
     app.state.qdrant = QdrantClient(url=settings.qdrant_url)
 
     opciones = PdfPipelineOptions(

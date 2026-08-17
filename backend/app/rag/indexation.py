@@ -1,5 +1,5 @@
 import numpy as np
-from qdrant_client.models import PointStruct, VectorParams, Distance
+from qdrant_client.models import PointStruct, VectorParams, Distance, SparseVectorParams, models
 import uuid
 import datetime
 
@@ -45,21 +45,34 @@ def normalize_text(ruta_archivo: str, converter, chunker):
 
     return textos_para_embeber, registros
 
-def embed_texts(chunks: list, embedder: str, qdrant, registros: list):
-    vectores = np.array(list(embedder.embed(chunks)))
+def embed_texts(chunks: list, dense_embedder: str, sparse_embeder: str, qdrant, registros: list):
+    vectores_densos = np.array(list(dense_embedder.embed(chunks)))
+    vectores_dispersos = np.array(list(sparse_embeder.embed(chunks)))
+
 
     if not qdrant.collection_exists(collection_name="Test_1"):
         qdrant.create_collection(
             collection_name="Test_1", 
-            vectors_config=VectorParams(size= 1024, distance=Distance.COSINE))
+            vectors_config={
+                "dense_vector": VectorParams(size= 1024, distance=Distance.COSINE)
+                },
+            sparse_vector_config={
+                "sparse_vector": SparseVectorParams(modifier= models.Modifier.IDF)
+                }
+            )
 
     puntos = [
         PointStruct(
             id=id_desde_texto(registro["texto"]),
-            vector=vector.tolist(),
-            payload=registro
+            vector={
+                "dense_vector": denso.list(),
+                "sparse_vector": disperso.list(
+                    indices= disperso.indices.tolist(),
+                    values= disperso.values.tolist()),
+            },
+            payload=registro,
         )
-        for i, (registro, vector) in enumerate(zip(registros, vectores))
+        for registro, denso, disperso in zip(registros, vectores_densos, vectores_dispersos)
     ]
 
     qdrant.upsert(
