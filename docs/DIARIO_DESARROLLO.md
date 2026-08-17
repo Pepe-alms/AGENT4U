@@ -557,3 +557,16 @@ Un aviso importante de versión, porque en internet verás las dos formas y te c
 El flujo mínimo de tu proyecto usa solo cuatro: `create_collection` una vez, `upsert` para meter chunks, `query_points` para buscar, y `get_collection`/`count` para comprobar que fue bien. El resto los irás necesitando conforme crezca.
 
 Un detalle que te ahorrará un error: casi todos estos métodos reciben clases del módulo `models` (o `qdrant_client.models`) — `VectorParams`, `Distance`, `PointStruct`, `Filter`. Tendrás que importarlas de ahí; no son strings sueltos.
+
+
+**Nomenclaturas de commits**
+
+Para poder hacer un seguimiento de los cambios que se aplican en el poryecto, se establecen las siguientes nomencalturas como las adecuadas
+
+- ADD: Añade una nueva característica al sistema.
+- FIX: Corrige un error o fallo (bug).
+- DOCS: Cambios exclusivos en la documentación.
+- STYLE: Cambios de estilo que no afectan el significado del código (espacios, comas, etc.).
+- REFACTOR: Refactorización del código sin agregar funciones ni corregir errores.
+- TEST: Adición o corrección de pruebas.
+- CHORE: Tareas de mantenimiento, actualización de dependencias
