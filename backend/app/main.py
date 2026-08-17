@@ -60,11 +60,12 @@ app = FastAPI(lifespan=lifespan)
 @app.post("/preguntar")
 def preguntar(body: Consulta, request: Request):
 
-    embedder = request.app.state.embedder
+    dense_embedder = request.app.state.dense_embedder
+    sparse_embedder = request.app.state.sparse_embedder
     qdrant = request.app.state.qdrant
 
 
-    chunks = buscar_chunks(query=body.query, embedder=embedder, qdrant= qdrant)
+    chunks = buscar_chunks(query=body.query, dense_embedder=dense_embedder, qdrant= qdrant)
     response = generate_response(query=body.query, chunks=chunks, model=get_settings().llm_model)
     return {"respuesta": response}
 

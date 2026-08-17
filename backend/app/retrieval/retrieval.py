@@ -53,15 +53,30 @@
 # print(respuesta.choices[0].message.content)
 
 import numpy as np
+from qdrant_client import models
 
-def buscar_chunks (query: str, embedder, qdrant, limite: int = 5) -> list[str]:
-    query_vector = np.array(list(
-    embedder.embed([f"query: {query}"])))[0]
+def buscar_chunks (query: str, dense_embedder, sparse_embedder, qdrant, limite: int = 5) -> list[str]:
+    query_vector_dense = list(dense_embedder.embed([f"query: {query}"]))
+    query_vector_sparse = list(sparse_embedder.embed([f"query: {query}"]))
 
     query_result = qdrant.query_points(
         collection_name="Test_1",
-        query=query_vector,
-        limit=limite,
+        prefetch= [
+            models.Prefetch(
+                query=models.SparseVector(
+                    indices=query_vector_sparse.indices.tolist(),
+                    values=query_vector_sparse.values.tolist()
+                ),
+                using="sparse_vector",
+                limit = 5,
+            ),
+            models.Prefetch(
+                query=query_vector_dense.tolist(),
+                using="dense_vector",
+                limit = 5,
+            ),        
+        ],
+        query=models.RrfQuery(rrf=models.Rrf()),
         with_payload=True,
     ).points
 
