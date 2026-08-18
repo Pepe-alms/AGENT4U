@@ -65,7 +65,7 @@ def preguntar(body: Consulta, request: Request):
     qdrant = request.app.state.qdrant
 
 
-    chunks = buscar_chunks(query=body.query, dense_embedder=dense_embedder, qdrant= qdrant)
+    chunks = buscar_chunks(query=body.query, dense_embedder=dense_embedder, sparse_embedder=sparse_embedder, qdrant=qdrant)
     response = generate_response(query=body.query, chunks=chunks, model=get_settings().llm_model)
     return {"respuesta": response}
 

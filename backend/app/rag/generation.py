@@ -5,7 +5,7 @@ def build_context(chunks: list[dict]) -> str:
     for i, chunk in enumerate(chunks):
         optimal_vectors.append(f"[{chunk['nombre']}]: {chunk['chunk']}")
 
-    context = "\n\n".join(optimal_vectors)
+    context = "\n \n".join(optimal_vectors)
     return context
 
 def generate_response(query: str, chunks: list[dict], model: str) -> str:
