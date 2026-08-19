@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from fastembed import TextEmbedding
 # Embeder Dispersa
 from fastembed import SparseTextEmbedding
+# CrossEncoder
+from fastembed.rerank.cross_encoder import TextCrossEncoder
 
 from qdrant_client import QdrantClient
 from app.core.config import get_settings
@@ -26,8 +28,11 @@ from transformers import AutoTokenizer
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+
     app.state.dense_embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
     app.state.sparse_embedder = SparseTextEmbedding(model_name= "Qdrant/bm25", language= "spanish")
+    app.state.cross_encoder = TextCrossEncoder(model_name = "jinaai/jina-reranker-v2-base-multilingual")
+
     app.state.qdrant = QdrantClient(url=settings.qdrant_url)
 
     opciones = PdfPipelineOptions(

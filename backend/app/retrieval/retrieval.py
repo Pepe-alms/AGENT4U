@@ -52,12 +52,29 @@
 
 # print(respuesta.choices[0].message.content)
 
-import numpy as np
 from qdrant_client import models
 
-def buscar_chunks (query: str, dense_embedder, sparse_embedder, qdrant, limite: int = 5) -> list[str]:
-    query_vector_dense = list(dense_embedder.embed([f"query: {query}"]))
-    query_vector_sparse = list(sparse_embedder.embed([f"query: {query}"]))
+def cross_encode(query: str, documents: list[str], cross_encoder, files: list[str], pages: list[list[str]]) -> list[float]:
+    scores = list(cross_encoder.rerank(query=query, documents=documents))
+    ranked = sorted(zip(documents, scores, files, pages), key=lambda x: x[1], reverse=True)
+    results_cross = []
+
+    for doc, score, file, page in ranked[:5]:
+        results_cross.append(
+            {
+            "chunk": doc,
+            "nombre": file,
+            "paginas": page,
+            "score": float(score),
+            }
+        )
+
+    return results_cross
+
+
+def buscar_chunks (query: str, dense_embedder, sparse_embedder, qdrant, cross_encoder) -> list[str]:
+    query_vector_dense = next(iter(dense_embedder.embed([f"query: {query}"])))
+    query_vector_sparse = next(iter(sparse_embedder.embed([query])))
 
     query_result = qdrant.query_points(
         collection_name="Test_1",
@@ -68,25 +85,22 @@ def buscar_chunks (query: str, dense_embedder, sparse_embedder, qdrant, limite: 
                     values=query_vector_sparse.values.tolist()
                 ),
                 using="sparse_vector",
-                limit = 5,
+                limit = 20,
             ),
             models.Prefetch(
                 query=query_vector_dense.tolist(),
                 using="dense_vector",
-                limit = 5,
+                limit = 20,
             ),        
         ],
         query=models.RrfQuery(rrf=models.Rrf()),
         with_payload=True,
     ).points
 
-    return [
-        {
-            "chunk": result.payload["texto"],
-            "nombre": result.payload["nombre"],
-            "headings": result.payload.get("headings", []),
-            "paginas": result.payload.get("paginas", []),
-            "score": result.score,
-        }
-        for result in query_result
-    ]
+    results_cross = cross_encode(query=query, 
+                                 documents=[result.payload["texto"] for result in query_result], 
+                                 files=[result.payload["nombre"] for result in query_result],
+                                 pages=[result.payload.get("paginas", []) for result in query_result],
+                                 cross_encoder=cross_encoder)
+
+    return results_cross

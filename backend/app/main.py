@@ -64,8 +64,9 @@ def preguntar(body: Consulta, request: Request):
     sparse_embedder = request.app.state.sparse_embedder
     qdrant = request.app.state.qdrant
 
+    cross_encoder = request.app.state.cross_encoder
 
-    chunks = buscar_chunks(query=body.query, dense_embedder=dense_embedder, qdrant= qdrant)
+    chunks = buscar_chunks(query=body.query, dense_embedder=dense_embedder, sparse_embedder=sparse_embedder, qdrant=qdrant, cross_encoder=cross_encoder)
     response = generate_response(query=body.query, chunks=chunks, model=get_settings().llm_model)
     return {"respuesta": response}
 
@@ -73,14 +74,15 @@ def preguntar(body: Consulta, request: Request):
 @app.post("/indexar")
 def indexar(body: Indexar, request: Request):
 
-    embedder = request.app.state.embedder
+    dense_embedder = request.app.state.dense_embedder
+    sparse_embedder = request.app.state.sparse_embedder
     qdrant = request.app.state.qdrant
     converter = request.app.state.converter
     chunker = request.app.state.chunker
 
 
     chunks, registros = normalize_text(ruta_archivo=body.ruta_archivo, converter=converter, chunker=chunker)
-    embed_texts(chunks=chunks, embedder=embedder, qdrant=qdrant, registros=registros)
+    embed_texts(chunks=chunks, dense_embedder=dense_embedder, sparse_embedder=sparse_embedder, qdrant=qdrant, registros=registros)
 
 
 
