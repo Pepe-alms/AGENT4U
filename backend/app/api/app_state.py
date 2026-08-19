@@ -35,10 +35,10 @@ async def lifespan(app: FastAPI):
 
     app.state.qdrant = QdrantClient(url=settings.qdrant_url)
 
-    opciones = PdfPipelineOptions(
+    options = PdfPipelineOptions(
     do_ocr=False,)
 
-    app.state.converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opciones)})
+    app.state.converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)})
 
     tokenizer = HuggingFaceTokenizer(
         tokenizer=AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large"),

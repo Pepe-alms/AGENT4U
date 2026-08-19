@@ -19,11 +19,11 @@ def generate_response(query: str, chunks: list[dict], model: str) -> str:
     - Si el contexto no contiene la respuesta, di exactamente: "No encuentro esa información en el documento." No inventes ni completes con lo que sepas.
     - Cita el documento del que sacas la informacion con [nombre del documento], con el formato [documento1], [documento2], etc."""
 
-    consulta = f"Contexto:{context} Consulta:{query}"
+    prompt = f"Contexto:{context} Consulta:{query}"
 
-    respuesta = litellm.completion( 
+    response = litellm.completion(
         model = model,
-        messages = [{"role": "user", "content": consulta},
+        messages = [{"role": "user", "content": prompt},
                     {"role": "system", "content": system_prompt}])
 
-    return respuesta.choices[0].message.content
+    return response.choices[0].message.content

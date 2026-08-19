@@ -3,56 +3,56 @@ from qdrant_client.models import PointStruct, VectorParams, Distance, SparseVect
 import uuid
 import datetime
 
-def id_desde_texto(texto: str) -> str:
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS, texto))
+def id_from_text(text: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, text))
 
-def normalize_text(ruta_archivo: str, converter, chunker):
-    convertir_texto = converter.convert(ruta_archivo)
-    chunks = chunker.chunk(dl_doc=convertir_texto.document)
+def normalize_text(file_path: str, converter, chunker):
+    converted_document = converter.convert(file_path)
+    chunks = chunker.chunk(dl_doc=converted_document.document)
 
-    textos_para_embeber = []
-    registros = []
-    RUIDO = {"page_header", "page_footer"}
+    texts_to_embed = []
+    records = []
+    NOISE_LABELS = {"page_header", "page_footer"}
 
     for chunk in chunks:
 
-        etiquetas = {item.label.value for item in chunk.meta.doc_items}
-        if etiquetas and etiquetas <= RUIDO:
+        labels = {item.label.value for item in chunk.meta.doc_items}
+        if labels and labels <= NOISE_LABELS:
             continue
 
-        texto = chunker.contextualize(chunk)
-        if len(texto) < 100:
+        text = chunker.contextualize(chunk)
+        if len(text) < 100:
             continue
 
         # Operamos sobre un chunk y obtenemos los doc_items
-        # Luego, para cada doc_item, obtenemos sus prov y extraemos el page_no 
+        # Luego, para cada doc_item, obtenemos sus prov y extraemos el page_no
 
-        paginas = sorted(set(
+        pages = sorted(set(
             prov.page_no
             for item in chunk.meta.doc_items
             for prov in item.prov
         ))
 
-        registros.append({
-            "texto": texto,
+        records.append({
+            "texto": text,
             "nombre": chunk.meta.origin.filename,
             "texto_crudo": chunk.text,
             "headings": chunk.meta.headings or [],
-            "paginas": list(paginas),
+            "paginas": list(pages),
             "fecha": datetime.datetime.now().isoformat()
         })
-        textos_para_embeber.append(f"passage: {texto}")
+        texts_to_embed.append(f"passage: {text}")
 
-    return textos_para_embeber, registros
+    return texts_to_embed, records
 
-def embed_texts(chunks: list, dense_embedder: str, sparse_embedder: str, qdrant, registros: list):
-    vectores_densos = np.array(list(dense_embedder.embed(chunks)))
-    vectores_dispersos = np.array(list(sparse_embedder.embed(chunks)))
+def embed_texts(chunks: list, dense_embedder: str, sparse_embedder: str, qdrant, records: list):
+    dense_vectors = np.array(list(dense_embedder.embed(chunks)))
+    sparse_vectors = np.array(list(sparse_embedder.embed(chunks)))
 
 
     if not qdrant.collection_exists(collection_name="Test_1"):
         qdrant.create_collection(
-            collection_name="Test_1", 
+            collection_name="Test_1",
             vectors_config={
                 "dense_vector": VectorParams(size= 1024, distance=Distance.COSINE)
                 },
@@ -61,21 +61,21 @@ def embed_texts(chunks: list, dense_embedder: str, sparse_embedder: str, qdrant,
                 }
             )
 
-    puntos = [
+    points = [
         PointStruct(
-            id=id_desde_texto(registro["texto"]),
+            id=id_from_text(record["texto"]),
             vector={
-                "dense_vector": denso.tolist(),
+                "dense_vector": dense_vector.tolist(),
                 "sparse_vector": models.SparseVector(
-                    indices= disperso.indices.tolist(),
-                    values= disperso.values.tolist()),
+                    indices= sparse_vector.indices.tolist(),
+                    values= sparse_vector.values.tolist()),
             },
-            payload=registro,
+            payload=record,
         )
-        for registro, denso, disperso in zip(registros, vectores_densos, vectores_dispersos)
+        for record, dense_vector, sparse_vector in zip(records, dense_vectors, sparse_vectors)
     ]
 
     qdrant.upsert(
         collection_name="Test_1",
-        points=puntos
+        points=points
     )

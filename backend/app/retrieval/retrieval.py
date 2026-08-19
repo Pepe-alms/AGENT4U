@@ -57,10 +57,10 @@ from qdrant_client import models
 def cross_encode(query: str, documents: list[str], cross_encoder, files: list[str], pages: list[list[str]]) -> list[float]:
     scores = list(cross_encoder.rerank(query=query, documents=documents))
     ranked = sorted(zip(documents, scores, files, pages), key=lambda x: x[1], reverse=True)
-    results_cross = []
+    ranked_results = []
 
     for doc, score, file, page in ranked[:5]:
-        results_cross.append(
+        ranked_results.append(
             {
             "chunk": doc,
             "nombre": file,
@@ -69,10 +69,10 @@ def cross_encode(query: str, documents: list[str], cross_encoder, files: list[st
             }
         )
 
-    return results_cross
+    return ranked_results
 
 
-def buscar_chunks (query: str, dense_embedder, sparse_embedder, qdrant, cross_encoder) -> list[str]:
+def search_chunks (query: str, dense_embedder, sparse_embedder, qdrant, cross_encoder) -> list[str]:
     query_vector_dense = next(iter(dense_embedder.embed([f"query: {query}"])))
     query_vector_sparse = next(iter(sparse_embedder.embed([query])))
 
@@ -97,10 +97,10 @@ def buscar_chunks (query: str, dense_embedder, sparse_embedder, qdrant, cross_en
         with_payload=True,
     ).points
 
-    results_cross = cross_encode(query=query, 
-                                 documents=[result.payload["texto"] for result in query_result], 
+    ranked_results = cross_encode(query=query,
+                                 documents=[result.payload["texto"] for result in query_result],
                                  files=[result.payload["nombre"] for result in query_result],
                                  pages=[result.payload.get("paginas", []) for result in query_result],
                                  cross_encoder=cross_encoder)
 
-    return results_cross
+    return ranked_results

@@ -14,53 +14,53 @@ from app.core.config import get_settings
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
-opciones = PdfPipelineOptions(
+options = PdfPipelineOptions(
     do_ocr=False,
 )
 
-converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opciones)})
-resultado = converter.convert("/Users/pepealms/Documents/Agent4U/backend/data/Big Data ESP 7.pdf")
-resultado.document.save_as_markdown("/Users/pepealms/Documents/Agent4U/backend/data/Big Data ESP 7.md")
+converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)})
+result = converter.convert("/Users/pepealms/Documents/Agent4U/backend/data/Big Data ESP 7.pdf")
+result.document.save_as_markdown("/Users/pepealms/Documents/Agent4U/backend/data/Big Data ESP 7.md")
 
-# EXTRACCION DE CHUNKS Y CONTEXTUALIZACION 
+# EXTRACCION DE CHUNKS Y CONTEXTUALIZACION
 
 chunker = HybridChunker()
-chunks = chunker.chunk(dl_doc=resultado.document)
+chunks = chunker.chunk(dl_doc=result.document)
 
 # for i, chunk in enumerate(islice(chunks, 5)):
-#    contextualizado = chunker.contextualize(chunk)
+#    contextualized = chunker.contextualize(chunk)
 #    print(f"============CHUNK {i}============")
 #    print(f"Chunk {i} original: {chunk.text}")
-#    print(f"Chunk {i} contextualizado: {contextualizado}")
+#    print(f"Chunk {i} contextualized: {contextualized}")
 
-textos_para_embeber = []
-chunks_limpios = []
+texts_to_embed = []
+clean_chunks = []
 
 for chunk in chunks:
-    texto = chunker.contextualize(chunk)
-    if len(texto) >= 100:
-        chunks_limpios.append(texto)
-        textos_para_embeber.append(f"passage: {texto}")
+    text = chunker.contextualize(chunk)
+    if len(text) >= 100:
+        clean_chunks.append(text)
+        texts_to_embed.append(f"passage: {text}")
 
 # EXTRACCION DE VECTORES
 
-embeder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
+embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
 
-# documentos = ["la lista de la compra 1 es: huevos, leche, pan", 
-#               "la lista de la compra 2 es: huevos, leche, pan, queso", 
+# documents = ["la lista de la compra 1 es: huevos, leche, pan",
+#               "la lista de la compra 2 es: huevos, leche, pan, queso",
 #               "la lista de la compra 3 es: huevos, leche, pan, queso, jamón",
 #               "el coche es de color rojo y tiene 4 puertas",]
 
-embeder_generator = embeder.embed(textos_para_embeber)
-vectores = np.array(list(embeder_generator))
+embedder_generator = embedder.embed(texts_to_embed)
+vectors = np.array(list(embedder_generator))
 
-# def similitud_coseno(a, b):
+# def cosine_similarity(a, b):
 #     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-# print(vectores[1])
+# print(vectors[1])
 
-# sim_1_2 = similitud_coseno(vectores[0], vectores[1])
-# sim_1_4 = similitud_coseno(vectores[0], vectores[3])
+# sim_1_2 = cosine_similarity(vectors[0], vectors[1])
+# sim_1_4 = cosine_similarity(vectors[0], vectors[3])
 
 # print(f"Similitud frase 1 vs 2 (parecidas): {sim_1_2:.4f}")
 # print(f"Similitud frase 1 vs 4 (distintas): {sim_1_4:.4f}")
@@ -73,22 +73,22 @@ if qdrant_client.collection_exists(collection_name="Test_1"):
     qdrant_client.delete_collection(collection_name="Test_1")
 
 qdrant_client.create_collection(
-    collection_name="Test_1", 
+    collection_name="Test_1",
     vectors_config=VectorParams(size= 1024, distance=Distance.COSINE)
     )
 
-for i, (chunk, vector) in enumerate(zip(chunks_limpios, vectores)):
-    punto =PointStruct(
+for i, (chunk, vector) in enumerate(zip(clean_chunks, vectors)):
+    point = PointStruct(
         id=i,
         vector=vector.tolist(),
         payload={"chunk": chunk}
     )
     if i == 0:
-        puntos = [punto]
+        points = [point]
     else:
-        puntos.append(punto)
+        points.append(point)
 
 qdrant_client.upsert(
     collection_name="Test_1",
-    points=puntos
+    points=points
 )

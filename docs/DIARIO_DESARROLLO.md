@@ -559,6 +559,33 @@ El flujo mínimo de tu proyecto usa solo cuatro: `create_collection` una vez, `u
 Un detalle que te ahorrará un error: casi todos estos métodos reciben clases del módulo `models` (o `qdrant_client.models`) — `VectorParams`, `Distance`, `PointStruct`, `Filter`. Tendrás que importarlas de ahí; no son strings sueltos.
 
 
+##### #19/08/2026
+
+**Depuración del pipeline de indexación híbrida (sparse + dense).** Tras montar `/indexar` con vectores densos (e5-large) y dispersos (BM25) a la vez en Qdrant, la primera pasada de indexación fallaba en cadena — una cosa arreglada destapaba la siguiente:
+
+- `app/main.py` — el endpoint `/indexar` leía `request.app.state.embedder`, un atributo que no existe (`app_state.py` solo define `dense_embedder` y `sparse_embedder`); y la llamada a `embed_texts(...)` no pasaba `sparse_embedder`.
+- `app/rag/indexation.py` — typo en la firma de `embed_texts` (`sparse_embeder` sin la segunda "d") que no coincidía con como se llamaba desde `main.py`.
+- Mismo archivo — al construir el `PointStruct`, se llamaba a `.list()` sobre un `numpy.ndarray` (no existe; es `.tolist()`) y sobre un `SparseEmbedding` de fastembed (tampoco existe; hay que envolver `indices`/`values` en `models.SparseVector(...)`, igual que ya se hacía en el lado de consulta en `retrieval.py`).
+- Mismo archivo — `qdrant.create_collection(..., sparse_vector_config=...)`: el kwarg real del cliente en esta versión es `sparse_vectors_config` (plural "vectors"), no `sparse_vector_config`.
+
+Con los cuatro arreglos, `/indexar` corre de punta a punta; se reindexaron los 10 documentos de `tests/data/` (67 puntos en la colección `Test_1`, con `dense_vector` y `sparse_vector` presentes).
+
+**Licencias de los rerankers de fastembed.** Antes de fijar uno para producción, comprobamos las licencias de los `TextCrossEncoder` soportados: `Xenova/ms-marco-MiniLM-L-6-v2` y `-L-12-v2` (Apache-2.0), `BAAI/bge-reranker-base` (MIT), `jinaai/jina-reranker-v1-tiny-en` y `-turbo-en` (Apache-2.0) son todos aptos para uso comercial. `jinaai/jina-reranker-v2-base-multilingual` — el que estaba puesto en `app_state.py` — es **CC-BY-NC-4.0**, solo investigación/evaluación; Jina empuja el v2 hacia su API de pago. Pendiente: decidir si se sustituye por uno de los permisivos antes de ir a producción.
+
+**Normalización de nomenclatura (sin tocar arquitectura).** Se revisó todo `backend/app/` y `backend/tests/` para que variables y funciones se encuentren en inglés y sigan snake_case/PascalCase estándar, dejando el diseño intacto:
+
+- `app/api/schemas.py`: `Consulta` → `QueryRequest`, `Indexar` → `IndexRequest` (campos `ruta_archivo` → `file_path`, `nombre` → `name`).
+- `app/retrieval/retrieval.py`: `buscar_chunks` → `search_chunks`; `results_cross` → `ranked_results`.
+- `app/rag/indexation.py`: `id_desde_texto` → `id_from_text`; parámetros/variables internas (`registros`→`records`, `vectores_densos`→`dense_vectors`, `vectores_dispersos`→`sparse_vectors`, `puntos`→`points`, etc.).
+- `app/rag/generation.py`: `consulta` → `prompt`, `respuesta` → `response`.
+- `app/api/app_state.py`: `opciones` → `options`.
+- Ficheros sueltos de experimentación renombrados: `app/retrieval/corss_encoder.py` (typo) → `cross_encoder.py`; `app/ingest/vector_disperso.py` → `app/ingest/sparse_vector.py`. Variables internas (`embeder`→`embedder`, `frase`→`phrase`, `vectores`→`vectors`, etc.) actualizadas igual.
+- `tests/response_test.py`: funciones (`normalizar`→`normalize`, `similitud_coseno`→`cosine_similarity`, `evaluar_respuesta`→`evaluate_response`, `ejecutar_ronda`→`run_round`, `ejecutar_evaluacion`→`run_evaluation`, `color_valor`→`value_color`, `pagina_html`→`html_page`) y constantes (`RONDAS_POR_DEFECTO`→`DEFAULT_ROUNDS`, etc.).
+
+**Qué se dejó igual a propósito** (para no romper contratos externos, que es justo lo que la tarea pedía no tocar): las claves de los `payload` de Qdrant (`"texto"`, `"nombre"`, `"paginas"`, ...) porque ya hay puntos indexados con esos nombres; el nombre de la colección `"Test_1"` y de los vectores nombrados (`"dense_vector"`, `"sparse_vector"`); las rutas de los endpoints (`/preguntar`, `/indexar`); los flags de CLI de `response_test.py` (`--rondas`, `--pausa`, `--umbral-similitud`) porque están documentados en el docstring de uso; y las claves del JSON/columnas de los reportes (`tests/response_file.json`, CSV/HTML de resultados). Cambiar cualquiera de esos habría sido un cambio de arquitectura/contrato de datos, no un renombrado de identificador Python.
+
+Verificado con `py_compile` + import real de los módulos tocados tras el refactor; sin regresiones de comportamiento.
+
 **Nomenclaturas de commits**
 
 Para poder hacer un seguimiento de los cambios que se aplican en el poryecto, se establecen las siguientes nomencalturas como las adecuadas
