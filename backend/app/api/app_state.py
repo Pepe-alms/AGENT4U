@@ -33,8 +33,6 @@ async def lifespan(app: FastAPI):
     app.state.sparse_embedder = SparseTextEmbedding(model_name= "Qdrant/bm25", language= "spanish")
     app.state.cross_encoder = TextCrossEncoder(model_name = "jinaai/jina-reranker-v2-base-multilingual")
 
-
-
     app.state.qdrant = QdrantClient(url=settings.qdrant_url)
 
     opciones = PdfPipelineOptions(

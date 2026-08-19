@@ -45,9 +45,9 @@ def normalize_text(ruta_archivo: str, converter, chunker):
 
     return textos_para_embeber, registros
 
-def embed_texts(chunks: list, dense_embedder: str, sparse_embeder: str, qdrant, registros: list):
+def embed_texts(chunks: list, dense_embedder: str, sparse_embedder: str, qdrant, registros: list):
     vectores_densos = np.array(list(dense_embedder.embed(chunks)))
-    vectores_dispersos = np.array(list(sparse_embeder.embed(chunks)))
+    vectores_dispersos = np.array(list(sparse_embedder.embed(chunks)))
 
 
     if not qdrant.collection_exists(collection_name="Test_1"):
@@ -56,7 +56,7 @@ def embed_texts(chunks: list, dense_embedder: str, sparse_embeder: str, qdrant, 
             vectors_config={
                 "dense_vector": VectorParams(size= 1024, distance=Distance.COSINE)
                 },
-            sparse_vector_config={
+            sparse_vectors_config={
                 "sparse_vector": SparseVectorParams(modifier= models.Modifier.IDF)
                 }
             )
@@ -65,8 +65,8 @@ def embed_texts(chunks: list, dense_embedder: str, sparse_embeder: str, qdrant, 
         PointStruct(
             id=id_desde_texto(registro["texto"]),
             vector={
-                "dense_vector": denso.list(),
-                "sparse_vector": disperso.list(
+                "dense_vector": denso.tolist(),
+                "sparse_vector": models.SparseVector(
                     indices= disperso.indices.tolist(),
                     values= disperso.values.tolist()),
             },
