@@ -52,7 +52,6 @@
 
 # print(respuesta.choices[0].message.content)
 
-import numpy as np
 from qdrant_client import models
 
 def cross_encode(query: str, documents: list[str], cross_encoder, files: list[str], pages: list[list[str]]) -> list[float]:
