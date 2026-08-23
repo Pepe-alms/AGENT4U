@@ -25,7 +25,7 @@ from transformers import AutoTokenizer
 
 ## SQL
 
-from backend.app.db.sesion import crear_esquema
+from app.db.document_sesion import crear_esquema
 
 
 
