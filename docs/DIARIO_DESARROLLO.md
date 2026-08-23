@@ -559,6 +559,33 @@ El flujo mínimo de tu proyecto usa solo cuatro: `create_collection` una vez, `u
 Un detalle que te ahorrará un error: casi todos estos métodos reciben clases del módulo `models` (o `qdrant_client.models`) — `VectorParams`, `Distance`, `PointStruct`, `Filter`. Tendrás que importarlas de ahí; no son strings sueltos.
 
 
+##### #19/08/2026
+
+**Depuración del pipeline de indexación híbrida (sparse + dense).** Tras montar `/indexar` con vectores densos (e5-large) y dispersos (BM25) a la vez en Qdrant, la primera pasada de indexación fallaba en cadena — una cosa arreglada destapaba la siguiente:
+
+- `app/main.py` — el endpoint `/indexar` leía `request.app.state.embedder`, un atributo que no existe (`app_state.py` solo define `dense_embedder` y `sparse_embedder`); y la llamada a `embed_texts(...)` no pasaba `sparse_embedder`.
+- `app/rag/indexation.py` — typo en la firma de `embed_texts` (`sparse_embeder` sin la segunda "d") que no coincidía con como se llamaba desde `main.py`.
+- Mismo archivo — al construir el `PointStruct`, se llamaba a `.list()` sobre un `numpy.ndarray` (no existe; es `.tolist()`) y sobre un `SparseEmbedding` de fastembed (tampoco existe; hay que envolver `indices`/`values` en `models.SparseVector(...)`, igual que ya se hacía en el lado de consulta en `retrieval.py`).
+- Mismo archivo — `qdrant.create_collection(..., sparse_vector_config=...)`: el kwarg real del cliente en esta versión es `sparse_vectors_config` (plural "vectors"), no `sparse_vector_config`.
+
+Con los cuatro arreglos, `/indexar` corre de punta a punta; se reindexaron los 10 documentos de `tests/data/` (67 puntos en la colección `Test_1`, con `dense_vector` y `sparse_vector` presentes).
+
+**Licencias de los rerankers de fastembed.** Antes de fijar uno para producción, comprobamos las licencias de los `TextCrossEncoder` soportados: `Xenova/ms-marco-MiniLM-L-6-v2` y `-L-12-v2` (Apache-2.0), `BAAI/bge-reranker-base` (MIT), `jinaai/jina-reranker-v1-tiny-en` y `-turbo-en` (Apache-2.0) son todos aptos para uso comercial. `jinaai/jina-reranker-v2-base-multilingual` — el que estaba puesto en `app_state.py` — es **CC-BY-NC-4.0**, solo investigación/evaluación; Jina empuja el v2 hacia su API de pago. Pendiente: decidir si se sustituye por uno de los permisivos antes de ir a producción.
+
+**Normalización de nomenclatura (sin tocar arquitectura).** Se revisó todo `backend/app/` y `backend/tests/` para que variables y funciones se encuentren en inglés y sigan snake_case/PascalCase estándar, dejando el diseño intacto:
+
+- `app/api/schemas.py`: `Consulta` → `QueryRequest`, `Indexar` → `IndexRequest` (campos `ruta_archivo` → `file_path`, `nombre` → `name`).
+- `app/retrieval/retrieval.py`: `buscar_chunks` → `search_chunks`; `results_cross` → `ranked_results`.
+- `app/rag/indexation.py`: `id_desde_texto` → `id_from_text`; parámetros/variables internas (`registros`→`records`, `vectores_densos`→`dense_vectors`, `vectores_dispersos`→`sparse_vectors`, `puntos`→`points`, etc.).
+- `app/rag/generation.py`: `consulta` → `prompt`, `respuesta` → `response`.
+- `app/api/app_state.py`: `opciones` → `options`.
+- Ficheros sueltos de experimentación renombrados: `app/retrieval/corss_encoder.py` (typo) → `cross_encoder.py`; `app/ingest/vector_disperso.py` → `app/ingest/sparse_vector.py`. Variables internas (`embeder`→`embedder`, `frase`→`phrase`, `vectores`→`vectors`, etc.) actualizadas igual.
+- `tests/response_test.py`: funciones (`normalizar`→`normalize`, `similitud_coseno`→`cosine_similarity`, `evaluar_respuesta`→`evaluate_response`, `ejecutar_ronda`→`run_round`, `ejecutar_evaluacion`→`run_evaluation`, `color_valor`→`value_color`, `pagina_html`→`html_page`) y constantes (`RONDAS_POR_DEFECTO`→`DEFAULT_ROUNDS`, etc.).
+
+**Qué se dejó igual a propósito** (para no romper contratos externos, que es justo lo que la tarea pedía no tocar): las claves de los `payload` de Qdrant (`"texto"`, `"nombre"`, `"paginas"`, ...) porque ya hay puntos indexados con esos nombres; el nombre de la colección `"Test_1"` y de los vectores nombrados (`"dense_vector"`, `"sparse_vector"`); las rutas de los endpoints (`/preguntar`, `/indexar`); los flags de CLI de `response_test.py` (`--rondas`, `--pausa`, `--umbral-similitud`) porque están documentados en el docstring de uso; y las claves del JSON/columnas de los reportes (`tests/response_file.json`, CSV/HTML de resultados). Cambiar cualquiera de esos habría sido un cambio de arquitectura/contrato de datos, no un renombrado de identificador Python.
+
+Verificado con `py_compile` + import real de los módulos tocados tras el refactor; sin regresiones de comportamiento.
+
 **Nomenclaturas de commits**
 
 Para poder hacer un seguimiento de los cambios que se aplican en el poryecto, se establecen las siguientes nomencalturas como las adecuadas
@@ -570,3 +597,42 @@ Para poder hacer un seguimiento de los cambios que se aplican en el poryecto, se
 - REFACTOR: Refactorización del código sin agregar funciones ni corregir errores.
 - TEST: Adición o corrección de pruebas.
 - CHORE: Tareas de mantenimiento, actualización de dependencias
+
+##### #23/08/2026
+
+**Persistencia de documentos indexados (`app/db/`).** Hasta ahora `/indexar` metía vectores en Qdrant sin dejar rastro de qué se había indexado ni de si algo había fallado a medio camino. Se añadió una capa mínima con SQLAlchemy:
+
+- `document_model.py` — modelo `Document` (tabla `documents`): `origin` (única, para no reindexar dos veces la misma fuente), `name`, `type`, `size`, `state` (`pendiente` → `indexado` / `error`), `num_chunks`, `error_message`, y dos campos todavía sin usar pensados para más adelante (`hash_content` para dedupe por contenido en vez de por ruta/URL, `user` para cuando haya más de un usuario).
+- `document_crud.py` — `crear_documento`, `marcar_indexado`, `marcar_error`, `listar_documentos`.
+- `document_sesion.py` — engine + `SessionLocal` sobre SQLite (`APP_DB_URL`, por defecto `sqlite:///./agent4u.db`), `get_db()` como dependencia de FastAPI, y `crear_esquema()` invocado desde el `lifespan` en `app_state.py` para que las tablas existan al arrancar.
+
+**Excepciones de dominio (`app/core/excepcions.py`).** `DocumentoYaExiste` y `FalloIngesta`, para que `main.py` traduzca fallos internos en códigos HTTP con sentido: 409 si el `origin` ya está en la base (constraint `unique` + `IntegrityError` capturada en `indexar_documento`), 500 si falla el parseo/embedding a media ingesta — en ese caso se limpia lo que se hubiera subido a Qdrant con `borrar_por_origen` antes de marcar el documento como `error`.
+
+**Endpoints `/indexar-url` y `/documentos`.** `indexar_documento()` (nueva, en `rag/indexation.py`) orquesta el flujo completo: crea el registro en BD, normaliza + embebe, y marca el resultado final. `/indexar-url` la usa para indexar por URL; `/documentos` lista el histórico vía `document_crud.listar_documentos`. `/indexar` se está migrando ahora mismo al mismo `indexar_documento`, así que dejará de ser un camino aparte sin tracking en BD.
+
+**Reorganización `ingest/` + `retrieval/` → `rag/`.** Dos cosas distintas bajo el mismo movimiento:
+- `app/ingest/ingest.py`, `app/ingest/sparse_vector.py` (scripts de la exploración inicial, con rutas locales hardcodeadas y prints) y `app/retrieval/cross_encoder.py` / `llm.py` (demos sueltas, nunca importadas desde `main.py`) se eliminan directamente — ya habían cumplido su función de aprendizaje.
+- `app/retrieval/retrieval.py` sí era código activo (`search_chunks`, usado por `/preguntar`) y se traslada a `app/rag/retrieval.py`, agrupando ingesta + recuperación + generación bajo `rag/`. Ojo: en el traslado, la llamada a `cross_encode(...)` que antes estaba activa quedó comentada (ver pendientes).
+- La lógica de `normalize_text` / `embed_texts` / `id_from_text`, que antes vivía directamente dentro de `indexation.py`, se extrajo a `app/rag/vectorization.py`; `indexation.py` queda solo como la orquestación (`indexar_documento`) para el tracking en BD.
+
+**Respuestas estructuradas con citas (`rag/generation.py`).** El LLM ahora debe devolver JSON (`{"respuesta": ..., "fuentes": [{"documento", "pagina"}]}`) en vez de prosa con `[nombreDocumento]` intercalado. `parse_and_validate_response()` extrae el bloque JSON con regex, valida forma y tipos, y cae a una respuesta de error controlada si el LLM no obedece el formato — necesario porque no hay garantía de que el modelo devuelva JSON válido siempre. `build_context()` ahora también mete página y URL en la cabecera de cada fragmento del contexto.
+
+**Dockerización del backend.** `backend/Dockerfile` (Python 3.12-slim, `uv sync --frozen --no-dev`, `HF_HOME=/models/hf`) + servicio `api` nuevo en `docker-compose.yml`, con `api_data` (SQLite) y `model_cache` (pesos de HuggingFace) como volúmenes con nombre — así el contenedor no vuelve a descargar los modelos de Docling/fastembed en cada rebuild, mismo razonamiento de caché local que ya vimos con Docling. Nueva dependencia: `sqlalchemy`.
+
+**Sesión de hoy — depurando `/indexar-url`.** Al revisar el endpoint aparecieron varios bugs de scaffolding que impedían que funcionara de punta a punta, arreglados y verificados con una prueba end-to-end (converter/chunker/embedders/qdrant simulados contra SQLite real):
+
+- `document_crud.py` apuntaba a una clase `Documento` con campos en español (`origen`, `nombre`, `tipo`, `tamano`, `estado`, `fecha_alta`) que no existían en el modelo real (`Document`, en inglés) — nada de lo que tocara la base de datos podía funcionar.
+- `main.py` no importaba `HTTPException` ni las excepciones de dominio; `/indexar-url` tipaba el body como `url: str` y luego lo trataba como objeto (`url.file_path`) — ahora tiene su propio schema, `IndexUrlRequest`.
+- En `indexation.py`, el `raise FalloIngesta(...)` vivía fuera del bloque `except`, y Python borra la variable de excepción (`as e`) al salir de él — el fallo real quedaba enmascarado por un `UnboundLocalError`. También faltaba la llamada a `marcar_indexado` en el camino feliz, así que un documento indexado con éxito se quedaba para siempre en estado `pendiente`.
+- `config.py` tenía `db_url` como variable suelta a nivel de módulo, fuera de la clase `Settings` — la app ni arrancaba (`settings.db_url` no existía).
+- Import roto `from vectorization import ...` (faltaba el prefijo `app.rag.`) y otro con prefijo `backend.app...` inconsistente con el resto del proyecto (`app...`).
+
+**Arreglados el mismo día, tras una segunda pasada sobre `main.py`:**
+- `retrieval.py` y `generation.py` leían `result.payload["url"]` / `chunk["url"]` con acceso directo — cambiado a `.get("url")` en ambos, porque `vectorization.py` no guarda esa clave al indexar (solo `"nombre"`, `"texto"`, `"paginas"`...) y no hay hoy un dato real de URL distinto de `"nombre"` que propagar; de momento cae a `'N/A'` en el contexto que ve el LLM en vez de reventar con `KeyError`.
+- `/preguntar` hacía `return {response}` con `response` ya como `dict` — eso es un *set* de un elemento, no un dict, y como los dicts no son hashables rompía con `TypeError` en toda consulta. Ahora `return response` directamente.
+- `IndexRequest` (`schemas.py`) ganó `type: str` y `size: int | None = None` para que coincida con lo que `/indexar` ya le pedía a `body`.
+- Bug nuevo encontrado de paso en `/documentos` (añadido durante la reescritura de `/indexar`): el `raise HTTPException(404, ...)` de "sin documentos" estaba dentro del mismo `try` que un `except Exception` genérico, así que el propio `except` lo recapturaba y lo convertía en un 500 con el detalle mezclado — mismo patrón que el bug de `FalloIngesta`/`e` de más arriba. Se separó el `if not documentos` fuera del `try`.
+
+**Pendiente / a vigilar:**
+- El reranker cross-encoder se carga en el `lifespan` pero la llamada a `cross_encode(...)` sigue comentada en `rag/retrieval.py` — hoy no se usa, solo consume memoria al arrancar.
+- Si en algún momento se quiere una URL de fuente real y distinta de `"nombre"` en las citas del LLM, hace falta guardarla explícitamente en el payload al indexar (`vectorization.py`) — el `.get("url")` de hoy solo evita el crash, no añade el dato.

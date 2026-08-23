@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://localhost:6333"
     gemini_api_key: str = gemini_api_key
     llm_model: str = "gemini/gemini-flash-lite-latest"
+    db_url: str = "sqlite:///./agent4u.db"
 
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
-
 

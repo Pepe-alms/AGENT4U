@@ -1,2 +1,5 @@
 .env
 /backend/tests/data/
+agent4u.db__pycache__/
+*.pyc
+__pycache__/
