@@ -8,3 +8,9 @@ class QueryRequest(BaseModel):
 class IndexRequest(BaseModel):
     file_path: str
     name: str
+    type: str
+    size: int | None = None
+
+class IndexUrlRequest(BaseModel):
+    url: str
+    size: int | None = None

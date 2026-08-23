@@ -39,7 +39,7 @@ from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
 from app.rag.generation import generate_response
-from app.retrieval.retrieval import search_chunks
+from backend.app.rag.retrieval import search_chunks
 
 DEFAULT_ROUNDS = 5
 DEFAULT_PAUSE = 5.0  # version gratuita de Gemini: 15 peticiones/min

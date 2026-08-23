@@ -23,6 +23,10 @@ from docling.chunking import HybridChunker
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from transformers import AutoTokenizer
 
+## SQL
+
+from app.db.document_sesion import crear_esquema
+
 
 
 @asynccontextmanager
@@ -35,15 +39,20 @@ async def lifespan(app: FastAPI):
 
     app.state.qdrant = QdrantClient(url=settings.qdrant_url)
 
-    options = PdfPipelineOptions(
-    do_ocr=False,)
+    opciones_pdf = PdfPipelineOptions(do_ocr=False, do_table_structure=True)
 
-    app.state.converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)})
+    app.state.converter = DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(pipeline_options=opciones_pdf),
+        }
+    )
 
     tokenizer = HuggingFaceTokenizer(
         tokenizer=AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large"),
         max_tokens=500,)
     app.state.chunker = HybridChunker(tokenizer=tokenizer)
+
+    sesion = crear_esquema()
 
     yield
     app.state.qdrant.close()

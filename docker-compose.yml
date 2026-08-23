@@ -9,5 +9,21 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      APP_QDRANT_URL: http://qdrant:6333
+      APP_DB_URL: sqlite:////data/agent4u.db
+      APP_GEMINI_API_KEY: ${APP_GEMINI_API_KEY}
+    volumes:
+      - api_data:/data
+      - model_cache:/models
+    depends_on:
+      - qdrant
+
 volumes:
   qdrant_data:
+  api_data:
+  model_cache:

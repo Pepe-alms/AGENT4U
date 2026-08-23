@@ -1,59 +1,19 @@
-## Paso 2 — importamos contextlib para poder usar el lifespan de FastAPI 
-# y así poder inicializar la configuración de la aplicación. lifespan es un 
-# contexto de vida de la aplicación que nos permite ejecutar código antes y después 
-# de que la aplicación se inicie y se cierre.
-
-# from contextlib import asynccontextmanager
-# from fastapi import FastAPI
-# from qdrant_client import AsyncQdrantClient
-
-# from app.core.config import get_settings
-
-# Como funciona este codigo:
-# - Importamos asynccontextmanager de contextlib para crear un contexto de vida asíncrono.
-# - Importamos FastAPI de fastapi para crear la aplicación web.
-# - Importamos get_settings de core.config para obtener la configuración de la aplicación.
-# - Creamos una función lifespan que recibe la aplicación FastAPI como parámetro.
-# - Dentro de lifespan, obtenemos la configuración de la aplicación usando get_settings().
-# - Creamos un cliente Qdrant asíncrono usando AsyncQdrantClient y la URL base de Qdrant obtenida de la configuración.
-# - Usamos yield para indicar que el código antes de yield se ejecuta al iniciar la aplicación y el código después de yield se ejecuta al cerrar la aplicación.
-# - Cerramos el cliente Qdrant asíncrono al finalizar la aplicación.
-
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     settings = get_settings()
-#     app.state.qdrant = AsyncQdrantClient(url=settings.qdrant_url)
-#     yield
-#     await app.state.qdrant.close()
-
-# app = FastAPI(lifespan= lifespan)
-
-# ## Paso 1 — app/main.py con un solo endpoint y cero configuración.
-# # - Creas la instancia de FastAPI y un /health que devuelva un ok.
-# # - Arrancas con uv run uvicorn app.main:app --reload
-
-# @app.get("/health")
-# async def health():
-#     return {"status": "ok"}
-
-# @app.get("/health/qdrant")
-# async def health_qdrant():
-#     try:
-#         await app.state.qdrant.get_collections()
-#         return {"status": "ok"}
-#     except Exception as e:
-#         return {"status": "error", "message": str(e)}
-
-
-
-from fastapi import FastAPI, Request
-from app.api.schemas import QueryRequest, IndexRequest
+from fastapi import Depends, FastAPI, HTTPException, Request
+from typing import Annotated
+from app.api.schemas import QueryRequest, IndexRequest, IndexUrlRequest
 from app.api.app_state import lifespan
 from app.core.config import get_settings
-from app.retrieval.retrieval import search_chunks
-from app.rag.generation import generate_response, build_context
+from app.rag.retrieval import search_chunks
+from app.rag.generation import generate_response
+from app.rag.remove import borrar_por_origen
+from app.db.document_sesion import get_db
+from app.db import document_crud
 
-from app.rag.indexation import embed_texts, normalize_text
+from app.rag.indexation import indexar_documento
+from sqlalchemy.orm import Session
+
+from app.core.excepcions import DocumentoYaExiste, FalloIngesta
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -68,22 +28,107 @@ def preguntar(body: QueryRequest, request: Request):
 
     chunks = search_chunks(query=body.query, dense_embedder=dense_embedder, sparse_embedder=sparse_embedder, qdrant=qdrant, cross_encoder=cross_encoder)
     response = generate_response(query=body.query, chunks=chunks, model=get_settings().llm_model)
-    return {"respuesta": response}
+    return response
 
 
-@app.post("/indexar")
-def indexar(body: IndexRequest, request: Request):
+@app.post(
+    "/indexar",
+    responses={409: {"description": "Documento ya existe."}, 
+               500: {"description": "Error en la ingesta del documento."}},
+)
+def indexar(
+        body: IndexRequest, 
+        request: Request,
+        db: Annotated[Session, Depends(get_db)],
+    ):
 
-    dense_embedder = request.app.state.dense_embedder
-    sparse_embedder = request.app.state.sparse_embedder
-    qdrant = request.app.state.qdrant
-    converter = request.app.state.converter
-    chunker = request.app.state.chunker
+    try:
+        resultado = indexar_documento(
+            db=db,
+            file_path=body.file_path,
+            converter=request.app.state.converter,
+            chunker=request.app.state.chunker,
+            dense_embedder=request.app.state.dense_embedder,
+            sparse_embedder=request.app.state.sparse_embedder,
+            qdrant=request.app.state.qdrant,
+            size=body.size,
+            type=body.type
+        )
+    except DocumentoYaExiste as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except FalloIngesta as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"status": "indexado", **resultado}
+
+@app.post(
+    "/indexar-url",
+    responses={409: {"description": "Documento ya existe."}, 
+               500: {"description": "Error en la ingesta del documento."}},
+)
+def indexar_url(
+    body: IndexUrlRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    ):
+
+    try:
+        resultado = indexar_documento(
+            db=db,
+            file_path=body.url,
+            converter=request.app.state.converter,
+            chunker=request.app.state.chunker,
+            dense_embedder=request.app.state.dense_embedder,
+            sparse_embedder=request.app.state.sparse_embedder,
+            qdrant=request.app.state.qdrant,
+            size=body.size,
+            type= "url"
+
+        )
+    except DocumentoYaExiste as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except FalloIngesta as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"status": "indexado", **resultado}
 
 
-    chunks, records = normalize_text(file_path=body.file_path, converter=converter, chunker=chunker)
-    embed_texts(chunks=chunks, dense_embedder=dense_embedder, sparse_embedder=sparse_embedder, qdrant=qdrant, records=records)
+@app.get(
+    "/documentos",
+    responses={500: {"description": "Error interno del servidor."}, 
+               404: {"description": "Documentos no encontrados."}}
+)
+def listar(db: Annotated[Session, Depends(get_db)]):
+    try:
+        documentos = document_crud.listar_documentos(db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
+    if not documentos:
+        raise HTTPException(status_code=404, detail="No se encontraron documentos.")
 
+    return {"documentos": documentos}
 
-    return {"status": "indexado"}
+@app.delete(
+    "/documentos/{documento}",
+    responses={500: {"description": "Error interno del servidor."}, 
+               404: {"description": "Documento no encontrado."}}
+)
+def eliminar(
+    documento: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+):
+    try:
+        if borrar_por_origen(qdrant=request.app.state.qdrant, origen=documento):
+            eliminado = document_crud.eliminar_documento(db, documento)
+        else:
+            return {"status": "fallo en el borrado", "documento": documento}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if not eliminado:
+        raise HTTPException(status_code=404, detail="Documento no encontrado.")
+
+    return {"status": "eliminado", "documento": documento}
+
