@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.rag.retrieval import search_chunks
 from app.rag.generation import generate_response
 from app.rag.remove import borrar_por_origen
-from app.db.document_sesion import get_db
+from backend.app.db.sesion import get_db
 from app.db import document_crud
 
 from app.rag.indexation import indexar_documento
