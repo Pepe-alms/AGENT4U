@@ -132,3 +132,17 @@ def eliminar(
 
     return {"status": "eliminado", "documento": documento}
 
+@app.get(
+        "/conversaciones/{usuario}", 
+         responses={500: {"description": "Error interno del servidor."},
+                    404: {"description": "Conversaciones no encontradas."}})
+def listar_conversaciones(
+    usuario: str,
+    db: Annotated[Session, Depends(get_db)],
+):
+    try:
+        conversaciones = record_crud.listar_conversaciones(db, usuario)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"conversaciones": conversaciones}
