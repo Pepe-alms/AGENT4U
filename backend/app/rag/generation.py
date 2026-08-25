@@ -99,3 +99,15 @@ def generate_response(query: str, chunks: list[dict], model: str) -> dict:
                     {"role": "system", "content": system_prompt}])
 
     return parse_and_validate_response(raw_response.choices[0].message.content)
+
+
+def reformular_consulta(query: str, historial: list[dict], model: str) -> str:
+    historial_texto = "\n".join([f"{m['rol']}: {m['contenido']}" for m in historial])
+    prompt = f"Historial de conversación:\n{historial_texto}\n\nNueva consulta: {query}\n\nReformula la consulta para que sea más clara y específica, manteniendo el mismo significado. Devuelve solo la consulta reformulada."
+
+    raw_response = litellm.completion(
+        model=model,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return raw_response.choices[0].message.content.strip()

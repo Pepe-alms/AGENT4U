@@ -6,29 +6,35 @@ from app.core.config import get_settings
 from app.rag.retrieval import search_chunks
 from app.rag.generation import generate_response
 from app.rag.remove import borrar_por_origen
-from app.db.document_sesion import get_db
+from backend.app.db.sesion import get_db
 from app.db import document_crud
 
 from app.rag.indexation import indexar_documento
 from sqlalchemy.orm import Session
 
-from app.core.excepcions import DocumentoYaExiste, FalloIngesta
+from app.core.excepcions import DocumentoYaExiste, FalloIngesta, ConversacionNoEncontrada
+
+from app.rag.query import responder
 
 
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/preguntar")
-def preguntar(body: QueryRequest, request: Request):
+def preguntar(body: QueryRequest, request: Request, db: Annotated[Session, Depends(get_db)],):
 
-    dense_embedder = request.app.state.dense_embedder
-    sparse_embedder = request.app.state.sparse_embedder
-    qdrant = request.app.state.qdrant
-
-    cross_encoder = request.app.state.cross_encoder
-
-    chunks = search_chunks(query=body.query, dense_embedder=dense_embedder, sparse_embedder=sparse_embedder, qdrant=qdrant, cross_encoder=cross_encoder)
-    response = generate_response(query=body.query, chunks=chunks, model=get_settings().llm_model)
-    return response
+    try:
+        return responder(
+            db=db,
+            query=body.query,
+            conversacion_id=body.conversacion_id,
+            dense_embedder=request.app.state.dense_embedder,
+            sparse_embedder=request.app.state.sparse_embedder,
+            cross_encoder=request.app.state.cross_encoder,
+            qdrant=request.app.state.qdrant,
+            model=get_settings().llm_model,
+        )
+    except ConversacionNoEncontrada as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.post(
@@ -131,18 +137,3 @@ def eliminar(
         raise HTTPException(status_code=404, detail="Documento no encontrado.")
 
     return {"status": "eliminado", "documento": documento}
-
-@app.get(
-        "/conversaciones/{usuario}", 
-         responses={500: {"description": "Error interno del servidor."},
-                    404: {"description": "Conversaciones no encontradas."}})
-def listar_conversaciones(
-    usuario: str,
-    db: Annotated[Session, Depends(get_db)],
-):
-    try:
-        conversaciones = record_crud.listar_conversaciones(db, usuario)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    return {"conversaciones": conversaciones}
