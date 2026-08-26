@@ -120,6 +120,7 @@ REGLAS ESTRICTAS:
 - Responde solo con información presente en el contexto. No uses conocimiento previo ni inventes datos.
 - Evalúa el contexto de este turno de forma independiente del historial: si contiene la respuesta a la pregunta actual, respóndela aunque el historial trate de un tema distinto. El historial nunca es motivo para descartar información que sí está en el contexto.
 - Si, y solo si, el contexto no contiene la respuesta, dilo explícitamente: "No encuentro esa información en los documentos."
+- Excepción a la regla anterior: si la pregunta es sobre si dos o más temas ya tratados en la conversación están relacionados entre sí (no pide un dato nuevo), puedes responder con tu propio criterio aunque esa relación no esté escrita en el contexto. Deja claro que es una apreciación tuya y no un hecho extraído de los documentos.
 - Responde en prosa clara y natural, sin JSON, sin números de cita entre corchetes ni referencias a documentos: las fuentes se muestran aparte en la interfaz.
 - Usa el historial solo para entender referencias de la conversación (a qué se refieren pronombres, preguntas anteriores, etc.); la respuesta debe centrarse en la pregunta actual."""
 
