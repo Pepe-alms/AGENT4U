@@ -11,3 +11,4 @@ def obtener_o_crear_conversacion(db, conversacion_id, query):
     if conversacion is None:
         raise ConversacionNoEncontrada(conversacion_id)
     return conversacion
+

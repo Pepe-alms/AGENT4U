@@ -12,9 +12,12 @@ def crear_conversacion(db: Session, titulo: str, usuario: str) -> Conversacion:
 def obtener_conversacion(db: Session, conversacion_id: int) -> Conversacion | None:
     return db.scalar(select(Conversacion).where(Conversacion.id == conversacion_id))
 
-def listar_conversaciones(db: Session, usuario: str) -> list[Conversacion]:
+def listar_conversaciones(db: Session, usuario: str, limit: int = 20) -> list[Conversacion]:
     return db.scalars(
-        select(Conversacion).where(Conversacion.usuario == usuario).order_by(Conversacion.actualizada_en.desc())
+        select(Conversacion)
+        .where(Conversacion.usuario == usuario)
+        .order_by(Conversacion.actualizada_en.desc())
+        .limit(limit)
     ).all()
 
 def eliminar_conversacion(db: Session, id: int) -> bool:

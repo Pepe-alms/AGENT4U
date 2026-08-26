@@ -1,13 +1,12 @@
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from typing import Annotated
-from app.api.schemas import QueryRequest, IndexRequest, IndexUrlRequest
+from app.api.schemas import QueryRequest, IndexRequest, IndexUrlRequest, MensajeOut, ConversacionResumenOut, ConversacionDetalleOut
 from app.api.app_state import lifespan
 from app.core.config import get_settings
-from app.rag.retrieval import search_chunks
-from app.rag.generation import generate_response
 from app.rag.remove import borrar_por_origen
-from backend.app.db.sesion import get_db
-from app.db import document_crud
+from app.db.sesion import get_db
+from app.db import document_crud, record_crud
 
 from app.rag.indexation import indexar_documento
 from sqlalchemy.orm import Session
@@ -23,7 +22,7 @@ app = FastAPI(lifespan=lifespan)
 def preguntar(body: QueryRequest, request: Request, db: Annotated[Session, Depends(get_db)],):
 
     try:
-        return responder(
+        generador = responder(
             db=db,
             query=body.query,
             conversacion_id=body.conversacion_id,
@@ -35,6 +34,8 @@ def preguntar(body: QueryRequest, request: Request, db: Annotated[Session, Depen
         )
     except ConversacionNoEncontrada as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+    return StreamingResponse(generador, media_type="text/event-stream")
 
 
 @app.post(
@@ -137,3 +138,35 @@ def eliminar(
         raise HTTPException(status_code=404, detail="Documento no encontrado.")
 
     return {"status": "eliminado", "documento": documento}
+
+@app.get(
+        "/conversaciones", 
+        response_model=list[ConversacionResumenOut])
+
+def listar_conversaciones(
+    db: Annotated[Session, Depends(get_db)]
+):
+    return record_crud.listar_conversaciones(db, usuario="local")
+
+@app.delete(
+    "/conversaciones/{conversacion_id}",
+    responses={404: {"description": "Conversación no encontrada."}},
+)
+def eliminar_conversacion(
+    conversacion_id: int, 
+    db: Annotated[Session, Depends(get_db)]
+):
+    if not record_crud.eliminar_conversacion(db, conversacion_id):
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    return {"status": "eliminada", "id": conversacion_id}
+
+@app.get(
+    "/conversaciones/{conversacion_id}",
+    response_model=ConversacionDetalleOut,
+    responses={404: {"description": "Conversación no encontrada."}},
+)
+def obtener_conversacion(conversacion_id: int, db: Annotated[Session, Depends(get_db)]):
+    conv = record_crud.obtener_conversacion(db, conversacion_id)
+    if conv is None:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    return conv
