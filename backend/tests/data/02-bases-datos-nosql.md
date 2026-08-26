@@ -26,6 +26,8 @@ Constituyen una categoría más reciente, orientada a almacenar representaciones
 
 Formulado por Eric Brewer en el año 2000 y demostrado formalmente por Gilbert y Lynch en 2002, el teorema CAP establece que un sistema distribuido no puede garantizar simultáneamente las tres propiedades siguientes: consistencia, disponibilidad y tolerancia a particiones de red. Como las particiones de red son inevitables en un sistema distribuido real, en la práctica la elección se produce entre consistencia y disponibilidad.
 
+La razón técnica es la siguiente: cuando una partición de red separa dos réplicas de un mismo dato, cada una solo puede tomar una de dos decisiones ante una petición de lectura o escritura. Si responde con el valor que tiene localmente, puede estar devolviendo un dato desactualizado respecto a la otra réplica, porque no puede confirmar si ha habido una escritura más reciente al otro lado de la partición: eso sacrifica la consistencia. Si en cambio se niega a responder hasta poder confirmar que su valor coincide con el de la otra réplica, dejará de atender peticiones mientras dure la partición: eso sacrifica la disponibilidad. No existe una tercera opción, porque durante la partición las réplicas no pueden comunicarse entre sí para ponerse de acuerdo, así que la elección entre consistencia y disponibilidad es inevitable en el momento en que ocurre la partición.
+
 | Sistema | Modelo | Prioriza |
 |---|---|---|
 | Redis | Clave-valor | Disponibilidad |

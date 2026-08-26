@@ -1,5 +1,6 @@
 .env
 /backend/tests/data/
-agent4u.db__pycache__/
-*.pyc
+/backend/tests/results/
+agent4u.db
 __pycache__/
+*.pyc
