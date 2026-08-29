@@ -1,16 +1,18 @@
 from qdrant_client import models
 
-def cross_encode(query: str, documents: list[str], cross_encoder, files: list[str], pages: list[list[str]]) -> list[float]:
+def cross_encode(query: str, documents: list[str], cross_encoder, files: list[str], pages: list[list[str]], urls: list[str]) -> list[float]:
     scores = list(cross_encoder.rerank(query=query, documents=documents))
-    ranked = sorted(zip(documents, scores, files, pages), key=lambda x: x[1], reverse=True)
+    print(f"Scores: {scores}")
+    ranked = sorted(zip(documents, scores, files, pages, urls), key=lambda x: x[1], reverse=True)
     ranked_results = []
 
-    for doc, score, file, page in ranked[:10]:
+    for doc, score, file, page, url in ranked[:10]:
         ranked_results.append(
             {
             "chunk": doc,
             "nombre": file,
             "paginas": page,
+            "url": url,
             "score": float(score),
             }
         )
@@ -40,26 +42,28 @@ def search_chunks (query: str, dense_embedder, sparse_embedder, qdrant, cross_en
             ),        
         ],
         query=models.RrfQuery(rrf=models.Rrf()),
+        limit=20,
         with_payload=True,
     ).points
 
     # Cross-encoder
-    # ranked_results = cross_encode(query=query,
-    #                              documents=[result.payload["texto"] for result in query_result],
-    #                              files=[result.payload["nombre"] for result in query_result],
-    #                              pages=[result.payload.get("paginas", []) for result in query_result],
-    #                              cross_encoder=cross_encoder)
+    ranked_results = cross_encode(query=query,
+                                 documents=[result.payload["texto"] for result in query_result],
+                                 files=[result.payload["nombre"] for result in query_result],
+                                 pages=[result.payload.get("paginas", []) for result in query_result],
+                                 urls=[result.payload.get("url") for result in query_result],
+                                 cross_encoder=cross_encoder)
 
-    ranked_results = [
-        {
-            "chunk": result.payload["texto"],
-            "nombre": result.payload["nombre"],
-            "paginas": result.payload.get("paginas", []),
-            "url": result.payload.get("url"),
-            "score": result.score,
+    # ranked_results = [
+    #     {
+    #         "chunk": result.payload["texto"],
+    #         "nombre": result.payload["nombre"],
+    #         "paginas": result.payload.get("paginas", []),
+    #         "url": result.payload.get("url"),
+    #         "score": result.score,
 
-        }
-        for result in query_result[:5]
-    ]
-
+    #     }
+    #     for result in query_result[:5]
+    # ]
+    
     return ranked_results

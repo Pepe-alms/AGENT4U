@@ -1,10 +1,9 @@
 import datetime
 from sqlalchemy import String, DateTime, Text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey, JSON, Index
 
-class Base(DeclarativeBase):
-    pass        
+from app.db.document_model import Base
 
 class Conversacion(Base):
     __tablename__ = "conversaciones"
