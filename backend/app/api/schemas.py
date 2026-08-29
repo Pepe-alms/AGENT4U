@@ -1,11 +1,19 @@
 import datetime
 from pydantic import ConfigDict
 from pydantic import BaseModel
+from pydantic import field_validator
 
 ## validamos que el contenido de la consolta como minimo tenga un campo query de tipo string
 class QueryRequest(BaseModel):
     query: str
     conversacion_id: str | None = None
+
+    @field_validator("conversacion_id", mode="before")
+    @classmethod
+    def _vacio_a_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 class IndexRequest(BaseModel):
     file_path: str
     name: str
