@@ -32,8 +32,33 @@ def crear_grafo(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
             cross_encoder,
         )
         return {
-            "chunks": resultados,
+            "chunks": chunks,
         }
+
+    def nodo_evaluar(estado: EstadoRAG):
+        chunks = estado.get("chunks", [])
+        contexto_pobre = max((c["score"] for c in chunks), default=-99)
+        return {
+            "contexto_pobre": contexto_pobre <= 0,
+        }
+
+    def nodo_reescribir(estado: EstadoRAG):
+
+        nueva_consulta = reescribir_consulta(
+            estado["consulta_busqueda"],
+            model=model,
+        )
+        return {
+            "consulta_busqueda": nueva_consulta,
+            "intentos": estado.get("intentos", 0) + 1,
+        }
+
+    def decidir(estado: EstadoRAG):
+        if not estad.get("contexto_pobre"):
+            return "reconstruir"
+        if estado.get("intentos", 0) >= 2:
+            return "construir"
+        return "reescribir"
 
     return {
         "dense_embedder": dense_embedder,
@@ -41,4 +66,9 @@ def crear_grafo(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
         "qdrant": qdrant,
         "cross_encoder": cross_encoder,
         "model": model,
+        "nodo_reformular": nodo_reformular,
+        "nodo_buscar": nodo_buscar,
+        "nodo_evaluar": nodo_evaluar,
+        "nodo_reescribir": nodo_reescribir,
+        "decidir": decidir,
     }
