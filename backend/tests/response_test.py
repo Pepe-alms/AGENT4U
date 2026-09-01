@@ -38,7 +38,7 @@ from fastembed import TextEmbedding
 from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
-from app.rag.generation import generate_response
+from app.rag.prompt import generate_response
 from backend.app.rag.retrieval import search_chunks
 
 DEFAULT_ROUNDS = 5

@@ -16,6 +16,7 @@ from app.core.excepcions import DocumentoYaExiste, FalloIngesta, ConversacionNoE
 from app.rag.query import responder
 
 
+
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/preguntar")
@@ -31,6 +32,7 @@ def preguntar(body: QueryRequest, request: Request, db: Annotated[Session, Depen
             cross_encoder=request.app.state.cross_encoder,
             qdrant=request.app.state.qdrant,
             model=get_settings().llm_model,
+            grafo=request.app.state.grafo,
         )
     except ConversacionNoEncontrada as e:
         raise HTTPException(status_code=404, detail=str(e))
