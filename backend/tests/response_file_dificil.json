@@ -1,0 +1,146 @@
+[
+  {
+    "id": 101,
+    "pregunta": "¿Qué debe cumplir una tabla para que toda columna capaz de determinar el valor de otras sea, a su vez, suficiente para identificar cada fila de forma única?",
+    "tipo": "vocabulario_indirecto",
+    "documento_esperado": "01-normalizacion-bases-datos.md",
+    "debe_contener": "superclave",
+    "respuesta_esperada": "Debe cumplir la forma normal de Boyce-Codd: para toda dependencia funcional no trivial, el determinante debe ser una superclave."
+  },
+  {
+    "id": 102,
+    "pregunta": "¿Por qué en algunos sistemas es posible leer justo después de escribir un dato y no obtener todavía el valor recién guardado?",
+    "tipo": "vocabulario_indirecto",
+    "documento_esperado": "02-bases-datos-nosql.md",
+    "debe_contener": "consistencia eventual",
+    "respuesta_esperada": "Porque el sistema usa un modelo de consistencia eventual: tras una escritura, las réplicas convergen al mismo valor con el tiempo, pero una lectura inmediata puede devolver un dato obsoleto."
+  },
+  {
+    "id": 103,
+    "pregunta": "¿Qué protocolo moderno evita que la pérdida de un paquete en un flujo bloquee a los demás flujos independientes de la misma conexión, y en qué versión de HTTP se usa?",
+    "tipo": "vocabulario_indirecto",
+    "documento_esperado": "03-protocolos-tcp-udp.md",
+    "debe_contener": "QUIC",
+    "respuesta_esperada": "QUIC, que elimina el bloqueo de cabecera de línea entre flujos independientes y es la base de HTTP/3."
+  },
+  {
+    "id": 104,
+    "pregunta": "¿Por qué puede aparecer moho justo en la zona de una fachada bien aislada donde hay un pilar de hormigón embebido en la pared?",
+    "tipo": "vocabulario_indirecto",
+    "documento_esperado": "09-eficiencia-energetica-edificios.md",
+    "debe_contener": "puente térmico",
+    "respuesta_esperada": "Porque esa zona es un puente térmico: el flujo de calor aumenta respecto a los elementos contiguos por el cambio de material, lo que provoca condensaciones superficiales y moho."
+  },
+  {
+    "id": 105,
+    "pregunta": "¿Por qué un consumidor de una cola de mensajes debe estar preparado para procesar la misma tarea más de una vez sin que eso cause un problema?",
+    "tipo": "vocabulario_indirecto",
+    "documento_esperado": "14-colas-mensajeria.md",
+    "debe_contener": "idempotente",
+    "respuesta_esperada": "Porque en un sistema de entrega al menos una vez un mensaje puede recibirse repetido si el consumidor falla antes de confirmar, así que el consumidor debe ser idempotente: repetir la operación no debe producir un efecto incorrecto."
+  },
+  {
+    "id": 106,
+    "pregunta": "¿Qué mecanismo evita que muchos procesos intenten recalcular a la vez el mismo valor cuando caduca en la caché?",
+    "tipo": "vocabulario_indirecto",
+    "documento_esperado": "16-cache-aplicaciones.md",
+    "debe_contener": "estampida",
+    "respuesta_esperada": "Un bloqueo breve o la agrupación de solicitudes, para evitar el efecto de estampida cuando el valor está ausente simultáneamente para varios procesos."
+  },
+  {
+    "id": 107,
+    "pregunta": "¿Qué combinación de confirmaciones de escritura y de lectura garantiza que una lectura siempre vea el dato más reciente en un sistema con réplicas?",
+    "tipo": "solape_tematico",
+    "documento_esperado": "18-replicacion-particionado.md",
+    "debe_contener": "W + R",
+    "respuesta_esperada": "Cuando el número de réplicas que confirman la escritura (W) más el número que se consulta en la lectura (R) supera el número total de réplicas (N), toda lectura contempla al menos una réplica con la escritura más reciente."
+  },
+  {
+    "id": 108,
+    "pregunta": "¿Qué estrategia de particionado minimiza el movimiento de datos cuando se añade un nodo nuevo a un sistema distribuido?",
+    "tipo": "solape_tematico",
+    "documento_esperado": "18-replicacion-particionado.md",
+    "debe_contener": "hash consistente",
+    "respuesta_esperada": "El hash consistente, porque solo reasigna la fracción de claves adyacente al nodo añadido en vez de recalcular la ubicación de todas las claves."
+  },
+  {
+    "id": 109,
+    "pregunta": "¿Qué patrón evita que un servicio siga intentando llamar a una dependencia que ya está caída, dándole tiempo a recuperarse?",
+    "tipo": "solape_tematico",
+    "documento_esperado": "19-resiliencia-microservicios.md",
+    "debe_contener": "cortacircuito",
+    "respuesta_esperada": "El cortacircuito (circuit breaker): cuando la tasa de fallos supera un umbral se abre y las llamadas fallan de inmediato sin intentar la red."
+  },
+  {
+    "id": 110,
+    "pregunta": "¿Qué mecanismo permite a un consumidor lento indicarle a quien le envía trabajo que reduzca el ritmo para no acumular tareas sin control?",
+    "tipo": "solape_tematico",
+    "documento_esperado": "19-resiliencia-microservicios.md",
+    "debe_contener": "contrapresión",
+    "respuesta_esperada": "La contrapresión (backpressure): el consumidor comunica a quien le envía trabajo que reduzca el ritmo porque no puede procesarlo con la rapidez suficiente."
+  },
+  {
+    "id": 111,
+    "pregunta": "¿Qué evento del marco ágil Scrum tiene una duración máxima de 15 minutos en un sprint de un mes?",
+    "tipo": "solape_tematico",
+    "documento_esperado": "05-metodologias-agiles.md",
+    "debe_contener": "Scrum diario",
+    "respuesta_esperada": "El Scrum diario, con una duración máxima de 15 minutos."
+  },
+  {
+    "id": 112,
+    "pregunta": "¿Qué debe informar un estado de seguimiento útil de un proyecto según las buenas prácticas de gestión de proyectos técnicos?",
+    "tipo": "solape_tematico",
+    "documento_esperado": "17-gestion-proyectos.md",
+    "debe_contener": "bloqueos",
+    "respuesta_esperada": "Logros, próximo paso, bloqueos y decisiones pendientes."
+  },
+  {
+    "id": 113,
+    "pregunta": "¿Qué algoritmo de reemplazo de caché, LRU o LFU, recomienda usar el documento sobre caché en aplicaciones?",
+    "tipo": "trampa",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que esa información no está en los documentos: el documento sobre caché no menciona ningún algoritmo de reemplazo concreto."
+  },
+  {
+    "id": 114,
+    "pregunta": "¿Qué versión de OAuth elimina definitivamente el flujo implícito de la especificación?",
+    "tipo": "trampa",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que esa información no está en los documentos: el documento solo dice que el flujo implícito está obsoleto y que el borrador de OAuth 2.1 recomienda PKCE también en apps web, no que elimine formalmente el flujo implícito."
+  },
+  {
+    "id": 115,
+    "pregunta": "¿Qué RTO mínimo exige la regla 3-2-1 de copias de seguridad?",
+    "tipo": "trampa",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que esa información no está en los documentos: la regla 3-2-1 y el RTO se explican por separado, sin relacionar la regla con ningún valor de RTO."
+  },
+  {
+    "id": 116,
+    "pregunta": "¿Cuánto impacta el tiempo de recolección de basura (garbage collection) en la latencia p99 de un servicio, según el documento de observabilidad?",
+    "tipo": "trampa",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que esa información no está en los documentos: el documento de observabilidad no menciona la recolección de basura."
+  },
+  {
+    "id": 117,
+    "pregunta": "¿Qué producto o middleware concreto recomienda el documento de seguridad de APIs para implementar los límites de tasa?",
+    "tipo": "trampa",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que esa información no está en los documentos: el documento menciona los límites de tasa de forma genérica, sin recomendar ningún producto."
+  },
+  {
+    "id": 118,
+    "pregunta": "¿Qué versión de MongoDB introdujo el soporte de transacciones multi-documento?",
+    "tipo": "trampa",
+    "documento_esperado": null,
+    "debe_contener": null,
+    "respuesta_esperada": "El sistema debe indicar que esa información no está en los documentos: el documento de NoSQL menciona MongoDB como ejemplo documental pero no da detalles de versiones."
+  }
+]

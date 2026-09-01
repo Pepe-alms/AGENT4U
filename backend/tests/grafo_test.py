@@ -14,13 +14,18 @@ Para cada pregunta se ejecutan dos pipelines con el mismo modelo final:
     2 reintentos de busqueda si el contexto tiene puntuacion pobre) -> LLM.
 
 Se mide, para cada pipeline: si el documento esperado aparece entre los
-recuperados, si la respuesta contiene la frase clave esperada (o, para las
-preguntas de tipo "ausente", si el modelo admite que no encuentra la
-informacion), la puntuacion media de retrieval y la duracion.
+recuperados, si la respuesta es semanticamente equivalente a la esperada
+(similitud coseno de embeddings, no coincidencia literal: un LLM puede
+parafrasear una respuesta correcta) -- o, para las preguntas de tipo
+"ausente"/"trampa", si el modelo admite que no encuentra la informacion --,
+la puntuacion media de retrieval y la duracion. La coincidencia literal con
+"debe_contener" se guarda solo como columna informativa, no decide el
+acierto.
 
 Uso:
     uv run python tests/grafo_test.py
     uv run python tests/grafo_test.py --pausa 3
+    uv run python tests/grafo_test.py --preguntas tests/response_file_dificil.json
 """
 
 import argparse
@@ -34,6 +39,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import litellm
+import numpy as np
 import pandas as pd
 from fastembed import SparseTextEmbedding, TextEmbedding
 from fastembed.rerank.cross_encoder import TextCrossEncoder
@@ -45,17 +51,23 @@ from app.rag.prompt import generate_query, reformular_consulta
 from app.rag.retrieval import search_chunks
 
 DEFAULT_PAUSE = 4.0  # version gratuita de Gemini: limite de peticiones/min
+DEFAULT_SIMILARITY_THRESHOLD = 0.85
 RETRIES = 4
 TESTS_DIR = Path(__file__).parent
 QUESTIONS_PATH = TESTS_DIR / "response_file.json"
 RESULTS_DIR = TESTS_DIR / "results"
 ABSENT_PHRASE = "no encuentro esa informacion"
+TIPOS_SIN_RESPUESTA = {"ausente", "trampa"}
 
 
 def normalize(text: str | None) -> str:
     if not text:
         return ""
     return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii").lower()
+
+
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
 
 
 def llm_complete(messages: list[dict], model: str) -> str:
@@ -71,19 +83,26 @@ def llm_complete(messages: list[dict], model: str) -> str:
     raise last_error
 
 
-def evaluar(item: dict, respuesta: str, documentos_recuperados: list[str]) -> dict:
-    if item["tipo"] == "ausente":
+def evaluar(item: dict, respuesta: str, documentos_recuperados: list[str], dense_embedder, umbral: float) -> dict:
+    if item["tipo"] in TIPOS_SIN_RESPUESTA:
         return {
             "respuesta_correcta": ABSENT_PHRASE in normalize(respuesta),
+            "similitud": None,
+            "contiene_keyword": None,
             "doc_recuperado_ok": None,
         }
+
+    vectores = np.array(list(dense_embedder.embed([f"query: {respuesta}", f"query: {item['respuesta_esperada']}"])))
+    similitud = round(cosine_similarity(vectores[0], vectores[1]), 3)
     return {
-        "respuesta_correcta": normalize(item["debe_contener"]) in normalize(respuesta),
+        "respuesta_correcta": similitud >= umbral,
+        "similitud": similitud,
+        "contiene_keyword": normalize(item["debe_contener"]) in normalize(respuesta),
         "doc_recuperado_ok": item["documento_esperado"] in documentos_recuperados,
     }
 
 
-def run_baseline(item: dict, dense_embedder, sparse_embedder, cross_encoder, qdrant, model: str, pausa: float) -> dict:
+def run_baseline(item: dict, dense_embedder, sparse_embedder, cross_encoder, qdrant, model: str, pausa: float, umbral: float) -> dict:
     t0 = time.perf_counter()
     consulta = reformular_consulta(item["pregunta"], [], model)
     chunks = search_chunks(consulta, dense_embedder, sparse_embedder, qdrant, cross_encoder)
@@ -101,11 +120,11 @@ def run_baseline(item: dict, dense_embedder, sparse_embedder, cross_encoder, qdr
         "score_medio_retrieval": score_medio,
         "reintentos": 0,
         "duracion_seg": duracion,
-        **evaluar(item, respuesta, documentos),
+        **evaluar(item, respuesta, documentos, dense_embedder, umbral),
     }
 
 
-def run_grafo(item: dict, grafo, model: str, pausa: float) -> dict:
+def run_grafo(item: dict, grafo, dense_embedder, model: str, pausa: float, umbral: float) -> dict:
     t0 = time.perf_counter()
     estado = grafo.invoke({"query": item["pregunta"], "historial": []})
     chunks = estado.get("chunks", [])
@@ -122,7 +141,7 @@ def run_grafo(item: dict, grafo, model: str, pausa: float) -> dict:
         "score_medio_retrieval": score_medio,
         "reintentos": estado.get("intentos", 0),
         "duracion_seg": duracion,
-        **evaluar(item, respuesta, documentos),
+        **evaluar(item, respuesta, documentos, dense_embedder, umbral),
     }
 
 
@@ -130,6 +149,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Compara el pipeline con grafo frente al baseline sin grafo")
     parser.add_argument("--pausa", type=float, default=DEFAULT_PAUSE, help="segundos entre llamadas al LLM")
     parser.add_argument("--preguntas", type=Path, default=QUESTIONS_PATH)
+    parser.add_argument("--umbral-similitud", type=float, default=DEFAULT_SIMILARITY_THRESHOLD)
     return parser.parse_args()
 
 
@@ -152,7 +172,7 @@ def main() -> None:
         print(f"[{i}/{len(questions)}] ({item['tipo']}) {item['pregunta']}")
 
         try:
-            res_baseline = run_baseline(item, dense_embedder, sparse_embedder, cross_encoder, qdrant, settings.llm_model, args.pausa)
+            res_baseline = run_baseline(item, dense_embedder, sparse_embedder, cross_encoder, qdrant, settings.llm_model, args.pausa, args.umbral_similitud)
         except Exception as exc:
             res_baseline = {"pipeline": "baseline", "error": str(exc), "respuesta_correcta": False, "doc_recuperado_ok": False}
             print(f"    baseline: fallo -> {exc}")
@@ -160,7 +180,7 @@ def main() -> None:
             print(f"    baseline: correcta={res_baseline['respuesta_correcta']} doc_ok={res_baseline['doc_recuperado_ok']} score={res_baseline['score_medio_retrieval']}")
 
         try:
-            res_grafo = run_grafo(item, grafo, settings.llm_model, args.pausa)
+            res_grafo = run_grafo(item, grafo, dense_embedder, settings.llm_model, args.pausa, args.umbral_similitud)
         except Exception as exc:
             res_grafo = {"pipeline": "grafo", "error": str(exc), "respuesta_correcta": False, "doc_recuperado_ok": False}
             print(f"    grafo:    fallo -> {exc}")
