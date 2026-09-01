@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.db.sesion import SessionLocal
 from app.db import record_crud
-from app.rag.generation import generate_query
+from app.rag.prompt import generate_query
 
 BASE_URL = "http://127.0.0.1:8000"
 

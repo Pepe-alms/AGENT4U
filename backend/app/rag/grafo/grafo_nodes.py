@@ -1,8 +1,11 @@
-from typing import TypeDict
+from typing import TypedDict
+from app.rag.prompt import reformular_consulta, reescribir_consulta
+from app.rag.retrieval import search_chunks
+from app.rag.prompt import generate_query
 
 # Estes es el esquema del objeto que se usara en los nodos de LangGraph para almacenar el estado de la conversación y la información relevante para la recuperación de documentos.
 
-class EstadoRAG(TypeDict, total=False):
+class EstadoRAG(TypedDict, total=False):
     query: str
     historial: list
     consulta_busqueda: str
@@ -11,7 +14,7 @@ class EstadoRAG(TypeDict, total=False):
     contexto_pobre: bool
     messages: list[dict]
 
-def crear_grafo(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
+def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
 
     def nodo_reformular(estado: EstadoRAG):
         consulta = reformular_consulta(
@@ -53,22 +56,28 @@ def crear_grafo(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
             "intentos": estado.get("intentos", 0) + 1,
         }
 
-    def decidir(estado: EstadoRAG):
-        if not estad.get("contexto_pobre"):
-            return "reconstruir"
+    def decidir_reconsulta(estado: EstadoRAG):
+        if not estado.get("contexto_pobre"):
+            return "construir"
         if estado.get("intentos", 0) >= 2:
             return "construir"
         return "reescribir"
 
+    def nodo_construir(estado: EstadoRAG):
+        message = generate_query(
+            estado["query"],
+            estado.get("chunks", []),
+            estado.get("historial", [])
+        )
+        return {
+            "messages": message,
+        }
+
     return {
-        "dense_embedder": dense_embedder,
-        "sparse_embedder": sparse_embedder,
-        "qdrant": qdrant,
-        "cross_encoder": cross_encoder,
-        "model": model,
-        "nodo_reformular": nodo_reformular,
-        "nodo_buscar": nodo_buscar,
-        "nodo_evaluar": nodo_evaluar,
-        "nodo_reescribir": nodo_reescribir,
-        "decidir": decidir,
+        "reformular": nodo_reformular,
+        "buscar": nodo_buscar,
+        "evaluar": nodo_evaluar,
+        "reescribir": nodo_reescribir,
+        "construir": nodo_construir,
+        "decidir": decidir_reconsulta,
     }

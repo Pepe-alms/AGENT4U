@@ -27,6 +27,10 @@ from transformers import AutoTokenizer
 
 from app.db.sesion import crear_esquema
 
+## Grafo
+
+from app.rag.grafo.grafo_create import crear_grafo
+
 
 
 @asynccontextmanager
@@ -52,7 +56,15 @@ async def lifespan(app: FastAPI):
         max_tokens=500,)
     app.state.chunker = HybridChunker(tokenizer=tokenizer)
 
-    sesion = crear_esquema()
+    crear_esquema()
+
+    app.state.grafo = crear_grafo(
+        dense_embedder=app.state.dense_embedder,
+        sparse_embedder=app.state.sparse_embedder,
+        qdrant=app.state.qdrant,
+        cross_encoder=app.state.cross_encoder,
+        model=settings.llm_model,
+    )
 
     yield
     app.state.qdrant.close()
