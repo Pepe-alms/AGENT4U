@@ -1,0 +1,62 @@
+[
+  {
+    "id": "conv-cap",
+    "turnos": [
+      {"pregunta": "¿Qué es el teorema CAP?"},
+      {
+        "pregunta": "¿Quién lo demostró formalmente y en qué año?",
+        "documento_esperado": "02-bases-datos-nosql.md",
+        "debe_contener": "Gilbert y Lynch",
+        "respuesta_esperada": "Gilbert y Lynch lo demostraron formalmente en 2002."
+      }
+    ]
+  },
+  {
+    "id": "conv-masa-madre",
+    "turnos": [
+      {"pregunta": "¿Cuánto dura la fermentación en bloque del pan de masa madre a 24 grados?"},
+      {
+        "pregunta": "¿Y si la temperatura baja dos grados, cuánto se alarga?",
+        "documento_esperado": "07-masa-madre.md",
+        "debe_contener": "más de una hora",
+        "respuesta_esperada": "Un descenso de dos grados puede alargar la fermentación en más de una hora."
+      }
+    ]
+  },
+  {
+    "id": "conv-pkce",
+    "turnos": [
+      {"pregunta": "¿Qué es PKCE en OAuth 2.0?"},
+      {
+        "pregunta": "¿En qué RFC se definió y cuándo se publicó?",
+        "documento_esperado": "04-oauth2-autenticacion.md",
+        "debe_contener": "RFC 7636",
+        "respuesta_esperada": "En el RFC 7636, publicado en septiembre de 2015."
+      }
+    ]
+  },
+  {
+    "id": "conv-cortacircuito",
+    "turnos": [
+      {"pregunta": "¿Qué es un cortacircuito en una arquitectura de microservicios?"},
+      {
+        "pregunta": "¿Y qué pasa cuando ese cortacircuito lleva un tiempo abierto?",
+        "documento_esperado": "19-resiliencia-microservicios.md",
+        "debe_contener": "semiabierto",
+        "respuesta_esperada": "Pasado un intervalo entra en estado semiabierto y deja pasar unas pocas llamadas de prueba: si tienen éxito vuelve a cerrarse, si fallan se abre de nuevo."
+      }
+    ]
+  },
+  {
+    "id": "conv-replicacion",
+    "turnos": [
+      {"pregunta": "¿Qué diferencia hay entre replicación primaria-secundaria y multi-primario?"},
+      {
+        "pregunta": "¿Qué técnica ayuda a resolver los conflictos que pueden darse en el segundo caso?",
+        "documento_esperado": "18-replicacion-particionado.md",
+        "debe_contener": "CRDT",
+        "respuesta_esperada": "La resolución de conflictos puede basarse en marca de tiempo, en la aplicación, o en estructuras de datos que se fusionan automáticamente como los CRDT."
+      }
+    ]
+  }
+]
