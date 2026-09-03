@@ -1,20 +1,42 @@
-from typing import TypedDict
+import operator
+from typing import Annotated, TypedDict
+from langgraph.types import Send
 from app.rag.prompt import reformular_consulta, reescribir_consulta
 from app.rag.retrieval import search_chunks
-from app.rag.prompt import generate_query
+from app.rag.prompt import generate_query, descomponer_consulta
 
-# Estes es el esquema del objeto que se usara en los nodos de LangGraph para almacenar el estado de la conversación y la información relevante para la recuperación de documentos.
+def acumular(actual: list | None, nuevo: list | None) -> list:
+    if nuevo is None:
+        return []
+    return (actual or []) + nuevo
 
 class EstadoRAG(TypedDict, total=False):
     query: str
     historial: list
     consulta_busqueda: str
+    chunks_parciales: Annotated[list[dict], acumular]
     chunks: list[dict]
     intentos: int
     contexto_pobre: bool
     messages: list[dict]
+    subconsultas: list[str]
 
 def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
+
+    def multiconsulta(estado: EstadoRAG):
+        subconsultas = descomponer_consulta(
+            estado["consulta_busqueda"],
+            model=model,
+        )
+        return {
+            "subconsultas": subconsultas,
+        }
+
+    def repartir(estado:EstadoRAG):
+        return [Send(
+            "buscar", 
+            {"consulta_busqueda": subconsulta}) 
+            for subconsulta in estado["subconsultas"]]
 
     def nodo_reformular(estado: EstadoRAG):
         consulta = reformular_consulta(
@@ -26,17 +48,19 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
             "consulta_busqueda": consulta,
             "intentos": 0,
         }
+
     def nodo_buscar(estado: EstadoRAG):
+        consulta = estado["consulta_busqueda"]
         chunks = search_chunks(
-            estado["consulta_busqueda"],
+            consulta,
             dense_embedder,
             sparse_embedder,
             qdrant,
             cross_encoder,
         )
-        return {
-            "chunks": chunks,
-        }
+        for c in chunks:
+            c["subconsulta"] = consulta
+        return {"chunks_parciales": chunks}
 
     def nodo_evaluar(estado: EstadoRAG):
         chunks = estado.get("chunks", [])
@@ -54,6 +78,7 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
         return {
             "consulta_busqueda": nueva_consulta,
             "intentos": estado.get("intentos", 0) + 1,
+            "chunks_parciales": None,
         }
 
     def decidir_reconsulta(estado: EstadoRAG):
@@ -73,11 +98,42 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
             "messages": message,
         }
 
+    def nodo_fusionar(estado: EstadoRAG):
+        chunks = estado.get("chunks_parciales", [])
+        if not chunks:
+            return {"chunks": []}
+
+        por_rama: dict[str, list[dict]] = {}
+        for c in chunks:
+            por_rama.setdefault(c.get("subconsulta", ""), []).append(c)
+
+        presupuesto = 9
+        cuota = max(1, presupuesto // len(por_rama))
+
+        seleccionados: list[dict] = []
+        for rama in por_rama.values():
+            rama.sort(key=lambda c: c["score"], reverse=True)
+            seleccionados.extend(rama[:cuota])
+
+        vistos: set[str] = set()
+        finales: list[dict] = []
+        for c in sorted(seleccionados, key=lambda c: c["score"], reverse=True):
+            clave = c["chunk"]
+            if clave in vistos:
+                continue
+            vistos.add(clave)
+            finales.append(c)
+
+        return {"chunks": finales}
+
     return {
+        "repartir": repartir,
+        "multiconsulta": multiconsulta,
         "reformular": nodo_reformular,
         "buscar": nodo_buscar,
         "evaluar": nodo_evaluar,
         "reescribir": nodo_reescribir,
         "construir": nodo_construir,
         "decidir": decidir_reconsulta,
+        "fusionar": nodo_fusionar,
     }
