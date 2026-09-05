@@ -636,3 +636,105 @@ Para poder hacer un seguimiento de los cambios que se aplican en el poryecto, se
 **Pendiente / a vigilar:**
 - El reranker cross-encoder se carga en el `lifespan` pero la llamada a `cross_encode(...)` sigue comentada en `rag/retrieval.py` — hoy no se usa, solo consume memoria al arrancar.
 - Si en algún momento se quiere una URL de fuente real y distinta de `"nombre"` en las citas del LLM, hace falta guardarla explícitamente en el payload al indexar (`vectorization.py`) — el `.get("url")` de hoy solo evita el crash, no añade el dato.
+
+##### #24/08/2026
+
+**Conversaciones relacionales (`app/db/record_model.py`, `record_crud.py`).** Hasta hoy el RAG contestaba preguntas sueltas, sin memoria de nada. Se añaden dos tablas sobre el mismo `Base` que ya usaba `Document`:
+
+- `Conversacion` — `titulo`, `usuario` (indexado; de momento siempre `"local"`, pero el campo ya está para cuando haya login), `creada_en` y `actualizada_en` con `onupdate`, para que el listado pueda ordenarse por actividad reciente y no por fecha de creación.
+- `Mensaje` — `rol`, `contenido`, `fuentes` (JSON, para guardar las citas pegadas a la respuesta que las generó) y `creado_en`. La relación es 1-N con `cascade="all, delete-orphan"`, así borrar una conversación se lleva sus mensajes por delante en vez de dejar huérfanos; y lleva índice compuesto `(conversacion_id, creado_en)` porque la única consulta que se va a hacer de verdad es "los últimos N mensajes de este hilo".
+
+Endpoint `/conversaciones` para listar el histórico.
+
+##### #25/08/2026
+
+**Orquestación de la conversación (`rag/conversacion.py`, `rag/query.py`).** `obtener_o_crear_conversacion` resuelve el caso "primera pregunta del hilo": crea la conversación y le deriva el título de los primeros 60 caracteres de la consulta, cortando por palabra entera para no dejarlo partido a mitad. Si llega un `conversacion_id` que no existe se lanza `ConversacionNoEncontrada` (nueva en `core/excepcions.py`) y la API devuelve 404, en vez de crear un hilo fantasma en silencio.
+
+`responder()` en `query.py` pasa a ser el punto único de entrada de una consulta. Un detalle de orden que importa: **el historial se lee antes de guardar la pregunta actual**. Si se hiciera al revés, el modelo se vería a sí mismo preguntando justo lo que se le está preguntando.
+
+##### #26/08/2026
+
+**Streaming SSE, y marcha atrás en el JSON con citas (`rag/streaming.py`).** Aquí se revierte una decisión tomada hace tres días. El 23/08 se montó `parse_and_validate_response()` para que el LLM devolviera `{"respuesta": ..., "fuentes": [...]}` y poder pintar las citas aparte. El problema es que ese formato es incompatible con el streaming: para parsear un JSON necesitas la respuesta **entera**, así que el usuario se traga toda la latencia mirando una pantalla en blanco.
+
+El enfoque nuevo: el LLM vuelve a escribir prosa natural y las fuentes viajan **por separado**, en su propio evento SSE, emitido *antes* de que empiece a llegar el texto. `traductor_evento()` serializa cada frame como `data: {...}\n\n` y el generador emite `inicio` → `fuentes` → `texto`* → `fin`. Así el front ya tiene las fuentes que pintar mientras la respuesta sigue cayendo token a token. `generate_response` y `parse_and_validate_response` se quedan sin uso a partir de aquí (se borrarían del todo el 05/09).
+
+Detalle sucio pero deliberado: `responder_stream` abre su **propia** sesión de base de datos con `SessionLocal` para guardar la respuesta completa al terminar. No puede reutilizar la de la petición porque FastAPI la cierra al devolver el `StreamingResponse`, no al agotarse el generador — para cuando el stream termina, esa sesión lleva rato muerta.
+
+También se sacan de git las `agent4u.db` que se habían colado (una en la raíz y otra en `backend/`) y se amplía el `.gitignore`.
+
+##### #29/08/2026
+
+**Cross-encoder activado — se cierra el pendiente del 23/08.** El reranker llevaba seis días cargándose en el `lifespan` y ocupando memoria con la llamada comentada. Se reactiva `cross_encode(...)` en `retrieval.py`: los 20 candidatos que salen del RRF se reordenan por relevancia y se recortan a 10. Se añade `retrieval_scores_test.py` para poder mirar los scores a ojo.
+
+Ojo con una consecuencia que condiciona todo lo del grafo: los scores del cross-encoder son **logits, no probabilidades**, y salen negativos muy a menudo. Los umbrales que se escriben ese mismo día dependen de eso.
+
+**Primeros nodos del grafo (`rag/grafo/grafo.py`).** `nodo_reformular`, `nodo_buscar`, `nodo_evaluar`, `nodo_reescribir` y `decidir_reconsulta`. La idea de fondo: si el contexto recuperado es pobre (mejor score ≤ 0), reescribir la consulta con sinónimos y reintentar; pero si el mejor score baja de −1, rendirse y contestar con lo que haya, porque a partir de ahí insistir solo quema llamadas al LLM sin mejorar nada. Tope de 2 reintentos.
+
+##### #01/09/2026
+
+**El grafo se parte en dos ficheros y nace `prompt.py`.** `grafo.py` se separa en `grafo_nodes.py` (los nodos) y `grafo_create.py` (el cableado: nodos, aristas y la condicional de `decidir_reconsulta`). A la vez se vacían 142 líneas de `generation.py` hacia el nuevo `prompt.py`. Ese vaciado dejó `generation.py` convertido en una copia casi idéntica y muerta, que nadie importaba — se arrastraría hasta el refactor del 05/09.
+
+**Evaluación grafo vs baseline, y el resultado no fue el que se esperaba.** Se monta `grafo_conversacional_test.py` y un set de preguntas difíciles para comparar el pipeline con grafo contra el lineal de siempre. 18 preguntas:
+
+| pipeline | correctas | keyword | doc ok | similitud | reintentos | seg/pregunta |
+|---|---|---|---|---|---|---|
+| baseline | 100% | 91,7% | 100% | 0,953 | 0 | 4,95 |
+| grafo | 100% | 91,7% | 100% | 0,946 | 0,83 | 11,92 |
+
+El grafo no mejoró **nada**: mismo acierto, mismo retrieval, similitud incluso un pelo peor, y **2,4× más lento** por culpa de los reintentos. La conclusión honesta del día es que sobre ese set la capa agéntica no aportaba, solo encarecía. De ahí sale la hipótesis que se prueba el 03/09: puede que el problema no fuera *reintentar mejor*, sino que **una sola consulta no cubre una pregunta con varios temas dentro**.
+
+Nota metodológica: `respuesta_correcta` da 100% en ambos pipelines, así que esa métrica está saturada y no discrimina nada. La que de verdad informa es `contiene_keyword`.
+
+##### #03/09/2026
+
+**Multiconsulta, fusión y la arista `repartir`.** `descomponer_consulta` le pide al LLM que parta la pregunta en hasta 3 subconsultas autónomas (y que devuelva una sola si el tema es único). `repartir` es una arista condicional que usa `Send` de LangGraph para lanzar una rama `buscar` por subconsulta **en paralelo**, y `fusionar` las recombina.
+
+Dos decisiones de diseño que no son evidentes leyendo el código:
+
+- El estado `chunks_parciales` necesita un reductor (`acumular`) porque varias ramas escriben a la vez sobre la misma clave y LangGraph tiene que saber cómo combinarlas. Además acepta `None` como señal de **reset**: es el truco que usa `nodo_reescribir` para tirar los fragmentos malos del intento anterior antes de reintentar, en vez de acumularlos.
+- `fusionar` **no** se queda con los 9 mejores globales, sino que reparte cuota por rama (`9 // nº de ramas`). Si se quedara con los mejores globales, la subconsulta con scores más altos se comería todo el presupuesto y la otra mitad de la pregunta llegaría al LLM sin contexto ninguno. Después deduplica por texto, porque dos subconsultas distintas suelen recuperar el mismo fragmento.
+
+Segunda evaluación, ahora con 25 preguntas:
+
+| pipeline | correctas | keyword | doc ok | similitud | reintentos | seg/pregunta |
+|---|---|---|---|---|---|---|
+| baseline | 100% | 72,7% | 100% | 0,915 | 0 | 2,19 |
+| grafo | 100% | 77,3% | 100% | 0,919 | 0,24 | 3,67 |
+
+Esta vez sí hay ventaja, aunque modesta: **+4,5 puntos en keyword a cambio de 1,7× de tiempo**. Y los reintentos bajan de 0,83 a 0,24 por pregunta, lo que encaja con la hipótesis: al repartir la pregunta en subconsultas, cada búsqueda encuentra contexto decente a la primera y el bucle de reescritura casi no hace falta.
+
+##### #05/09/2026
+
+**Refactor de arquitectura.** El backend había crecido por acumulación y `rag/` se había convertido en un cajón donde convivían el pipeline y la orquestación. Se reordena en cinco capas con una regla clara: `api/` habla HTTP, `services/` orquesta, `rag/` es pipeline puro, `db/` persiste, `core/` es transversal.
+
+- `app/main.py` → `app/api/main.py`, que ahora solo crea el `FastAPI` e incluye routers. Los siete endpoints se reparten en `api/routers/` (`query`, `indexation`, `documents`, `conversations`). Hay que acordarse de que el `CMD` del Dockerfile pasa a ser `app.api.main:app`.
+- `rag/indexation.py` y `rag/query.py` → `services/`, que es donde les tocaba: no son pipeline, son orquestación (BD + pipeline + errores de dominio). Se añade `services/document_service.py` con la lógica de borrado que hasta ahora vivía suelta dentro del endpoint.
+- `db/` se reordena en `models/` y `crud/` con un fichero por dominio, y se corrigen los nombres (`sesion.py` → `session.py`, `excepcions.py` → `exceptions.py`).
+
+Tres duplicidades reales que salieron al mover cosas de sitio:
+
+- `generation.py` y `prompt.py` eran casi el mismo fichero desde el 01/09. Ahora se separan de verdad por responsabilidad: `prompt.py` **construye** texto y mensajes, `generation.py` **llama** al LLM.
+- `borrar_por_origen` existía **dos veces con comportamiento distinto**: la de `remove.py` (que usaba el endpoint) filtraba por `origen` **o** `nombre` y se tragaba las excepciones; la de `vectorization.py` (que usaba el rollback de indexación) filtraba solo por `origen` y dejaba escapar el error. Esa segunda era un fallo latente: al llamarse desde dentro de un `except`, si reventaba enmascaraba el `FalloIngesta` original con una excepción distinta. Se unifican en una sola, con el filtro amplio y capturando.
+- `"Test_1"` estaba escrito a mano en tres sitios (crear colección, buscar y borrar). Pasa a `Settings.qdrant_collection`.
+
+**Suite de tests automática — 59 tests, ~4 segundos, sin red.** Organizada en tres niveles, y dentro de cada nivel el fichero hace espejo del módulo que cubre:
+
+- `tests/unit/` — funciones puras, sin dobles: `build_context` y el reparto de `fusionar` / `acumular`.
+- `tests/integration/` — los tres servicios contra SQLite **en memoria**, con dobles de Qdrant, del LLM y de docling. Cubren lo que de verdad duele: que un origen duplicado dé `DocumentoYaExiste` sin tocar el vector store, que un fallo a mitad de ingesta marque `error` y limpie los vectores, que el historial que recibe el grafo no incluya todavía la pregunta actual, y que si el LLM revienta se emita el evento `error` sin guardar respuesta a medias.
+- `tests/api/` — los endpoints con el `TestClient`. El cliente se construye **sin** `with`, a propósito: así no se dispara el `lifespan` y no se descargan los modelos de embeddings en cada test.
+
+Los scripts manuales antiguos (`response_test.py`, `grafo_test.py`, etc.) se retiran; los sets de preguntas y el indexador de corpus se conservan en `tests/evaluation/`, porque son material curado a mano que sigue valiendo para medir calidad.
+
+**CI en GitHub Actions (`.github/workflows/backend.yml`).** Se ejecuta en cada push y en los PR a `main`: `uv sync --frozen` (que además falla si `uv.lock` se desincroniza de `pyproject.toml`) y `uv run pytest`.
+
+Un descubrimiento incómodo al montarlo: **la suite no arrancaba en un entorno limpio**. `Settings` declara `gemini_api_key: str` con el valor de `os.getenv(...)` como defecto, así que sin la variable el defecto es `None`, pydantic lo rechaza por tipo, y como `vectorization.py` llama a `get_settings()` al importarse, el fallo ocurre en tiempo de recolección: 5 errores y ni un test ejecutado. En CI se resuelve poniendo `APP_GEMINI_API_KEY` con un valor de relleno — la suite nunca llama al LLM real, está doblado. Pero la fragilidad de fondo sigue ahí: **el proyecto no se puede ni importar sin esa variable**, así que quien clone el repo sin `.env` se come un `ValidationError` que no explica en ningún sitio que le falta la clave. Se rellena `.env.example`, que estaba a 0 bytes, para dejarlo dicho.
+
+**Pendiente / a vigilar (actualizado a 05/09):**
+
+- **Licencia del reranker, ahora sí urgente.** `jinaai/jina-reranker-v2-base-multilingual` es **CC-BY-NC-4.0**, solo investigación. Cuando se anotó el 19/08 era un problema dormido porque la llamada estaba comentada; desde el 29/08 el reranker está en el camino caliente de toda consulta. Hay alternativas permisivas ya identificadas (`BAAI/bge-reranker-base`, MIT; los `Xenova/ms-marco-MiniLM`, Apache-2.0).
+- **El núcleo RAG es lo peor cubierto.** Medido con cobertura real: `services/` al 100%, pero `retrieval.py` al 25%, `grafo_create.py` al 14% y 7 de los 8 nodos del grafo sin un solo test. En particular `decidir_reconsulta` — cuatro ramas decidiendo si se reintenta una búsqueda — es una función pura y no tiene pruebas. Es el hueco con mejor relación valor/esfuerzo.
+- **CI en verde no significa desplegable.** Todo lo externo está doblado, así que nada comprueba que la app arranque de verdad ni que la imagen Docker construya. El `CMD` del Dockerfile cambió hoy y ningún test vigila esa ruta.
+- **Un documento que falla al indexar queda bloqueado**: la fila se queda en estado `error` pero con el `origin` ocupado, así que reintentar el mismo fichero devuelve 409 en vez de reintentar limpio.
+- **Sin colección en Qdrant no se puede borrar ningún documento**: `borrar_por_origen` devuelve `False` y el servicio nunca llega a la base de datos.
+- Sigue pendiente del 23/08: guardar una URL de fuente real en el payload al indexar, distinta de `"nombre"`.
+- `ruff` reporta 3 imports muertos (`sys` en `config.py`, `operator` en `grafo_nodes.py`, `os` en `vectorization.py`). No hay job de lint en el CI todavía.
