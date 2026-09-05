@@ -3,7 +3,7 @@ from sqlalchemy import String, DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey, JSON, Index
 
-from app.db.document_model import Base
+from app.db.models.document import Base
 
 class Conversacion(Base):
     __tablename__ = "conversaciones"

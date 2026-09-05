@@ -47,7 +47,8 @@ from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
 from app.rag.grafo.grafo_create import crear_grafo
-from app.rag.prompt import generate_query, reformular_consulta
+from app.rag.prompt import generate_query
+from app.rag.generation import reformular_consulta
 from app.rag.retrieval import search_chunks
 
 DEFAULT_PAUSE = 4.0  # version gratuita de Gemini: limite de peticiones/min

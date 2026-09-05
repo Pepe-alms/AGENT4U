@@ -1,5 +1,8 @@
 from qdrant_client import models
 
+from app.rag.vectorization import COLLECTION_NAME
+
+
 def cross_encode(query: str, documents: list[str], cross_encoder, files: list[str], pages: list[list[str]], urls: list[str]) -> list[float]:
     scores = list(cross_encoder.rerank(query=query, documents=documents))
     print(f"Scores: {scores}")
@@ -25,7 +28,7 @@ def search_chunks (query: str, dense_embedder, sparse_embedder, qdrant, cross_en
     query_vector_sparse = next(iter(sparse_embedder.embed([query])))
 
     query_result = qdrant.query_points(
-        collection_name="Test_1",
+        collection_name=COLLECTION_NAME,
         prefetch= [
             models.Prefetch(
                 query=models.SparseVector(
@@ -53,17 +56,5 @@ def search_chunks (query: str, dense_embedder, sparse_embedder, qdrant, cross_en
                                  pages=[result.payload.get("paginas", []) for result in query_result],
                                  urls=[result.payload.get("url") for result in query_result],
                                  cross_encoder=cross_encoder)
-
-    # ranked_results = [
-    #     {
-    #         "chunk": result.payload["texto"],
-    #         "nombre": result.payload["nombre"],
-    #         "paginas": result.payload.get("paginas", []),
-    #         "url": result.payload.get("url"),
-    #         "score": result.score,
-
-    #     }
-    #     for result in query_result[:5]
-    # ]
     
     return ranked_results

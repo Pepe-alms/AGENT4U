@@ -26,9 +26,9 @@ from fastembed import SparseTextEmbedding, TextEmbedding
 from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
-from app.core.excepcions import DocumentoYaExiste
-from app.db.sesion import SessionLocal, crear_esquema
-from app.rag.indexation import indexar_documento
+from app.core.exceptions import DocumentoYaExiste
+from app.db.session import SessionLocal, crear_esquema
+from app.services.indexation_service import indexar_documento
 
 DATA_DIR = Path(__file__).parent / "data"
 DOCUMENTOS = ["18-replicacion-particionado.md", "19-resiliencia-microservicios.md"]
