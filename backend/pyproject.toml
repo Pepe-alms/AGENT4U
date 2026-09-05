@@ -25,10 +25,9 @@ dependencies = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-# Los ficheros *_test.py en tests/ son scripts manuales (llaman a servicios
-# reales: LLM, Qdrant), no tests de pytest; sin este filtro, pytest los
-# recolecta igualmente por el patron *_test.py y rompe la recoleccion si
-# alguno tiene un import obsoleto.
+pythonpath = ["."]
+# Solo se recolecta test_*.py: deja fuera los scripts manuales de
+# tests/evaluation/, que llaman al LLM y a Qdrant reales.
 python_files = ["test_*.py"]
 
 

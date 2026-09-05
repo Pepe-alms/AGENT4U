@@ -1,0 +1,39 @@
+name: Backend
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests (unit, integration, api)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      APP_GEMINI_API_KEY: dummy-para-tests
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Instalar dependencias
+        run: uv sync --frozen
+
+      - name: Ejecutar la suite
+        run: uv run pytest -q --tb=short

@@ -1,5 +1,5 @@
 """Indexa en Qdrant los documentos nuevos añadidos para el set de preguntas
-dificiles (tests/response_file_dificil.json): 18-replicacion-particionado.md
+dificiles (response_file_dificil.json): 18-replicacion-particionado.md
 y 19-resiliencia-microservicios.md, pensados para solaparse tematicamente
 con documentos ya existentes (02-bases-datos-nosql.md, 11-observabilidad-
 servicios.md, 13-seguridad-apis.md, 14-colas-mensajeria.md) y poner a
@@ -8,13 +8,13 @@ prueba si el grafo discrimina bien entre fuentes parecidas.
 No es un test de pytest: escribe en la base de datos y en Qdrant reales.
 
 Uso:
-    uv run python tests/index_hard_docs.py
+    uv run python tests/evaluation/index_hard_docs.py
 """
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat
@@ -30,7 +30,7 @@ from app.core.exceptions import DocumentoYaExiste
 from app.db.session import SessionLocal, crear_esquema
 from app.services.indexation_service import indexar_documento
 
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DOCUMENTOS = ["18-replicacion-particionado.md", "19-resiliencia-microservicios.md"]
 
 
