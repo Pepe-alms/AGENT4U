@@ -3,7 +3,7 @@ from typing import Annotated, TypedDict
 from langgraph.types import Send
 from app.rag.generation import reformular_consulta, reescribir_consulta, descomponer_consulta
 from app.rag.retrieval import search_chunks
-from app.rag.prompt import generate_query
+from app.rag.prompt import generate_query, descomponer_consulta
 
 def acumular(actual: list | None, nuevo: list | None) -> list:
     if nuevo is None:
