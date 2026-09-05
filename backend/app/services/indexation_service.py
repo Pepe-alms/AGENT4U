@@ -1,6 +1,6 @@
 import os
-from app.db import document_crud
-from app.core.excepcions import DocumentoYaExiste, FalloIngesta
+from app.db.crud import document as document_crud
+from app.core.exceptions import DocumentoYaExiste, FalloIngesta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.rag.vectorization import embed_texts, normalize_text, borrar_por_origen

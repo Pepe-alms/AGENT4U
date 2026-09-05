@@ -1,7 +1,7 @@
 import operator
 from typing import Annotated, TypedDict
 from langgraph.types import Send
-from app.rag.prompt import reformular_consulta, reescribir_consulta
+from app.rag.generation import reformular_consulta, reescribir_consulta, descomponer_consulta
 from app.rag.retrieval import search_chunks
 from app.rag.prompt import generate_query, descomponer_consulta
 
@@ -20,6 +20,7 @@ class EstadoRAG(TypedDict, total=False):
     contexto_pobre: bool
     messages: list[dict]
     subconsultas: list[str]
+    valor_maximo: float
 
 def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
 
@@ -64,9 +65,10 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
 
     def nodo_evaluar(estado: EstadoRAG):
         chunks = estado.get("chunks", [])
-        contexto_pobre = max((c["score"] for c in chunks), default=-99)
+        mejor_score = max((c["score"] for c in chunks), default=-99)
         return {
-            "contexto_pobre": contexto_pobre <= 0,
+            "contexto_pobre": mejor_score <= 0,
+            "valor_maximo": mejor_score,
         }
 
     def nodo_reescribir(estado: EstadoRAG):
@@ -83,6 +85,8 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
 
     def decidir_reconsulta(estado: EstadoRAG):
         if not estado.get("contexto_pobre"):
+            return "construir"
+        if estado.get("valor_maximo", 0) < -1:
             return "construir"
         if estado.get("intentos", 0) >= 2:
             return "construir"

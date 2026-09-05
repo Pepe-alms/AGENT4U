@@ -2,7 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
-from app.db.document_model import Base
+from app.db.models.document import Base
+# El modelo de conversaciones registra sus tablas en el mismo Base al importarse.
+from app.db.models import conversation as _conversation_models  # noqa: F401
 
 from collections.abc import Generator
 from sqlalchemy.orm import Session

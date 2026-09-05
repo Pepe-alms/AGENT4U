@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.document_model import Document
+from app.db.models.document import Document
 
 
 def crear_documento(db: Session, origen: str, nombre: str, type: str,

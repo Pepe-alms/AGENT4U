@@ -4,6 +4,11 @@ import datetime
 import numpy as np
 from qdrant_client.models import PointStruct, VectorParams, Distance, SparseVectorParams, models
 
+from app.core.config import get_settings
+
+COLLECTION_NAME = get_settings().qdrant_collection
+
+
 def id_from_text(text: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, text))
 
@@ -50,9 +55,9 @@ def embed_texts(chunks: list, dense_embedder: str, sparse_embedder: str, qdrant,
     sparse_vectors = np.array(list(sparse_embedder.embed(chunks)))
 
 
-    if not qdrant.collection_exists(collection_name="Test_1"):
+    if not qdrant.collection_exists(collection_name=COLLECTION_NAME):
         qdrant.create_collection(
-            collection_name="Test_1",
+            collection_name=COLLECTION_NAME,
             vectors_config={
                 "dense_vector": VectorParams(size= 1024, distance=Distance.COSINE)
                 },
@@ -76,21 +81,34 @@ def embed_texts(chunks: list, dense_embedder: str, sparse_embedder: str, qdrant,
     ]
 
     qdrant.upsert(
-        collection_name="Test_1",
+        collection_name=COLLECTION_NAME,
         points=points
     )
 
-def borrar_por_origen(qdrant, origen: str) -> None:
-    if not qdrant.collection_exists(collection_name="Test_1"):
-        return
-    qdrant.delete(
-        collection_name="Test_1",
-        points_selector=models.FilterSelector(
-            filter=models.Filter(
-                must=[models.FieldCondition(
-                    key="origen",
-                    match=models.MatchValue(value=origen),
-                )]
-            )
-        ),
-    )
+def borrar_por_origen(qdrant, origen: str) -> bool:
+    """Borra los puntos cuyo campo 'origen' o 'nombre' coincida. Devuelve False
+    si la coleccion no existe o si el borrado falla, True en caso contrario."""
+    try:
+        if not qdrant.collection_exists(collection_name=COLLECTION_NAME):
+            return False
+        qdrant.delete(
+            collection_name=COLLECTION_NAME,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    should=[
+                        models.FieldCondition(
+                            key="origen",
+                            match=models.MatchValue(value=origen),
+                        ),
+                        models.FieldCondition(
+                            key="nombre",
+                            match=models.MatchValue(value=origen),
+                        ),
+                    ],
+                )
+            ),
+        )
+        return True
+    except Exception as e:
+        print(f"Error al borrar por origen: {e}")
+        return False

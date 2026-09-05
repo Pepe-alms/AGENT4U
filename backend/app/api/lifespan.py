@@ -25,7 +25,7 @@ from transformers import AutoTokenizer
 
 ## SQL
 
-from app.db.sesion import crear_esquema
+from app.db.session import crear_esquema
 
 ## Grafo
 
@@ -40,11 +40,9 @@ async def lifespan(app: FastAPI):
     app.state.dense_embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
     app.state.sparse_embedder = SparseTextEmbedding(model_name= "Qdrant/bm25", language= "spanish")
     app.state.cross_encoder = TextCrossEncoder(model_name = "jinaai/jina-reranker-v2-base-multilingual")
-
     app.state.qdrant = QdrantClient(url=settings.qdrant_url)
 
     opciones_pdf = PdfPipelineOptions(do_ocr=False, do_table_structure=True)
-
     app.state.converter = DocumentConverter(
         format_options={
             InputFormat.PDF: PdfFormatOption(pipeline_options=opciones_pdf),

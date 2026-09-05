@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.record_model import Conversacion, Mensaje
+from app.db.models.conversation import Conversacion, Mensaje
 
 def crear_conversacion(db: Session, titulo: str, usuario: str) -> Conversacion:
     doc = Conversacion(titulo=titulo, usuario=usuario)

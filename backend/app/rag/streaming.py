@@ -1,8 +1,8 @@
 import json
 from collections.abc import Iterator
 import litellm
-from app.db.sesion import SessionLocal
-from app.db import record_crud
+from app.db.session import SessionLocal
+from app.db.crud import conversation as conversation_crud
 
 
 def traductor_evento (tipo: str, datos: dict) -> str: 
@@ -47,7 +47,7 @@ def responder_stream(messages: list[dict],
 
         completa = "".join(partes)
         with SessionLocal() as sesion:
-            record_crud.anadir_mensaje(
+            conversation_crud.anadir_mensaje(
                 sesion, conversacion_id, rol="assistant",
                 contenido=completa, fuentes=fuentes,
             )
