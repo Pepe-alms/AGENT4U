@@ -1,12 +1,4 @@
-<<<<<<< HEAD
 import litellm
-=======
-"""Construccion de prompts y mensajes para el LLM.
-
-Este modulo no hace llamadas al LLM: solo compone texto y listas de
-mensajes. Las funciones que si llaman al LLM viven en app.rag.generation.
-"""
->>>>>>> origin/main
 
 SYSTEM_PROMPT_STREAMING = """Eres un asistente que responde preguntas basándote ÚNICAMENTE en el contexto proporcionado y en el historial de la conversación.
 
