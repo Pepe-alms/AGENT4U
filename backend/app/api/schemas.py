@@ -5,7 +5,7 @@ from pydantic import field_validator
 
 class QueryRequest(BaseModel):
     query: str
-    conversacion_id: str | None = None
+    conversacion_id: int | None = None
 
     @field_validator("conversacion_id", mode="before")
     @classmethod
