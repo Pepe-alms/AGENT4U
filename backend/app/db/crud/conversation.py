@@ -1,13 +1,25 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models.conversation import Conversacion, Mensaje
 
+# Intentos ante colisión del id aleatorio de 5 cifras antes de rendirse.
+_MAX_INTENTOS_ID = 5
+
+
 def crear_conversacion(db: Session, titulo: str, usuario: str) -> Conversacion:
-    doc = Conversacion(titulo=titulo, usuario=usuario)
-    db.add(doc)
-    db.commit()
-    return doc
+    for _ in range(_MAX_INTENTOS_ID):
+        doc = Conversacion(titulo=titulo, usuario=usuario)
+        db.add(doc)
+        try:
+            db.commit()
+        except IntegrityError:
+            # Id repetido: se descarta y se reintenta con otro.
+            db.rollback()
+            continue
+        return doc
+    raise RuntimeError("No se pudo asignar un id libre de 5 cifras a la conversación")
 
 def obtener_conversacion(db: Session, conversacion_id: int) -> Conversacion | None:
     return db.scalar(select(Conversacion).where(Conversacion.id == conversacion_id))
