@@ -1,14 +1,21 @@
 import datetime
+import secrets
 from sqlalchemy import String, DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey, JSON, Index
 
 from app.db.models.document import Base
 
+
+def id_5_cifras() -> int:
+    """Id aleatorio de 5 cifras (10000-99999), no enumerable."""
+    return 10000 + secrets.randbelow(90000)
+
+
 class Conversacion(Base):
     __tablename__ = "conversaciones"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True, default=id_5_cifras)
     titulo: Mapped[str] = mapped_column(String(256), default="Nueva conversación")
     usuario: Mapped[str] = mapped_column(String(128), default="local", index=True)
     creada_en: Mapped[datetime.datetime] = mapped_column(

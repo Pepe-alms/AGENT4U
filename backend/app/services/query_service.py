@@ -6,7 +6,7 @@ from app.rag.streaming import responder_stream
 
 
 def obtener_o_crear_conversacion(db, conversacion_id, query):
-    if conversacion_id is None:
+    if conversacion_id is None or len(conversacion_id)< 3:
         titulo = query[:60].rsplit(" ", 1)[0] if len(query) > 60 else query
         return conversation_crud.crear_conversacion(db, titulo=titulo, usuario="local")
 
