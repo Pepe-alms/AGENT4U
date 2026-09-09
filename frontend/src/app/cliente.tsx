@@ -6,7 +6,7 @@ type Fuente = {
   nombre: string;
   origen?: string;
   headings?: string[];
-  pages: number[];
+  paginas: number[];
 };
 
 export default function App() {
@@ -14,46 +14,69 @@ export default function App() {
     const [respuesta, setRespuesta] = useState('');
     const [fuentes, setFuentes] = useState<Fuente[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     async function consultar() {
 
         setRespuesta('');
         setFuentes([]);
+        setError('');
         setLoading(true);
         
-        const res = await fetch(`${API}/consultar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ pregunta }),
-        });
+        try {
+            const res = await fetch(`${API}/preguntar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: pregunta }),
+            });
 
-        const reader = res.body?.getReader();
-        const decoder = new TextDecoder();
-        let chunk = "";
+            if (!res.ok || !res.body) {
+                setError(`La consulta falló (${res.status})`);
+                return;
+            }
 
-        while (true) {
-            const { done, value } = await reader!.read();
-            if (done) break;
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
 
-            chunk = decoder.decode(value, { stream: true });
-            const data = chunk.split("\n\n")
-            chunk = data.pop() || "";
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-            for (const d in data ){
-                if (!d.startsWith("data: ")) continue;
-                const evento = JSON.parse(d.slice(6));
-                
-                if (evento.type === "fuentes") {
-                    setFuentes(evento.fuentes);}
-                if (evento.type === "texto") {
-                    setRespuesta((r) => r + evento.texto);
+                buffer += decoder.decode(value, { stream: true });
+                const eventos = buffer.split("\n\n");
+                buffer = eventos.pop() ?? "";
+
+                for (const evento of eventos) {
+                    procesarEvento(evento);
                 }
             }
+            procesarEvento(buffer);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Error de conexión');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
-    } 
+
+        function procesarEvento(bloque: string) {
+            const linea = bloque.trim();
+            if (!linea.startsWith("data: ")) return;
+
+            const evento = JSON.parse(linea.slice(6));
+
+            if (evento.tipo === "fuentes") {
+                setFuentes(evento.fuentes);
+            }
+            if (evento.tipo === "texto") {
+                setRespuesta((r) => r + evento.texto);
+            }
+            if (evento.tipo === "error") {
+                setError(evento.mensaje);
+            }
+        }
+    }
     
     return (
         <div className="container">
@@ -66,6 +89,7 @@ export default function App() {
             <button onClick={consultar} disabled={loading}>
                 {loading ? 'Consultando...' : 'Consultar'}
             </button>
+            {error && <p className="error">{error}</p>}
             <div className="respuesta">
                 <h2>Respuesta:</h2>
                 <p>{respuesta}</p>
@@ -78,13 +102,13 @@ export default function App() {
                             <li key={index}>
                                 <strong>{fuente.nombre}</strong> - {fuente.origen || 'Sin origen'}
                                 {fuente.headings && (
-                                    <   ul>
+                                    <ul>
                                         {fuente.headings.map((heading, idx) => (
                                             <li key={idx}>{heading}</li>
                                         ))}
                                     </ul>
                                 )}
-                                <p>Páginas: {fuente.pages.join(', ')}</p>
+                                <p>Páginas: {fuente.paginas.join(', ')}</p>
                             </li>
                         ))}
                     </ul>
