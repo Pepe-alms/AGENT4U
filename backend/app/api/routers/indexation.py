@@ -2,18 +2,25 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Annotated
 from sqlalchemy.orm import Session
 
-from app.api.schemas import IndexRequest, IndexUrlRequest
+from app.api.schemas import ErrorOut, IndexRequest, IndexUrlRequest, IndexacionOut
 from app.core.exceptions import DocumentoYaExiste, FalloIngesta
 from app.db.session import get_db
 from app.services.indexation_service import indexar_documento
 
-router = APIRouter()
+router = APIRouter(tags=["indexacion"])
 
 
 @router.post(
     "/indexar",
-    responses={409: {"description": "Documento ya existe."},
-               500: {"description": "Error en la ingesta del documento."}},
+    response_model=IndexacionOut,
+    summary="Indexar un fichero local",
+    description="Convierte el fichero, lo trocea, vectoriza los fragmentos y "
+                "los guarda en Qdrant. La ruta ('file_path') es unica: "
+                "reindexar la misma devuelve 409. Si la ingesta falla a mitad "
+                "se limpian los vectores ya escritos y el documento queda en "
+                "estado 'error'.",
+    responses={409: {"model": ErrorOut, "description": "Documento ya existe."},
+               500: {"model": ErrorOut, "description": "Error en la ingesta del documento."}},
 )
 def indexar(
         body: IndexRequest,
@@ -43,8 +50,12 @@ def indexar(
 
 @router.post(
     "/indexar-url",
-    responses={409: {"description": "Documento ya existe."},
-               500: {"description": "Error en la ingesta del documento."}},
+    response_model=IndexacionOut,
+    summary="Indexar una pagina web",
+    description="Mismo flujo que POST /indexar, forzando type='url'. La URL "
+                "es unica: reindexar la misma devuelve 409.",
+    responses={409: {"model": ErrorOut, "description": "Documento ya existe."},
+               500: {"model": ErrorOut, "description": "Error en la ingesta del documento."}},
 )
 def indexar_url(
     body: IndexUrlRequest,
