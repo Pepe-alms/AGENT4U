@@ -2,16 +2,26 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated
 from sqlalchemy.orm import Session
 
-from app.api.schemas import ConversacionResumenOut, ConversacionDetalleOut
+from app.api.schemas import (
+    ConversacionDetalleOut,
+    ConversacionEliminadaOut,
+    ConversacionResumenOut,
+    ErrorOut,
+)
 from app.db.session import get_db
 from app.db.crud import conversation as conversation_crud
 
-router = APIRouter()
+router = APIRouter(tags=["conversaciones"])
 
 
 @router.get(
     "/conversaciones",
-    response_model=list[ConversacionResumenOut])
+    response_model=list[ConversacionResumenOut],
+    summary="Listar conversaciones",
+    description="Las 20 conversaciones mas recientes del usuario, ordenadas "
+                "por fecha de ultima actualizacion. Sin sus mensajes. "
+                "Devuelve una lista vacia si no hay ninguna.",
+)
 def listar_conversaciones(
     db: Annotated[Session, Depends(get_db)]
 ):
@@ -20,7 +30,10 @@ def listar_conversaciones(
 
 @router.delete(
     "/conversaciones/{conversacion_id}",
-    responses={404: {"description": "Conversación no encontrada."}},
+    response_model=ConversacionEliminadaOut,
+    summary="Eliminar una conversacion",
+    description="Borra la conversacion y, en cascada, todos sus mensajes.",
+    responses={404: {"model": ErrorOut, "description": "Conversación no encontrada."}},
 )
 def eliminar_conversacion(
     conversacion_id: int,
@@ -34,7 +47,10 @@ def eliminar_conversacion(
 @router.get(
     "/conversaciones/{conversacion_id}",
     response_model=ConversacionDetalleOut,
-    responses={404: {"description": "Conversación no encontrada."}},
+    summary="Obtener una conversacion con sus mensajes",
+    description="Devuelve la conversacion completa, con los mensajes ordenados "
+                "del mas antiguo al mas reciente.",
+    responses={404: {"model": ErrorOut, "description": "Conversación no encontrada."}},
 )
 def obtener_conversacion(conversacion_id: int, db: Annotated[Session, Depends(get_db)]):
     conv = conversation_crud.obtener_conversacion(db, conversacion_id)
