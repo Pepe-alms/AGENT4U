@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from typing import Annotated
 from sqlalchemy.orm import Session
 
-from app.api.schemas import ErrorOut, EventoStream, QueryRequest
+from app.api.schemas import AjustesOut, ErrorOut, EventoStream, QueryRequest
 from app.core.config import get_settings
 from app.core.exceptions import ConversacionNoEncontrada
 from app.db.session import get_db
@@ -17,6 +17,33 @@ class EventStreamResponse(StreamingResponse):
 
 
 router = APIRouter(tags=["consulta"])
+
+
+def _modelos_permitidos() -> list[str]:
+    """Lista blanca de APP_LLM_MODELOS, con el modelo por defecto siempre dentro."""
+    settings = get_settings()
+    modelos = [m.strip() for m in settings.llm_modelos.split(",") if m.strip()]
+    if settings.llm_model not in modelos:
+        modelos.insert(0, settings.llm_model)
+    return modelos
+
+
+@router.get(
+    "/ajustes",
+    response_model=AjustesOut,
+    tags=["ajustes"],
+    summary="Que parametros de consulta acepta el servidor",
+    description="Lo que el cliente puede tocar en POST /preguntar. Existe para "
+                "que la interfaz no duplique los limites del servidor ni se "
+                "invente la lista de modelos.",
+)
+def ajustes():
+    settings = get_settings()
+    return {
+        "modelos": _modelos_permitidos(),
+        "max_fragmentos_defecto": settings.max_fragmentos_defecto,
+        "max_fragmentos_tope": settings.max_fragmentos_tope,
+    }
 
 
 @router.post(
@@ -56,6 +83,22 @@ router = APIRouter(tags=["consulta"])
     },
 )
 def preguntar(body: QueryRequest, request: Request, db: Annotated[Session, Depends(get_db)]):
+    settings = get_settings()
+
+    # Lista blanca: aceptar cualquier cadena dejaria que el cliente apunte a un
+    # modelo caro o inexistente, y el fallo saldria a mitad del stream.
+    modelo = body.modelo or settings.llm_model
+    if modelo not in _modelos_permitidos():
+        raise HTTPException(
+            status_code=422,
+            detail=f"Modelo no permitido: {modelo}. Disponibles: {', '.join(_modelos_permitidos())}",
+        )
+
+    if body.max_fragmentos is not None and body.max_fragmentos > settings.max_fragmentos_tope:
+        raise HTTPException(
+            status_code=422,
+            detail=f"max_fragmentos no puede pasar de {settings.max_fragmentos_tope}.",
+        )
 
     try:
         generador = responder(
@@ -66,8 +109,9 @@ def preguntar(body: QueryRequest, request: Request, db: Annotated[Session, Depen
             sparse_embedder=request.app.state.sparse_embedder,
             cross_encoder=request.app.state.cross_encoder,
             qdrant=request.app.state.qdrant,
-            model=get_settings().llm_model,
+            model=modelo,
             grafo=request.app.state.grafo,
+            max_fragmentos=body.max_fragmentos,
         )
     except ConversacionNoEncontrada as e:
         raise HTTPException(status_code=404, detail=str(e))
