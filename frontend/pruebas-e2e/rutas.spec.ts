@@ -77,14 +77,12 @@ test.describe('cada ruta del mapa', () => {
       await page.locator('h1').waitFor();
 
       /*
-       * Y se deja que acaben las animaciones de entrada antes de auditar.
-       *
-       * No es un parche: sin esta espera, axe mide elementos a mitad del fade
-       * y reporta `color-contrast` sobre una opacidad transitoria que nadie
-       * llega a leer. El estado que hay que auditar es el final. El revelado
-       * dura 400ms mas hasta 480ms de escalonado.
+       * No hace falta esperar a que acaben animaciones: la configuración pone
+       * `reducedMotion: 'reduce'` en todos los proyectos, así que el revelado
+       * se pinta directamente en su estado final. Antes había aquí una espera
+       * de 1,2 s porque axe medía elementos a mitad del fade y reportaba
+       * `color-contrast` sobre una opacidad transitoria.
        */
-      await page.waitForTimeout(1200);
 
       const { violations } = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

@@ -13,6 +13,7 @@ import { Revelar } from '@/sitio/componentes/Revelar';
 import { ENLACES, FLUJO_INGESTA, NODOS } from '@/sitio/datos/arquitectura';
 import { rutaPorId } from '@/routes';
 import { useScrollToHash } from '@/sitio/useScrollToHash';
+import { useSinMovimiento } from '@/shared/hooks/useMediaQuery';
 
 /** El lienzo del diagrama. Las coordenadas de los nodos viven en los datos. */
 const LIENZO = { ancho: 900, alto: 520 };
@@ -184,6 +185,13 @@ function Diagrama({
 }
 
 function PanelNodo({ id, onCerrar }: { id: string; onCerrar: () => void }) {
+  /*
+   * `MotionConfig reducedMotion="user"` desactiva las transformadas, pero NO
+   * la opacidad. Un fade de 250ms deja al texto a medio camino, y una
+   * auditoria de contraste que caiga ahi mide un gris que nadie llega a leer.
+   * Con movimiento reducido, duracion cero.
+   */
+  const sinMovimiento = useSinMovimiento();
   const nodo = NODOS.find((n) => n.id === id);
   if (!nodo) return null;
 
@@ -192,7 +200,7 @@ function PanelNodo({ id, onCerrar }: { id: string; onCerrar: () => void }) {
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 12 }}
-      transition={{ duration: 0.25, ease: [0, 0, 0.2, 1] }}
+      transition={{ duration: sinMovimiento ? 0 : 0.25, ease: [0, 0, 0.2, 1] }}
       className="flex flex-col gap-5 rounded-m border border-borde p-6"
       aria-label={`Detalle de ${nodo.nombre}`}
     >
@@ -290,6 +298,7 @@ function FlujoIngesta() {
 export function Arquitectura() {
   // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
   useScrollToHash();
+  const sinMovimiento = useSinMovimiento();
 
   const ruta = rutaPorId('arquitectura')!;
   /*
@@ -388,7 +397,7 @@ export function Arquitectura() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: sinMovimiento ? 0 : 0.2 }}
                 className="flex items-center justify-center rounded-m border border-dashed border-borde p-6 text-center"
               >
                 <p className="max-w-[26ch] text-[0.9375rem] text-tenue">
