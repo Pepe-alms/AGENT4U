@@ -31,24 +31,32 @@ export default defineConfig({
   projects: [
     {
       name: 'chrome',
-      // El Chrome ya instalado, en vez de descargar ~1 GB de navegadores.
-      // Para añadir Firefox o WebKit haría falta `npx playwright install`.
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+      // El Chrome ya instalado, en vez de descargar Chromium aparte.
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chrome',
+        // Aísla el estado del backend de mentira de este proyecto del otro:
+        // los dos corren a la vez contra el mismo servidor. Ver
+        // `estadoDe()` en pruebas-e2e/servidor-falso.mjs.
+        extraHTTPHeaders: { 'x-sesion-prueba': 'chrome' },
+      },
     },
     {
       /*
-       * El móvil importa aquí de verdad: el menú de navegación es otro
-       * componente por debajo de 768px, no el mismo encogido.
+       * iPhone 13 con WebKit de verdad, que es el motor de Safari.
        *
-       * `defaultBrowserType: 'chromium'` sobrescribe el WebKit que trae el
-       * perfil de iPhone, porque el proyecto no descarga navegadores: usa el
-       * Chrome ya instalado. Lo que se valida es el viewport, el táctil y el
-       * user agent, NO el motor: un fallo específico de Safari no se vería
-       * aquí. Para cubrirlo haría falta `npx playwright install webkit` y
-       * quitar estas dos líneas.
+       * Importa por dos cosas a la vez: el menú de navegación es otro
+       * componente por debajo de 768px, y WebKit es el único motor del iPhone.
+       * Antes esto corría sobre Chromium con el viewport del iPhone, lo que
+       * validaba la medida pero no el motor.
+       *
+       * Requiere `npx playwright install webkit` una vez.
        */
       name: 'iphone',
-      use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium', channel: 'chrome' },
+      use: {
+        ...devices['iPhone 13'],
+        extraHTTPHeaders: { 'x-sesion-prueba': 'iphone' },
+      },
     },
   ],
   // Playwright levanta las dos piezas y las apaga al terminar, para que
