@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { RUTAS_NAV } from '../src/routes';
+
 /**
  * Los recorridos que haria una persona.
  *
@@ -9,6 +11,22 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 const esMovil = (page: Page) => (page.viewportSize()?.width ?? 1440) < 768;
+
+/** El CTA vive en la barra en escritorio y dentro del menu en movil. */
+async function abrirElAgente(page: Page) {
+  if (esMovil(page)) {
+    await page.getByRole('button', { name: /abrir el menú/i }).click();
+    await page
+      .getByRole('dialog', { name: 'Navegación' })
+      .getByRole('link', { name: 'Abrir el agente' })
+      .click();
+    return;
+  }
+  await page
+    .getByRole('navigation', { name: 'Principal' })
+    .getByRole('link', { name: 'Abrir el agente' })
+    .click();
+}
 
 /** Abre el menu si hace falta y pulsa un enlace de la navegacion. */
 async function navegarA(page: Page, nombre: string) {
@@ -243,17 +261,16 @@ test('E · las rutas inexistentes caen en la 404, que tiene salida', async ({ pa
   }
 });
 
-test('E2 · el buscador de la 404 encuentra una sección', async ({ page }) => {
+test('E2 · la 404 lista las secciones y cualquiera de ellas funciona', async ({
+  page,
+}) => {
   await page.goto('/no-existe');
-  await page.getByLabel(/buscar una sección/i).fill('arquitect');
 
-  await expect(page.getByText(/1 sección para/)).toBeVisible();
-  // Acotado al resultado: "Arquitectura" aparece tambien en la barra y en el
-  // pie, y sin acotar el selector resuelve a tres enlaces.
-  await page
-    .getByRole('main')
-    .getByRole('link', { name: /Arquitectura.*siete piezas/s })
-    .click();
+  // Lista directa, no buscador: con tres secciones caben todas de un vistazo.
+  const lista = page.getByRole('main').getByRole('list').last();
+  await expect(lista.getByRole('listitem')).toHaveCount(RUTAS_NAV.length);
+
+  await lista.getByRole('link', { name: /Arquitectura/ }).click();
   await expect(page).toHaveURL(/\/arquitectura$/);
 });
 
@@ -364,4 +381,72 @@ test('H · se llega de Inicio a Tecnologías solo con teclado, y el foco cae en 
   // El foco aterriza en el h1 de la página nueva: sin esto, el siguiente Tab
   // seguiría por la barra y nunca llegaría al contenido.
   await expect(page.locator('h1')).toBeFocused();
+});
+
+/* --- Propuestas de UX implementadas --- */
+
+test('UX1 · la aplicación tiene salida y devuelve a donde estabas', async ({ page }) => {
+  // Se entra al sitio por Arquitectura para comprobar que vuelve ahí y no a
+  // la portada: mandar siempre a /home obliga a repetir el camino.
+  await page.goto('/arquitectura');
+  await abrirElAgente(page);
+
+  await expect(page).toHaveURL(/\/app$/);
+
+  const volver = page.getByRole('link', { name: /volver al sitio|^sitio$/i });
+  await expect(volver).toBeVisible();
+  await volver.click();
+
+  await expect(page).toHaveURL(/\/arquitectura$/);
+});
+
+test('UX1b · entrando directo a la aplicación, la salida lleva a la portada', async ({
+  page,
+}) => {
+  // Sin haber pasado por el sitio no hay nada que recordar.
+  await page.goto('/app');
+  await page.getByRole('link', { name: /volver al sitio|^sitio$/i }).click();
+  await expect(page).toHaveURL(/\/home$/);
+});
+
+test('UX2 · arquitectura y tecnologías se enlazan en los dos sentidos', async ({
+  page,
+}) => {
+  await page.goto('/arquitectura/qdrant');
+
+  const panel = page.getByRole('complementary', { name: /detalle de qdrant/i });
+  await panel.getByRole('link', { name: /Vector DB/ }).click();
+
+  await expect(page).toHaveURL(/\/tecnologias\?capa=vector-db$/);
+  await expect(page.getByText(/en Vector DB/)).toBeVisible();
+
+  // Y el camino de vuelta: de la capa a la pieza del diagrama.
+  await page
+    .getByRole('link', { name: /^Qdrant/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/arquitectura\/qdrant$/);
+  await expect(
+    page.getByRole('complementary', { name: /detalle de qdrant/i }),
+  ).toBeVisible();
+});
+
+test('UX3 · copiar el enlace a una pieza avisa de que lo ha copiado', async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'el permiso de portapapeles es de Chromium');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+  await page.goto('/arquitectura/qdrant');
+  const panel = page.getByRole('complementary', { name: /detalle de qdrant/i });
+
+  await panel.getByRole('button', { name: /copiar enlace a esta pieza/i }).click();
+
+  // La confirmación va por `aria-live`: quien no ve el icono también se entera.
+  await expect(page.getByRole('status')).toHaveText('Enlace copiado');
+
+  const copiado = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copiado).toMatch(/\/arquitectura\/qdrant$/);
 });

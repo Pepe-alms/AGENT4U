@@ -9,6 +9,7 @@ import {
   useMatches,
 } from 'react-router';
 
+import { guardarUltimaPagina } from '@/shared/lib/ultimaPagina';
 import { Sello } from '@/shared/ui/Logo';
 import { BotonMenu, DialogoMenu } from '@/sitio/componentes/MenuMovil';
 import {
@@ -183,6 +184,12 @@ export function Sitio() {
   // /arquitectura/:componente manda la hija, no el padre.
   const id = [...matches].reverse().find((m) => (m.handle as HandleRuta | undefined)?.id);
   const idRuta = (id?.handle as HandleRuta | undefined)?.id;
+
+  // Se recuerda la pagina para que el enlace de vuelta desde /app devuelva
+  // aqui y no siempre a la portada.
+  useEffect(() => {
+    guardarUltimaPagina(pathname);
+  }, [pathname]);
 
   useMetadatos(idRuta);
   useFocoEnTitular(pathname);

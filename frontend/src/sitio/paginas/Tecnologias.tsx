@@ -1,12 +1,14 @@
 import { useCallback, useMemo } from 'react';
 
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import { ArrowRight } from 'lucide-react';
 
 import { AnteriorSiguiente } from '@/sitio/componentes/AnteriorSiguiente';
 import { CabeceraPagina } from '@/sitio/componentes/CabeceraPagina';
 import { Migas } from '@/sitio/componentes/Migas';
 import { Revelar } from '@/sitio/componentes/Revelar';
 import { rutaPorId } from '@/routes';
+import { NODOS } from '@/sitio/datos/arquitectura';
 import { useScrollToHash } from '@/sitio/useScrollToHash';
 import {
   CAPAS,
@@ -52,6 +54,30 @@ function Chips({
       {chip('Todas', activo === null, () => onElegir(null))}
       {CAPAS.map((capa) => chip(capa, activo === capa, () => onElegir(capa)))}
     </ul>
+  );
+}
+
+/** Las piezas del diagrama que pertenecen a una capa, enlazadas. */
+function Piezas({ capa }: { capa: Capa }) {
+  const piezas = NODOS.filter((n) => n.capa === capa);
+  if (piezas.length === 0) return null;
+
+  return (
+    <Revelar>
+      <p className="flex flex-wrap items-center gap-2 text-[0.8125rem] text-tenue">
+        En el diagrama:
+        {piezas.map((pieza) => (
+          <Link
+            key={pieza.id}
+            to={`/arquitectura/${pieza.id}`}
+            className="group flex items-center gap-1 rounded-full border border-borde px-2.5 py-1 font-medium text-texto transition-colors hover:bg-superficie-suave focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-texto"
+          >
+            {pieza.nombre}
+            <ArrowRight size={12} strokeWidth={1.5} aria-hidden="true" />
+          </Link>
+        ))}
+      </p>
+    </Revelar>
   );
 }
 
@@ -135,6 +161,10 @@ export function Tecnologias() {
                   </h2>
                 </Revelar>
               ) : null}
+
+              {/* El camino de vuelta al diagrama: qué piezas del sistema usan
+                  esta capa. Cierra el cruce entre las dos páginas. */}
+              <Piezas capa={grupo.capa} />
 
               <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {grupo.items.map((tecnologia, indice) => (
