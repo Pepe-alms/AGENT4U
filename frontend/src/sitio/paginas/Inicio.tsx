@@ -8,6 +8,7 @@ import { ArticleCard } from '@/sitio/componentes/ArticleCard';
 import { Revelar } from '@/sitio/componentes/Revelar';
 import { AnteriorSiguiente } from '@/sitio/componentes/AnteriorSiguiente';
 import { RUTA_APP, RUTAS_NAV } from '@/routes';
+import { useScrollToHash } from '@/sitio/useScrollToHash';
 import {
   DEMO_FUENTES,
   DEMO_PREGUNTA,
@@ -749,6 +750,9 @@ function Recorrido() {
  * desaparecer.
  */
 export function Inicio() {
+  // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
+  useScrollToHash();
+
   return (
     <>
       <Hero />

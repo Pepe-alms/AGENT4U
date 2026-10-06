@@ -7,6 +7,7 @@ import { CabeceraPagina } from '@/sitio/componentes/CabeceraPagina';
 import { Migas } from '@/sitio/componentes/Migas';
 import { Revelar } from '@/sitio/componentes/Revelar';
 import { rutaPorId } from '@/routes';
+import { useScrollToHash } from '@/sitio/useScrollToHash';
 import {
   CAPAS,
   SLUG_CAPA,
@@ -55,6 +56,9 @@ function Chips({
 }
 
 export function Tecnologias() {
+  // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
+  useScrollToHash();
+
   const ruta = rutaPorId('tecnologias')!;
   /*
    * El filtro vive en la query y no en un `useState`.

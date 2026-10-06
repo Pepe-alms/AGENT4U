@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router';
 
 import { Revelar } from '@/sitio/componentes/Revelar';
 import { RUTAS_NAV } from '@/routes';
+import { useScrollToHash } from '@/sitio/useScrollToHash';
 
 /**
  * La 404.
@@ -14,6 +15,9 @@ import { RUTAS_NAV } from '@/routes';
  * usuario que arregle el problema por su cuenta.
  */
 export function NoEncontrada() {
+  // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
+  useScrollToHash();
+
   const { pathname } = useLocation();
   const [consulta, setConsulta] = useState('');
 

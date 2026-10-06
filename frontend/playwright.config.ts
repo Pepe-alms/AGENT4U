@@ -12,6 +12,21 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PUERTO_APP}`,
     trace: 'retain-on-failure',
+    /*
+     * Movimiento reducido en TODAS las pruebas.
+     *
+     * No es por comodidad: con el revelado al hacer scroll activo, cualquier
+     * elemento situado debajo de contenido que entra en pantalla se esta
+     * moviendo, y Playwright espera a que se estabilice antes de pulsarlo.
+     * Eso produjo cuatro falsos fallos y un recorrido que no se podia
+     * completar. Con esto, lo que se prueba es el estado final, que es el
+     * unico sobre el que tiene sentido afirmar algo.
+     *
+     * Lo que se pierde: las animaciones en si no quedan cubiertas. Es un
+     * intercambio aceptado, porque validar el aspecto de una transicion no es
+     * para lo que sirven estas pruebas.
+     */
+    reducedMotion: 'reduce',
   },
   projects: [
     {
