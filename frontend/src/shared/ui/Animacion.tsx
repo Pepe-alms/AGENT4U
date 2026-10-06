@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { LazyMotion } from 'motion/react';
+import { LazyMotion, MotionConfig } from 'motion/react';
 
 /**
  * Proveedor del motor de animacion de Motion.
@@ -24,7 +24,14 @@ import { LazyMotion } from 'motion/react';
 export function Animacion({ children }: { children: ReactNode }) {
   return (
     <LazyMotion features={() => import('motion/react').then((mod) => mod.domAnimation)}>
-      {children}
+      {/*
+        `reducedMotion="user"` es la red de seguridad: Motion desactiva solo
+        las animaciones de transformada cuando el sistema lo pide, sin que cada
+        componente tenga que acordarse. Los que ademas deben quedarse en su
+        estado final de golpe —Revelar, el pulso del pipeline— lo resuelven por
+        su cuenta con `useReducedMotion`.
+      */}
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </LazyMotion>
   );
 }

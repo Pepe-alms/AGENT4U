@@ -4,7 +4,7 @@ import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { X } from 'lucide-react';
 
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 
 import { AnteriorSiguiente } from '@/sitio/componentes/AnteriorSiguiente';
 import { CabeceraPagina } from '@/sitio/componentes/CabeceraPagina';
@@ -12,6 +12,7 @@ import { Migas } from '@/sitio/componentes/Migas';
 import { Revelar } from '@/sitio/componentes/Revelar';
 import { ENLACES, FLUJO_INGESTA, NODOS } from '@/sitio/datos/arquitectura';
 import { rutaPorId } from '@/routes';
+import { useScrollToHash } from '@/sitio/useScrollToHash';
 
 /** El lienzo del diagrama. Las coordenadas de los nodos viven en los datos. */
 const LIENZO = { ancho: 900, alto: 520 };
@@ -287,6 +288,9 @@ function FlujoIngesta() {
 }
 
 export function Arquitectura() {
+  // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
+  useScrollToHash();
+
   const ruta = rutaPorId('arquitectura')!;
   /*
    * El componente abierto vive en la URL y no en un `useState`.
@@ -297,24 +301,48 @@ export function Arquitectura() {
    */
   const { componente } = useParams<{ componente: string }>();
   const navegar = useNavigate();
+  const ubicacion = useLocation();
 
   // Un id inventado en la URL no abre nada en vez de romper la pagina.
   const elegido = NODOS.some((n) => n.id === componente) ? (componente ?? null) : null;
 
-  const elegir = useCallback(
-    (id: string | null) => {
-      /*
-       * Abrir APILA y cerrar REEMPLAZA.
-       *
-       * Abrir con `replace` parecia buena idea —"el historial es para moverse
-       * entre paginas"— y estaba mal: hacia que el boton de atras saltase a la
-       * pagina anterior en vez de cerrar el panel, que es justo lo que espera
-       * quien acaba de abrirlo. Cerrar si reemplaza, para no dejar un rastro
-       * de abrir-cerrar-abrir por el que haya que volver uno a uno.
-       */
-      navegar(id ? `${ruta.path}/${id}` : ruta.path, { replace: id === null });
+  /*
+   * Abrir y cerrar el panel, cuidando el historial.
+   *
+   * Hay DOS formas de llegar a /arquitectura/qdrant y cada una necesita una
+   * salida distinta:
+   *
+   *   1. Pulsando un nodo desde la propia pagina. El paso anterior del
+   *      historial es /arquitectura, asi que cerrar es literalmente volver
+   *      atras: `navigate(-1)`. Se marca con `state.desdePanel` al abrir.
+   *
+   *   2. Entrando por un enlace compartido. Aqui no hay nada detras a lo que
+   *      volver, asi que cerrar REEMPLAZA por /arquitectura.
+   *
+   * El intento anterior —abrir apila, cerrar apila /arquitectura— dejaba el
+   * historial en [/arquitectura, /arquitectura] y el siguiente "atras" no
+   * hacia nada visible: un paso muerto.
+   */
+  const abrir = useCallback(
+    (id: string) => {
+      navegar(`${ruta.path}/${id}`, { state: { desdePanel: true } });
     },
     [navegar, ruta.path],
+  );
+
+  const cerrar = useCallback(() => {
+    const abiertoDesdeLaPagina = (ubicacion.state as { desdePanel?: boolean } | null)
+      ?.desdePanel;
+    if (abiertoDesdeLaPagina) navegar(-1);
+    else navegar(ruta.path, { replace: true });
+  }, [navegar, ruta.path, ubicacion.state]);
+
+  const elegir = useCallback(
+    (id: string | null) => {
+      if (id) abrir(id);
+      else cerrar();
+    },
+    [abrir, cerrar],
   );
 
   return (
@@ -353,7 +381,7 @@ export function Arquitectura() {
           */}
           <AnimatePresence mode="wait">
             {elegido ? (
-              <PanelNodo key={elegido} id={elegido} onCerrar={() => elegir(null)} />
+              <PanelNodo key={elegido} id={elegido} onCerrar={cerrar} />
             ) : (
               <m.div
                 key="vacio"

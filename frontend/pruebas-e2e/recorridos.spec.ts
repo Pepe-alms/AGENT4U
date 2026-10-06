@@ -40,8 +40,19 @@ test('A · entra en la raíz, lee el hero y recorre el sitio hasta el final', as
   );
   await expect(page.getByLabel(/escribe una pregunta/i)).toBeVisible();
 
-  // Avanzar con "Siguiente" hasta que ya no haya. El tope evita que un
-  // encadenado circular deje la prueba dando vueltas para siempre.
+  /*
+   * Avanzar con "Siguiente" hasta que ya no haya. El tope evita que un
+   * encadenado circular deje la prueba dando vueltas para siempre.
+   *
+   * Entre clic y clic hay que esperar a que llegue la pagina NUEVA, y esperar
+   * a un `h1` generico no sirve: React Router envuelve las navegaciones en una
+   * transicion, asi que mientras llega el paquete diferido la pagina anterior
+   * sigue montada —con su propio h1 y su propio enlace "Siguiente"—. La prueba
+   * encontraba ese enlace viejo y lo pulsaba justo cuando lo quitaban del DOM.
+   *
+   * Lo que si prueba que ha cambiado la pagina: la URL del destino, que se lee
+   * del propio enlace, y un titular distinto al anterior.
+   */
   const visitadas: string[] = [];
   for (let paso = 0; paso < 10; paso += 1) {
     visitadas.push(new URL(page.url()).pathname);
@@ -51,13 +62,13 @@ test('A · entra en la raíz, lee el hero y recorre el sitio hasta el final', as
       .getByRole('link', { name: /siguiente/i });
     if ((await siguiente.count()) === 0) break;
 
-    // Sin `scrollIntoViewIfNeeded`: `click()` ya desplaza, y además reintenta
-    // si el nodo se reemplaza entre la resolución y la acción. Pedir el
-    // desplazamiento aparte abre una ventana en la que el elemento puede
-    // quedarse huérfano —el mismo patrón que el fallo de las citas de la
-    // iteración 022—.
+    const destino = await siguiente.getAttribute('href');
+    const titularAnterior = (await page.locator('h1').textContent()) ?? '';
+
     await siguiente.click();
-    await page.locator('h1').waitFor();
+
+    await expect(page).toHaveURL(new RegExp(`${destino}$`));
+    await expect(page.locator('h1')).not.toHaveText(titularAnterior);
   }
 
   // El recorrido llega al final y no se repite ninguna: eso seria un bucle.
@@ -101,6 +112,53 @@ test('B · abre un nodo del diagrama, recarga y vuelve atrás', async ({ page })
   await expect(page.getByText(/ninguna pieza seleccionada/i)).toBeVisible();
 });
 
+test('B2 · cerrar el panel no deja pasos muertos en el historial', async ({ page }) => {
+  await page.goto('/home');
+  await navegarA(page, 'Arquitectura');
+
+  await page.getByRole('button', { name: /Qdrant: Vector store/ }).click();
+  await expect(page).toHaveURL(/\/arquitectura\/qdrant$/);
+
+  await page
+    .getByRole('complementary', { name: /detalle de qdrant/i })
+    .getByRole('button', { name: /cerrar el detalle/i })
+    .click();
+  await expect(page).toHaveURL(/\/arquitectura$/);
+
+  /*
+   * La prueba de verdad: el siguiente "atrás" tiene que SALIR de
+   * /arquitectura, no quedarse en ella. Con la versión anterior —abrir apila,
+   * cerrar apila— el historial quedaba [/arquitectura, /arquitectura] y este
+   * paso no hacía nada visible.
+   */
+  await page.goBack();
+  await expect(page).toHaveURL(/\/home$/);
+});
+
+test('B3 · por deep link, cerrar y volver atrás no reabre el panel', async ({ page }) => {
+  // Se entra desde otra página para tener un paso anterior conocido.
+  await page.goto('/tecnologias');
+  await page.goto('/arquitectura/qdrant');
+
+  await expect(
+    page.getByRole('complementary', { name: /detalle de qdrant/i }),
+  ).toBeVisible();
+
+  await page
+    .getByRole('complementary', { name: /detalle de qdrant/i })
+    .getByRole('button', { name: /cerrar el detalle/i })
+    .click();
+  await expect(page).toHaveURL(/\/arquitectura$/);
+
+  // Cerrar reemplazó, así que atrás sale del sitio hacia la página previa y
+  // NUNCA reabre el panel.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/tecnologias$/);
+  await expect(
+    page.getByRole('complementary', { name: /detalle de qdrant/i }),
+  ).toHaveCount(0);
+});
+
 /* --- C. Exploración con filtros --- */
 
 test('C · filtra tecnologías y el filtro viaja en la URL', async ({ page, context }) => {
@@ -140,18 +198,32 @@ test('D · un enlace con #ancla lleva al ancla, no al principio de la página', 
   await page.goto('/home#coleccion');
   await page.locator('h1').waitFor();
 
-  const ancla = page.locator('#coleccion');
-  await expect(ancla).toBeVisible();
+  // `toBeInViewport` es la aserción web-first para esto: reintenta sola y no
+  // hay que medir cajas a mano. Un hash que cambia la URL y deja la página
+  // arriba es exactamente el fallo que vigila.
+  await expect(page.locator('#coleccion')).toBeInViewport();
+});
 
-  // En el viewport: un hash que cambia la URL y deja la página arriba es
-  // exactamente el fallo que esta prueba vigila.
-  await expect
-    .poll(async () => {
-      const caja = await ancla.boundingBox();
-      const alto = page.viewportSize()?.height ?? 900;
-      return caja !== null && caja.y < alto && caja.y > -caja.height;
-    })
-    .toBe(true);
+test('D2 · el ancla funciona con la CPU 4× más lenta', async ({ page, browserName }) => {
+  /*
+   * Esta prueba existe porque la versión anterior resolvía el ancla
+   * reintentando durante 500ms: con una CPU lenta o un paquete grande se podía
+   * agotar el plazo y el enlace compartido abría la página por arriba.
+   *
+   * Ahora el scroll lo hace la propia página una vez montada, así que no
+   * depende del tiempo. Ralentizar la CPU lo demuestra.
+   */
+  test.skip(browserName !== 'chromium', 'la ralentización de CPU es de CDP');
+
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+
+  await page.goto('/home#coleccion');
+
+  const ancla = page.locator('#coleccion');
+  await expect(ancla).toBeInViewport();
+
+  await cdp.detach();
 });
 
 /* --- E. Usuario perdido --- */

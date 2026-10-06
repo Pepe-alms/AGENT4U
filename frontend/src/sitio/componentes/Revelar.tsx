@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { useReducedMotion } from 'motion/react';
 import * as m from 'motion/react-m';
 
 /**
@@ -25,17 +26,30 @@ export function Revelar({
   className?: string;
   como?: 'div' | 'li';
 }) {
-  const animacion = {
-    initial: { opacity: 0, y: 8 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, margin: '-60px' },
-    transition: {
-      duration: 0.4,
-      ease: [0, 0, 0.2, 1] as const,
-      delay: Math.min(indice, 8) * 0.06,
-    },
-    className,
-  };
+  const sinMovimiento = useReducedMotion();
+
+  /*
+   * Con movimiento reducido NO se anima: se pinta el estado final.
+   *
+   * No es solo accesibilidad. Un revelado que desplaza 8px cada elemento al
+   * entrar en pantalla hace que todo lo que esta debajo se mueva mientras
+   * alguien intenta pulsarlo. Para una persona es un temblor de 400ms; para
+   * una prueba automatica es un elemento que nunca se estabiliza, y ahi es
+   * donde se ve que el problema existe.
+   */
+  const animacion = sinMovimiento
+    ? { className }
+    : {
+        initial: { opacity: 0, y: 8 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true, margin: '-60px' },
+        transition: {
+          duration: 0.4,
+          ease: [0, 0, 0.2, 1] as const,
+          delay: Math.min(indice, 8) * 0.06,
+        },
+        className,
+      };
 
   if (como === 'li') return <m.li {...animacion}>{children}</m.li>;
   return <m.div {...animacion}>{children}</m.div>;

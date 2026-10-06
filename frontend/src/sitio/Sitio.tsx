@@ -77,46 +77,6 @@ function useFocoEnTitular(pathname: string) {
   }, [pathname]);
 }
 
-/**
- * Un enlace con `#ancla` lleva al ancla con scroll suave.
- *
- * React Router no lo hace: cambia la URL y deja el scroll donde estaba, asi
- * que un enlace compartido con hash abre la pagina por arriba.
- */
-function useAnclaDelHash(hash: string) {
-  useEffect(() => {
-    if (!hash) return;
-    const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    /*
-     * Se reintenta durante medio segundo en vez de mirar una vez.
-     *
-     * Las paginas llegan diferidas: cuando cambia la URL, el ancla todavia no
-     * existe en el DOM, asi que una sola consulta no encuentra nada y el
-     * enlace compartido abre la pagina por arriba. Medio segundo es de sobra
-     * para un paquete local y suficientemente poco para que, si el ancla no
-     * existe de verdad, no se quede intentandolo.
-     */
-    let cuadro = 0;
-    const limite = performance.now() + 500;
-
-    const intentar = () => {
-      const destino = document.querySelector(hash);
-      if (destino) {
-        destino.scrollIntoView({
-          behavior: sinMovimiento ? 'auto' : 'smooth',
-          block: 'start',
-        });
-        return;
-      }
-      if (performance.now() < limite) cuadro = requestAnimationFrame(intentar);
-    };
-
-    cuadro = requestAnimationFrame(intentar);
-    return () => cancelAnimationFrame(cuadro);
-  }, [hash]);
-}
-
 function BarraSitio({
   menuAbierto,
   onAbrirMenu,
@@ -215,7 +175,7 @@ function PieSitio() {
  * lo que hace que paginas distintas se lean como la misma publicacion.
  */
 export function Sitio() {
-  const { pathname, hash } = useLocation();
+  const { pathname } = useLocation();
   const matches = useMatches();
   const [menuAbierto, setMenuAbierto] = useState(false);
 
@@ -226,7 +186,6 @@ export function Sitio() {
 
   useMetadatos(idRuta);
   useFocoEnTitular(pathname);
-  useAnclaDelHash(hash);
 
   return (
     <div className="min-h-dvh bg-fondo text-texto">
