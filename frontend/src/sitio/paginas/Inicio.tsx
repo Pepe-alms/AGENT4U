@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { AnimatePresence, useInView, useReducedMotion } from 'motion/react';
+import { AnimatePresence, useInView } from 'motion/react';
 import * as m from 'motion/react-m';
 import { ArrowUp, Search } from 'lucide-react';
 
 import { ArticleCard } from '@/sitio/componentes/ArticleCard';
 import { Revelar } from '@/sitio/componentes/Revelar';
+import { useRevelado } from '@/sitio/useRevelado';
 import { AnteriorSiguiente } from '@/sitio/componentes/AnteriorSiguiente';
 import { RUTA_APP, RUTAS_NAV } from '@/routes';
 import { useScrollToHash } from '@/sitio/useScrollToHash';
+import { useSinMovimiento } from '@/shared/hooks/useMediaQuery';
 import {
   DEMO_FUENTES,
   DEMO_PREGUNTA,
@@ -37,14 +39,6 @@ import {
 const FOCO =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-texto';
 
-/** La revelacion al entrar en pantalla: fade y 8px. Nada mas. */
-const REVELAR = {
-  initial: { opacity: 0, y: 8 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: '-60px' },
-  transition: { duration: 0.4, ease: [0, 0, 0.2, 1] as const },
-};
-
 /**
  * Escribe y borra las preguntas en bucle.
  *
@@ -52,7 +46,7 @@ const REVELAR = {
  * se queda con la primera pregunta entera, que es el estado final util.
  */
 function usePlaceholderMaquina(preguntas: string[], activo: boolean): string {
-  const sinMovimiento = useReducedMotion();
+  const sinMovimiento = useSinMovimiento();
   const [texto, setTexto] = useState(() => (sinMovimiento ? (preguntas[0] ?? '') : ''));
 
   useEffect(() => {
@@ -102,7 +96,7 @@ function usePlaceholderMaquina(preguntas: string[], activo: boolean): string {
  * adorno.
  */
 function Contador({ hasta, sufijo = '' }: { hasta: number; sufijo?: string }) {
-  const sinMovimiento = useReducedMotion();
+  const sinMovimiento = useSinMovimiento();
   const referencia = useRef<HTMLSpanElement>(null);
   const visible = useInView(referencia, { once: true, margin: '-40px' });
   const [valor, setValor] = useState(0);
@@ -143,6 +137,7 @@ function Contador({ hasta, sufijo = '' }: { hasta: number; sufijo?: string }) {
  * ==========================================================================*/
 
 function Hero() {
+  const revelar = useRevelado();
   const [valor, setValor] = useState('');
   const campo = useRef<HTMLInputElement>(null);
   // El placeholder solo se escribe mientras el campo esta vacio: superponer el
@@ -158,25 +153,20 @@ function Hero() {
     <section className="mx-auto max-w-[1200px] px-4 pt-16 pb-20 sm:px-6 sm:pt-24 sm:pb-32">
       <div className="mx-auto flex max-w-[44rem] flex-col items-center gap-6 text-center">
         <m.h1
-          {...REVELAR}
+          {...revelar()}
           tabIndex={-1}
           className="text-[clamp(2.25rem,1.6rem+2.6vw,3rem)] leading-[1.16] font-medium tracking-[-0.03em] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-texto"
         >
           {TITULAR}
         </m.h1>
 
-        <m.p
-          {...REVELAR}
-          transition={{ ...REVELAR.transition, delay: 0.06 }}
-          className="max-w-[46ch] text-balance text-suave"
-        >
+        <m.p {...revelar(1)} className="max-w-[46ch] text-balance text-suave">
           {SUBTITULO}
         </m.p>
 
         {/* La unica sombra del documento. Todo lo demas se separa con hairline. */}
         <m.form
-          {...REVELAR}
-          transition={{ ...REVELAR.transition, delay: 0.12 }}
+          {...revelar(2)}
           className="mt-2 w-full"
           onSubmit={(evento) => {
             evento.preventDefault();
@@ -213,11 +203,7 @@ function Hero() {
           </div>
         </m.form>
 
-        <m.ul
-          {...REVELAR}
-          transition={{ ...REVELAR.transition, delay: 0.18 }}
-          className="flex flex-wrap justify-center gap-2"
-        >
+        <m.ul {...revelar(3)} className="flex flex-wrap justify-center gap-2">
           {SUGERENCIAS.map((sugerencia) => (
             <li key={sugerencia}>
               <button
@@ -241,7 +227,7 @@ function Hero() {
 
 /** El vector: una fila de numeros que late. Es el ejemplo del paso 2. */
 function EjemploVector() {
-  const sinMovimiento = useReducedMotion();
+  const sinMovimiento = useSinMovimiento();
   const [semilla, setSemilla] = useState(0);
 
   useEffect(() => {
@@ -346,7 +332,9 @@ function EjemploDe({ cual }: { cual: Paso['ejemplo'] }) {
 }
 
 function Pipeline() {
-  const sinMovimiento = useReducedMotion();
+  const revelar = useRevelado();
+  // Igual que en Arquitectura: la opacidad no la cubre `reducedMotion="user"`.
+  const sinMovimiento = useSinMovimiento();
   // Clic y hover abren lo mismo. El clic manda: si el usuario fijo un paso, el
   // raton pasando por encima no se lo cambia.
   const [fijado, setFijado] = useState<string | null>(null);
@@ -358,7 +346,7 @@ function Pipeline() {
       id="como-responde"
       className="mx-auto max-w-[1200px] border-t border-borde px-4 py-16 sm:px-6 sm:py-20"
     >
-      <m.div {...REVELAR} className="flex flex-col gap-3">
+      <m.div {...revelar()} className="flex flex-col gap-3">
         <p className="text-[0.875rem] font-medium text-suave">Cómo responde</p>
         <h2 className="max-w-[24ch] text-[clamp(1.5rem,1.1rem+1.4vw,1.75rem)] font-semibold tracking-[-0.02em]">
           De tu pregunta a una respuesta que puedes comprobar.
@@ -414,8 +402,7 @@ function Pipeline() {
             return (
               <m.li
                 key={paso.id}
-                {...REVELAR}
-                transition={{ ...REVELAR.transition, delay: indice * 0.07 }}
+                {...revelar(indice)}
                 className="min-w-0"
                 onMouseEnter={() => setApuntado(paso.id)}
                 onMouseLeave={() => setApuntado(null)}
@@ -529,7 +516,8 @@ function useTokens(texto: string) {
 }
 
 function Demo() {
-  const sinMovimiento = useReducedMotion();
+  const revelar = useRevelado();
+  const sinMovimiento = useSinMovimiento();
   const referencia = useRef<HTMLDivElement>(null);
   const visible = useInView(referencia, { once: true, margin: '-80px' });
   const tokens = useTokens(DEMO_RESPUESTA);
@@ -558,7 +546,7 @@ function Demo() {
       className="mx-auto max-w-[1200px] border-t border-borde px-4 py-16 sm:px-6 sm:py-20"
       ref={referencia}
     >
-      <m.div {...REVELAR} className="flex flex-col gap-3">
+      <m.div {...revelar()} className="flex flex-col gap-3">
         <p className="text-[0.875rem] font-medium text-suave">Una respuesta de verdad</p>
         <h2 className="max-w-[24ch] text-[clamp(1.5rem,1.1rem+1.4vw,1.75rem)] font-semibold tracking-[-0.02em]">
           Cada afirmación lleva su fuente al lado.
@@ -566,8 +554,7 @@ function Demo() {
       </m.div>
 
       <m.div
-        {...REVELAR}
-        transition={{ ...REVELAR.transition, delay: 0.08 }}
+        {...revelar(1)}
         className="mt-8 overflow-hidden rounded-m border border-borde"
       >
         <div className="flex justify-end border-b border-borde p-5">
