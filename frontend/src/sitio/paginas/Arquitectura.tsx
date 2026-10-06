@@ -2,16 +2,20 @@ import { useCallback } from 'react';
 
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 
 import { useLocation, useNavigate, useParams } from 'react-router';
 
 import { AnteriorSiguiente } from '@/sitio/componentes/AnteriorSiguiente';
 import { CabeceraPagina } from '@/sitio/componentes/CabeceraPagina';
+import { CopiarEnlace } from '@/sitio/componentes/CopiarEnlace';
 import { Migas } from '@/sitio/componentes/Migas';
 import { Revelar } from '@/sitio/componentes/Revelar';
 import { ENLACES, FLUJO_INGESTA, NODOS } from '@/sitio/datos/arquitectura';
+import { Link } from 'react-router';
+
 import { rutaPorId } from '@/routes';
+import { SLUG_CAPA } from '@/sitio/datos/tecnologias';
 import { useScrollToHash } from '@/sitio/useScrollToHash';
 import { useSinMovimiento } from '@/shared/hooks/useMediaQuery';
 
@@ -226,6 +230,22 @@ function PanelNodo({ id, onCerrar }: { id: string; onCerrar: () => void }) {
         <p className="text-suave">{nodo.responsabilidad}</p>
       </div>
 
+      {nodo.capa ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-[0.8125rem] font-medium text-tenue">Capa</p>
+          {/* Cruce entre las dos páginas: de una pieza a las herramientas de
+              su capa. Sin esto, el filtro de /tecnologias no se puede enlazar
+              desde ningún sitio. */}
+          <Link
+            to={`/tecnologias?capa=${SLUG_CAPA[nodo.capa]}`}
+            className="group flex w-fit items-center gap-1.5 rounded-full border border-borde px-3 py-1.5 text-[0.8125rem] font-medium transition-colors hover:bg-superficie-suave focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-texto"
+          >
+            {nodo.capa}
+            <ArrowRight size={14} strokeWidth={1.5} aria-hidden="true" />
+          </Link>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3">
         <p className="text-[0.8125rem] font-medium text-tenue">Decisiones</p>
         <ul className="flex flex-col gap-3">
@@ -239,6 +259,14 @@ function PanelNodo({ id, onCerrar }: { id: string; onCerrar: () => void }) {
           ))}
         </ul>
       </div>
+
+      {/* El enlace profundo no se descubre solo: nada indica que la URL haya
+          cambiado al pulsar el nodo, así que nadie la copiaría. */}
+      <CopiarEnlace
+        url={`${window.location.origin}/arquitectura/${nodo.id}`}
+        etiqueta="Copiar enlace a esta pieza"
+        className="w-fit"
+      />
     </m.aside>
   );
 }

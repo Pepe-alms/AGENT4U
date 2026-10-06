@@ -5,9 +5,13 @@
  * nodo aqui lo mueve en el SVG y en el panel; no hay una segunda lista de
  * posiciones que mantener sincronizada.
  */
+import type { Capa } from '@/sitio/datos/tecnologias';
+
 export type NodoArquitectura = {
   id: string;
   nombre: string;
+  /** La capa de /tecnologias a la que pertenece. Enlaza las dos paginas. */
+  capa?: Capa;
   /** La frase de una linea que va dentro del nodo del diagrama. */
   rol: string;
   tecnologia: string;
@@ -22,6 +26,7 @@ export type NodoArquitectura = {
 export const NODOS: NodoArquitectura[] = [
   {
     id: 'front',
+    capa: 'Frontend',
     nombre: 'Frontend',
     rol: 'React + Vite',
     tecnologia: 'React 19 · TypeScript 6 · Vite 8 · Tailwind 4',
@@ -37,6 +42,7 @@ export const NODOS: NodoArquitectura[] = [
   },
   {
     id: 'api',
+    capa: 'Backend',
     nombre: 'API',
     rol: 'FastAPI',
     tecnologia: 'FastAPI · Pydantic · Uvicorn',
@@ -52,6 +58,7 @@ export const NODOS: NodoArquitectura[] = [
   },
   {
     id: 'agente',
+    capa: 'IA / LLM',
     nombre: 'Agente',
     rol: 'Orquestador',
     tecnologia: 'LangGraph',
@@ -68,6 +75,7 @@ export const NODOS: NodoArquitectura[] = [
   },
   {
     id: 'qdrant',
+    capa: 'Vector DB',
     nombre: 'Qdrant',
     rol: 'Vector store',
     tecnologia: 'Qdrant · FastEmbed',
@@ -83,6 +91,7 @@ export const NODOS: NodoArquitectura[] = [
   },
   {
     id: 'llm',
+    capa: 'IA / LLM',
     nombre: 'LLM',
     rol: 'Redacción',
     tecnologia: 'LiteLLM · Gemini Flash',
@@ -98,6 +107,7 @@ export const NODOS: NodoArquitectura[] = [
   },
   {
     id: 'documentos',
+    capa: 'Backend',
     nombre: 'Documentos',
     rol: 'Almacenamiento',
     tecnologia: 'SQLite · sistema de ficheros',
@@ -114,6 +124,7 @@ export const NODOS: NodoArquitectura[] = [
   },
   {
     id: 'ingesta',
+    capa: 'IA / LLM',
     nombre: 'Ingesta',
     rol: 'Indexación',
     tecnologia: 'Docling · FastEmbed',

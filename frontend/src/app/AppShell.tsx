@@ -10,9 +10,10 @@ import {
 // que es lo que de verdad recorta el bundle (medido: 124 -> 110,7 kB gz).
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { Library, PanelLeft, PanelRight } from 'lucide-react';
+import { ArrowLeft, Library, PanelLeft, PanelRight } from 'lucide-react';
 
 import { CONSULTA_ESCRITORIO, useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { leerUltimaPagina } from '@/shared/lib/ultimaPagina';
 import { IconButton } from '@/shared/ui/IconButton';
 import { Sello } from '@/shared/ui/Logo';
 import { Drawer } from '@/shared/ui/Drawer';
@@ -142,6 +143,27 @@ export function AppShell({
         verse nunca.
       */}
       <header className="relative z-10 flex h-16 shrink-0 items-center gap-1 bg-fondo px-3">
+        {/*
+          La salida hacia el sitio. La aplicacion era un callejon: una vez
+          dentro no habia forma de volver mas que con el boton de atras del
+          navegador o escribiendo la URL.
+
+          `<a>` y no `<Link>`: /app vive fuera del router del sitio, y el
+          sitio es otro arbol de React. Vuelve a donde estabas, no siempre a
+          la portada: si entraste desde Arquitectura, mandarte a la portada te
+          hace repetir el camino.
+        */}
+        <a
+          href={leerUltimaPagina()}
+          className="group flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.8125rem] font-medium text-suave transition-colors hover:bg-superficie-suave hover:text-texto"
+        >
+          <ArrowLeft size={15} strokeWidth={1.5} aria-hidden="true" />
+          <span className="hidden sm:inline">Volver al sitio</span>
+          <span className="sm:hidden">Sitio</span>
+        </a>
+
+        <span className="mx-1 h-4 w-px bg-borde" aria-hidden="true" />
+
         <IconButton
           etiqueta="Abrir conversaciones"
           icono={<PanelLeft size={18} />}

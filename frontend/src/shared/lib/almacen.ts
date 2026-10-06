@@ -6,18 +6,33 @@
  * try/catch, asi que vive aqui una sola vez: perder la preferencia es
  * aceptable, romper la aplicacion no.
  */
-export function leerDelAlmacen(clave: string): string | null {
+/**
+ * `'sesion'` usa `sessionStorage`, que se vacia al cerrar la pestaña. Es lo
+ * correcto para lo que deja de ser cierto mañana, como "la ultima pagina que
+ * estabas viendo".
+ */
+type Donde = 'local' | 'sesion';
+
+function almacen(donde: Donde): Storage {
+  return donde === 'sesion' ? sessionStorage : localStorage;
+}
+
+export function leerDelAlmacen(clave: string, donde: Donde = 'local'): string | null {
   try {
-    return localStorage.getItem(clave);
+    return almacen(donde).getItem(clave);
   } catch {
     return null;
   }
 }
 
-export function guardarEnAlmacen(clave: string, valor: string | null): void {
+export function guardarEnAlmacen(
+  clave: string,
+  valor: string | null,
+  donde: Donde = 'local',
+): void {
   try {
-    if (valor === null) localStorage.removeItem(clave);
-    else localStorage.setItem(clave, valor);
+    if (valor === null) almacen(donde).removeItem(clave);
+    else almacen(donde).setItem(clave, valor);
   } catch {
     // Sin persistencia la sesion sigue funcionando, solo no se recuerda.
   }
