@@ -16,6 +16,17 @@ class Settings(BaseSettings):
     gemini_api_key: str = gemini_api_key
     llm_model: str = "gemini/gemini-flash-lite-latest"
     db_url: str = "sqlite:///./agent4u.db"
+    # Carpeta donde POST /indexar-fichero deja lo que sube el cliente.
+    upload_dir: str = "./uploads"
+    # Techo por fichero, en bytes. 50 MB.
+    upload_max_bytes: int = 50 * 1024 * 1024
+    # Modelos que el cliente puede pedir en POST /preguntar, separados por
+    # comas. Es una lista blanca a proposito: aceptar cualquier cadena dejaria
+    # que quien use la API apunte a un modelo caro o inexistente.
+    llm_modelos: str = "gemini/gemini-flash-lite-latest,gemini/gemini-flash-latest"
+    # Fragmentos que se pasan al modelo tras el reordenado.
+    max_fragmentos_defecto: int = 10
+    max_fragmentos_tope: int = 20
 
 @lru_cache()
 def get_settings() -> Settings:

@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,31 @@ def listar_conversaciones(db: Session, usuario: str, limit: int = 20) -> list[Co
         .order_by(Conversacion.actualizada_en.desc())
         .limit(limit)
     ).all()
+
+def renombrar_conversacion(db: Session, id: int, titulo: str) -> Conversacion | None:
+    """Cambia el titulo y **conserva 'actualizada_en'**.
+
+    La columna tiene onupdate, asi que por defecto un renombrado la pondria al
+    dia y la conversacion saltaria al principio de la lista, que se ordena por
+    esa fecha. Renombrar no es conversar, asi que se conserva.
+    """
+    conv = db.scalar(select(Conversacion).where(Conversacion.id == id))
+    if conv is None:
+        return None
+
+    # UPDATE explicito con las dos columnas. Reasignar el atributo con su mismo
+    # valor no sirve: SQLAlchemy no lo ve como un cambio, no lo mete en el SET
+    # y entonces el onupdate hace su trabajo. Nombrando la columna en values()
+    # se usa este valor y el onupdate no entra.
+    db.execute(
+        update(Conversacion)
+        .where(Conversacion.id == id)
+        .values(titulo=titulo, actualizada_en=conv.actualizada_en)
+    )
+    db.commit()
+    db.refresh(conv)
+    return conv
+
 
 def eliminar_conversacion(db: Session, id: int) -> bool:
     conv = db.scalar(select(Conversacion).where(Conversacion.id == id))
