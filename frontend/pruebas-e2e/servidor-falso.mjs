@@ -10,9 +10,29 @@ import { createServer } from 'node:http';
 
 const PUERTO = Number(process.argv[2] ?? 8099);
 
-const documentos = [];
-const conversaciones = [];
-let siguienteId = 1000;
+/*
+ * El estado se PARTICIONA por sesion, y no es un lujo.
+ *
+ * Los dos proyectos de Playwright —Chrome e iPhone— corren a la vez contra
+ * este mismo servidor. Con un unico estado compartido, el segundo en subir
+ * `manual-cap.pdf` recibia un 409 "ya existe" y, peor, la prueba que empieza
+ * comprobando "aun no hay nada indexado" veia el documento del otro proyecto.
+ * Pasaba sola y fallaba en la tanda.
+ *
+ * Cada proyecto manda `x-sesion-prueba` con su nombre (ver
+ * `extraHTTPHeaders` en playwright.config.ts) y se lleva su propio mundo.
+ */
+const sesiones = new Map();
+
+function estadoDe(req) {
+  const clave = req.headers['x-sesion-prueba'] ?? 'global';
+  let estado = sesiones.get(clave);
+  if (!estado) {
+    estado = { documentos: [], conversaciones: [], siguienteId: 1000 };
+    sesiones.set(clave, estado);
+  }
+  return estado;
+}
 
 const TROZOS = [
   '## El teorema CAP\n\n',
@@ -78,6 +98,8 @@ function leerCuerpo(req) {
 
 createServer(async (req, res) => {
   const { method, url } = req;
+  const { documentos, conversaciones } = estadoDe(req);
+  const sesion = estadoDe(req);
 
   if (method === 'OPTIONS') {
     res.writeHead(204, {
@@ -152,7 +174,7 @@ createServer(async (req, res) => {
 
   if (url === '/preguntar' && method === 'POST') {
     const cuerpo = JSON.parse((await leerCuerpo(req)).toString() || '{}');
-    const id = cuerpo.conversacion_id ?? siguienteId++;
+    const id = cuerpo.conversacion_id ?? sesion.siguienteId++;
     let conv = conversaciones.find((c) => c.id === id);
     if (!conv) {
       conv = {
