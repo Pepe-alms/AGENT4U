@@ -2,6 +2,8 @@
 /backend/tests/data/
 /backend/tests/results/
 agent4u.db
+# Ficheros que sube POST /indexar-fichero (APP_UPLOAD_DIR).
+/backend/uploads/
 __pycache__/
 *.pyc
 .DS_Store

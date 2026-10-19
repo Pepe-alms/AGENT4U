@@ -265,13 +265,24 @@ class LLMFalso:
 class FakeGrafo:
     """Sustituye al grafo compilado: devuelve un estado fijo y anota la entrada."""
 
-    def __init__(self, resultado: dict):
+    def __init__(self, resultado: dict, tramos: list[dict] | None = None):
         self.resultado = resultado
         self.estados_recibidos: list[dict] = []
+        self._tramos = tramos if tramos is not None else [
+            {"construir": {"messages": resultado.get("messages", [])}},
+            {"fusionar": {"chunks": resultado.get("chunks", [])}},
+        ]
 
     def invoke(self, estado: dict) -> dict:
         self.estados_recibidos.append(estado)
         return self.resultado
+
+    def stream(self, estado: dict, stream_mode: str = "values"):
+        assert stream_mode == "updates", (
+            f"responder() pide 'updates'; recibido {stream_mode!r}"
+        )
+        self.estados_recibidos.append(estado)
+        return iter(self._tramos)
 
 
 @pytest.fixture
@@ -284,6 +295,22 @@ def grafo():
              "headings": ["Teorema CAP"], "paginas": [7], "chunk": "CAP dice que...", "score": 0.9},
         ],
     })
+
+
+@pytest.fixture
+def grafo_con_pasos(grafo):
+    """El mismo grafo, pasando por todos los nodos que emiten cifras.
+
+    Sirve para comprobar los eventos 'paso' sin tener que montar el grafo real.
+    """
+    grafo._tramos = [
+        {"multiconsulta": {"subconsultas": ["a", "b", "c"]}},
+        {"buscar": {"chunks_parciales": [{}, {}]}},
+        {"fusionar": {"chunks": grafo.resultado["chunks"]}},
+        {"evaluar": {"valor_maximo": 4.5, "contexto_pobre": False}},
+        {"construir": {"messages": grafo.resultado["messages"]}},
+    ]
+    return grafo
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,263 @@
+/* Inter es la primera de la pila: es el sustituto que la guia de estilo
+   recomienda para OpenAI Sans. Va empaquetada y no pedida a Google, porque la
+   aplicacion es local y tiene que arrancar sin red. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+@import 'tailwindcss';
+
+/* Despues de Tailwind: `@theme` solo lo procesa el motor si ya se cargo. */
+@import './tokens.css';
+
+/*
+ * No hay variante `dark:` a proposito. El tema se resuelve en los tokens, que
+ * se nombran por ROL: `bg-superficie` ya es el color correcto en los dos temas
+ * sin que ningun componente sepa en cual esta. Escribir `bg-white dark:bg-black`
+ * seria duplicar esa decision en cada clase y perder el sistema.
+ */
+
+@layer base {
+  body {
+    min-block-size: 100dvh;
+    background-color: var(--fondo);
+    color: var(--txt);
+    font-family: var(--font-sans);
+    /* 17px y 1.65 de interlineado: la base algo mayor y el aire entre lineas
+       son los que crean el ritmo de lectura editorial. */
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    letter-spacing: -0.01em;
+    font-feature-settings:
+      'calt' on,
+      'liga' on;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * El fondo es PLANO, a proposito. La version anterior llevaba grano de papel
+   * y manchas calidas: daba caracter, pero el caracter que daba era el de un
+   * documento impreso, y eso es lo que se leia como antiguo. Aqui la
+   * profundidad la ponen las superficies elevadas, no una textura.
+   */
+
+  /*
+   * Los titulares: misma letra, peso 500 y tracking NEGATIVO que se cierra
+   * segun crece el tamaño. Es la firma del sistema.
+   *
+   * El peso maximo es 600 y solo en el escalon de 28px. Nada de 700 ni 800:
+   * contra un tipo tan contenido se leen como un grito.
+   */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 500;
+    line-height: 1.16;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  h1 {
+    line-height: 1.16;
+    letter-spacing: var(--tracking-display);
+  }
+
+  h2 {
+    font-weight: 600;
+    line-height: 1.21;
+  }
+
+  p,
+  li {
+    overflow-wrap: break-word;
+  }
+
+  /* Foco visible en todo lo enfocable, y solo por teclado. Ningun componente
+     puede poner `outline: none` sin sustituir esto. */
+  :focus-visible {
+    outline: 2px solid var(--foco);
+    outline-offset: 2px;
+    border-radius: var(--radius-s);
+  }
+
+  /* Las cifras tecnicas (scores, paginas, duraciones) se alinean en columna:
+     sin esto bailan al cambiar de valor durante el streaming. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* La palabra destacada del titular: solo color. Con un titular grande y muy
+     apretado no hace falta nada mas. */
+  .texto-marca {
+    color: var(--acento);
+  }
+
+  /* Etiqueta de seccion: 14px en peso medio y gris, sin barra de color ni
+     regla. Lo que separa las zonas es el aire. */
+  .etiqueta-seccion {
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--txt-suave);
+  }
+
+  /* El foco del composer: el hairline se vuelve opaco. Nada de halos de
+     color, que es lo que haria falta si hubiera color de marca. */
+  .borde-marca {
+    position: relative;
+  }
+
+  .borde-marca::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid var(--borde-fuerte);
+    pointer-events: none;
+    /* Apagado salvo al enfocar: encendido siempre seria un marco decorativo
+       mas, y lo que tiene que decir es "el cursor esta aqui". */
+    opacity: 0;
+    transition: opacity var(--duracion-media) var(--curva);
+  }
+
+  .borde-marca:focus-within::after {
+    opacity: 1;
+  }
+
+  /* Para texto que solo deben leer los lectores de pantalla. */
+  .solo-lectores {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/* Entradas de los paneles modales. Van aqui y no en el componente porque
+   `@keyframes` dentro de un CSS Module se renombraria y `animate-[...]` no lo
+   encontraria. */
+@keyframes entrar-inicio {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes entrar-fin {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes entrar-abajo {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* Entrada escalonada de listas y tarjetas. El retraso sale de --indice, que
+   pone quien renderiza; se limita a 10 para que el ultimo no se haga esperar. */
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+.entra {
+  animation: entrar var(--duracion-lenta) var(--curva-entrada) backwards;
+  animation-delay: calc(min(var(--indice, 0), 10) * 40ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entra {
+    animation: none;
+  }
+}
+
+@keyframes brillar {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
+@keyframes entrar-paleta {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -0.75rem) scale(0.98);
+  }
+}
+
+/*
+ * Deriva de las manchas de las portadas.
+ *
+ * Tres recorridos distintos y de distinta duracion a proposito: con uno solo
+ * las manchas se mueven en bloque y se lee como un fondo que se desliza, no
+ * como una mezcla que respira.
+ *
+ * Va en CSS y no en Motion porque son bucles infinitos sobre elementos SVG:
+ * el compositor del navegador los lleva solo, sin pasar por React en cada
+ * fotograma, y con varias portadas en pantalla eso se nota.
+ */
+@keyframes derivar-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(6%, -4%) scale(1.12);
+  }
+}
+
+@keyframes derivar-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.08);
+  }
+  50% {
+    transform: translate(-7%, 5%) scale(1);
+  }
+}
+
+@keyframes derivar-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(4%, 7%) scale(1.1);
+  }
+}
+
+.deriva-1 {
+  animation: derivar-1 24s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.deriva-2 {
+  animation: derivar-2 30s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.deriva-3 {
+  animation: derivar-3 27s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deriva-1,
+  .deriva-2,
+  .deriva-3 {
+    animation: none;
+  }
+}

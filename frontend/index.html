@@ -1,9 +1,40 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My App</title>
+    <title>Agent4U</title>
+    <meta
+      name="description"
+      content="Consulta tus documentos indexados con respuestas citadas."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <!-- El sello de la marca, el mismo dibujo que shared/ui/Logo.tsx.
+         Va embebido para que no haya una peticion mas al cargar. -->
+    <link rel="icon" href="/sello.svg" type="image/svg+xml" />
+    <!--
+      El tema se aplica ANTES de pintar. React lo hace en un efecto, que corre
+      despues del primer fotograma: sin esto, quien tenga el claro guardado ve
+      un destello oscuro al cargar. Es sincrono y a proposito.
+
+      Duplica la clave de shared/lib/tema.ts; si cambia alli, cambia aqui.
+    -->
+    <script>
+      try {
+        var t = localStorage.getItem('agent4u:tema');
+        document.documentElement.setAttribute(
+          'data-tema',
+          t === 'claro' || t === 'oscuro' ? t : 'claro',
+        );
+        if (t === 'sistema') document.documentElement.removeAttribute('data-tema');
+        var d = localStorage.getItem('agent4u:densidad');
+        if (d === 'compacta') document.documentElement.setAttribute('data-densidad', d);
+      } catch (e) {
+        /* Navegacion privada o cookies bloqueadas: se queda el tema por defecto. */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

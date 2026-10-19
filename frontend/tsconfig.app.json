@@ -5,6 +5,11 @@
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
     "types": ["vite/client"],
+
+    /* Alias de imports: "@/x" -> "src/x". Sin baseUrl: esta deprecado en
+       TypeScript 6 y con moduleResolution "bundler" los paths ya se
+       resuelven relativos a este fichero. */
+    "paths": { "@/*": ["./src/*"] },
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 
@@ -17,10 +22,11 @@
     "jsx": "react-jsx",
 
     /* Linting */
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "cliente.tsx"]
+  "include": ["src"]
 }

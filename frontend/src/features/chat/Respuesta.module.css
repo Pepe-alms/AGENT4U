@@ -1,0 +1,338 @@
+/*
+ * Estilos de la prosa generada. Son selectores de elemento a propósito: el
+ * HTML viene de marked y no se le pueden poner clases a mano.
+ */
+
+.prosa {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--txt);
+  /* El cursor de escritura va pegado al último nodo, no suelto. */
+  overflow-wrap: break-word;
+}
+
+.prosa > * + * {
+  margin-block-start: calc(1rem * var(--escala-densidad));
+}
+
+.prosa h1,
+.prosa h2,
+.prosa h3,
+.prosa h4 {
+  letter-spacing: -0.02em;
+  margin-block-start: calc(1.5rem * var(--escala-densidad));
+}
+
+.prosa h1 {
+  font-size: 1.5rem;
+}
+
+.prosa h2 {
+  font-size: 1.125rem;
+}
+
+.prosa h3,
+.prosa h4 {
+  font-size: 1rem;
+}
+
+.prosa ul,
+.prosa ol {
+  padding-inline-start: calc(1.5rem * var(--escala-densidad));
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.5rem * var(--escala-densidad));
+}
+
+.prosa ul {
+  list-style: disc;
+}
+
+.prosa ol {
+  list-style: decimal;
+}
+
+.prosa li::marker {
+  color: var(--acento);
+}
+
+.prosa a {
+  color: var(--txt);
+  /* Sin color de marca, lo que señala un enlace es el subrayado. */
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: var(--borde-fuerte);
+}
+
+.prosa strong {
+  font-weight: 600;
+  color: var(--txt);
+}
+
+/* Cita: barra del color de acento. */
+.prosa blockquote {
+  padding: calc(0.5rem * var(--escala-densidad)) calc(1rem * var(--escala-densidad));
+  border-inline-start: 2px solid var(--borde-fuerte);
+  color: var(--txt-suave);
+  font-style: italic;
+}
+
+/* --- Código --- */
+
+.prosa code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+/* Código en línea: el :not() lo distingue del que va dentro de un bloque. */
+.prosa :not(pre) > code {
+  padding: 0.12em 0.36em;
+  border: 1px solid var(--borde);
+  border-radius: var(--radius-s);
+  background-color: var(--superficie-suave);
+  color: var(--acento);
+}
+
+.prosa pre {
+  position: relative;
+  padding: calc(1rem * var(--escala-densidad));
+  border: 1px solid var(--borde);
+  border-radius: var(--radius-m);
+  background-color: var(--superficie-suave);
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.prosa pre code {
+  color: var(--txt);
+}
+
+/* El botón lo inyecta markdown.ts, así que no puede llevar clase de módulo:
+   se referencia por su clase global. */
+.prosa :global(.copiar-codigo) {
+  position: absolute;
+  inset-block-start: calc(0.5rem * var(--escala-densidad));
+  inset-inline-end: calc(0.5rem * var(--escala-densidad));
+  padding: calc(0.25rem * var(--escala-densidad)) calc(0.5rem * var(--escala-densidad));
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radius-s);
+  background-color: var(--superficie);
+  color: var(--txt-suave);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--duracion-rapida) var(--curva),
+    color var(--duracion-rapida) var(--curva);
+}
+
+/*
+ * Aparece al acercar el ratón, y SIEMPRE que recibe el foco. Se usa `:focus`
+ * y no `:focus-visible`: un control que tiene el foco tiene que verse, venga
+ * el foco de donde venga; dejarlo a la heurística de `:focus-visible` lo hace
+ * invisible en casos legítimos.
+ */
+.prosa pre:hover :global(.copiar-codigo),
+.prosa :global(.copiar-codigo):focus {
+  opacity: 1;
+}
+
+/* En táctil no hay hover, así que el botón sería inalcanzable con el dedo:
+   ahí se queda siempre visible. */
+@media (hover: none) {
+  .prosa :global(.copiar-codigo) {
+    opacity: 1;
+  }
+}
+
+.prosa :global(.copiar-codigo):hover {
+  color: var(--acento);
+  border-color: var(--acento);
+}
+
+/* --- Tablas --- */
+
+.prosa table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.prosa th,
+.prosa td {
+  padding: calc(0.5rem * var(--escala-densidad)) calc(0.75rem * var(--escala-densidad));
+  border: 1px solid var(--borde);
+  text-align: start;
+}
+
+.prosa th {
+  background-color: var(--superficie-suave);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.prosa tbody tr:nth-child(even) {
+  background-color: var(--superficie-suave);
+}
+
+.prosa hr {
+  border: 0;
+  block-size: 1px;
+  background-color: var(--borde);
+}
+
+/* --- Marcadores de cita --- */
+
+/*
+ * Los inyecta markdown.ts sobre HTML ya saneado, así que van por clase global.
+ * Se pintan como una píldora numerada en superíndice: se leen como una cita
+ * académica y no compiten con el texto.
+ */
+.prosa :global(.cita) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 1.15rem;
+  block-size: 1.15rem;
+  margin-inline: 0.15em;
+  padding: 0 0.3em;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 9999px;
+  background-color: transparent;
+  color: var(--txt);
+  font-family: var(--font-sans);
+  font-size: 0.7em;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: super;
+  cursor: pointer;
+  transition:
+    background-color var(--duracion-rapida) var(--curva),
+    color var(--duracion-rapida) var(--curva),
+    transform var(--duracion-rapida) var(--curva);
+}
+
+.prosa :global(.cita):hover,
+.prosa :global(.cita):focus-visible {
+  background-color: var(--acento);
+  border-color: var(--acento);
+  color: var(--acento-texto);
+}
+
+/* La cita elegida se queda encendida: es la que el panel está mostrando. */
+.prosa[data-cita-activa='1'] :global(.cita[data-cita='1']),
+.prosa[data-cita-activa='2'] :global(.cita[data-cita='2']),
+.prosa[data-cita-activa='3'] :global(.cita[data-cita='3']),
+.prosa[data-cita-activa='4'] :global(.cita[data-cita='4']),
+.prosa[data-cita-activa='5'] :global(.cita[data-cita='5']),
+.prosa[data-cita-activa='6'] :global(.cita[data-cita='6']),
+.prosa[data-cita-activa='7'] :global(.cita[data-cita='7']),
+.prosa[data-cita-activa='8'] :global(.cita[data-cita='8']) {
+  background-color: var(--acento);
+  border-color: var(--acento);
+  color: var(--acento-texto);
+}
+
+/* --- Vista previa de la cita ---
+   Es CSS puro: si dependiera de estado de React, el hover re-renderizaria el
+   componente, React reescribiria el HTML inyectado y el clic se perderia entre
+   el mousedown y el click. Ver crearCita() en shared/lib/markdown.ts. */
+
+.prosa :global(.cita-envoltorio) {
+  position: relative;
+  display: inline-block;
+}
+
+.prosa :global(.cita-popover) {
+  position: absolute;
+  inset-block-end: calc(100% + 0.5rem);
+  inset-inline-start: 50%;
+  z-index: 20;
+  inline-size: max-content;
+  max-inline-size: min(22rem, 70vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radius-m);
+  background-color: var(--superficie);
+  box-shadow: var(--shadow-l);
+  /* Invisible y sin capturar el raton: si lo capturase, el popover taparia la
+     cita y el :hover parpadearia sin parar. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 0.25rem);
+  transition:
+    opacity var(--duracion-rapida) var(--curva),
+    transform var(--duracion-rapida) var(--curva),
+    visibility var(--duracion-rapida);
+  pointer-events: none;
+  text-align: start;
+  white-space: normal;
+}
+
+.prosa :global(.cita-envoltorio:hover) :global(.cita-popover),
+.prosa :global(.cita-envoltorio:focus-within) :global(.cita-popover) {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+.prosa :global(.cita-popover-doc) {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--txt);
+}
+
+.prosa :global(.cita-popover-meta) {
+  font-size: 0.6875rem;
+  color: var(--txt-tenue);
+}
+
+.prosa :global(.cita-popover-texto) {
+  margin-block-start: 0.25rem;
+  padding-inline-start: 0.5rem;
+  border-inline-start: 2px solid var(--acento);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--txt-suave);
+  /* Cuatro lineas: es una vista previa, no el fragmento entero. Para leerlo
+     completo esta el panel de fuentes. */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --- Cursor del streaming ---
+   Pegado al final del ultimo bloque, no suelto debajo: asi se lee como un
+   cursor de escritura y no como un adorno. */
+.escribiendo > *:last-child::after {
+  content: '';
+  display: inline-block;
+  inline-size: 0.5rem;
+  block-size: 1.05em;
+  margin-inline-start: 0.15rem;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background-color: var(--acento);
+  animation: latir 1s steps(2, start) infinite;
+}
+
+@keyframes latir {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .escribiendo > *:last-child::after {
+    animation: none;
+  }
+}
