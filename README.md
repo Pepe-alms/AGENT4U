@@ -8,7 +8,7 @@
 ![uv](https://img.shields.io/badge/deps-uv-261230)
 ![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)
 
-## Visión general
+## Visión general:
 
 Agent4U recibe documentos (PDF/DOCX), los convierte en fragmentos con estructura semántica, los indexa en una base vectorial y responde preguntas en lenguaje natural citando la fuente exacta de cada afirmación. El objetivo del proyecto es doble: servir como un RAG realmente usable sobre documentación propia, y como banco de pruebas para decisiones de diseño de RAG (chunking, embeddings, distancia de similitud, evaluación) documentadas y medidas, no solo intuidas.
 
