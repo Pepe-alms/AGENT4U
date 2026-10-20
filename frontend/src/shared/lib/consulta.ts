@@ -8,7 +8,7 @@ export type AjustesConsulta = {
 
 const CLAVE = 'agent4u:consulta';
 
-export const CONSULTA_POR_DEFECTO: AjustesConsulta = {
+const CONSULTA_POR_DEFECTO: AjustesConsulta = {
   maxFragmentos: null,
   modelo: null,
 };

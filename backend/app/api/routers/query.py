@@ -43,6 +43,7 @@ def ajustes():
         "modelos": _modelos_permitidos(),
         "max_fragmentos_defecto": settings.max_fragmentos_defecto,
         "max_fragmentos_tope": settings.max_fragmentos_tope,
+        "max_indexaciones_en_vuelo": settings.index_max_en_vuelo,
     }
 
 

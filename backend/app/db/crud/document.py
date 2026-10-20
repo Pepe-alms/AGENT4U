@@ -25,6 +25,31 @@ def marcar_error(db: Session, doc: Document, mensaje: str) -> None:
     db.commit()
 
 
+def crear_documento_encolado(db: Session, origen: str, nombre: str,
+                             tipo: str, tamano: int | None,
+                             job_id: str) -> Document:
+    doc = Document(origin=origen, name=nombre, type=tipo,
+                   size=tamano, state="en-cola", job_id=job_id)
+    db.add(doc)
+    db.commit()
+    return doc
+
+
+def obtener_por_job_id(db: Session, job_id: str) -> Document | None:
+    return db.scalar(select(Document).where(Document.job_id == job_id))
+
+
+def marcar_indexando(db: Session, doc: Document) -> None:
+    doc.state = "indexando"
+    db.commit()
+
+
+def contar_en_vuelo(db: Session) -> int:
+    return db.query(Document).filter(
+        Document.state.in_(("en-cola", "indexando"))
+    ).count()
+
+
 def listar_documentos(db: Session) -> list[Document]:
     return list(db.scalars(select(Document).order_by(Document.created_at.desc())))
 

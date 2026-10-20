@@ -1,4 +1,3 @@
-import litellm
 
 SYSTEM_PROMPT_STREAMING = """Eres un asistente que responde preguntas basándote ÚNICAMENTE en el contexto proporcionado y en el historial de la conversación.
 
@@ -84,39 +83,3 @@ def generate_query(query: str, chunks: list[dict], historial: list) -> list[dict
     })
 
     return messages
-
-import json
-
-def descomponer_consulta(consulta: str, model: str) -> list[str]:
-    system_prompt = """Analiza la pregunta y decide si trata de UN solo tema o de VARIOS temas distintos que habría que buscar por separado en una base documental.
-
-    Reglas:
-    - Si la pregunta trata de un solo tema, devuelve UNA sola subconsulta: la pregunta tal cual.
-    - Solo divide si la pregunta menciona dos o más temas claramente distintos.
-    - Cada subconsulta debe ser autónoma y entenderse sin leer las demás.
-    - Máximo 3 subconsultas.
-    - Responde ÚNICAMENTE con un JSON: {"subconsultas": ["...", "..."]}
-
-    Ejemplos:
-    Pregunta: "¿Qué exige la forma normal de Boyce-Codd?"
-    {"subconsultas": ["¿Qué exige la forma normal de Boyce-Codd?"]}
-
-    Pregunta: "¿Qué compromisos de diseño plantean la normalización relacional y el teorema CAP?"
-    {"subconsultas": ["compromisos de diseño en la normalización relacional", "compromisos de diseño del teorema CAP"]}"""
-
-    respuesta = litellm.completion(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": consulta},
-        ],
-    )
-    try:
-        texto = respuesta.choices[0].message.content.strip()
-        datos = json.loads(texto[texto.index("{"):texto.rindex("}") + 1])
-        subconsultas = datos.get("subconsultas", [])
-        return subconsultas[:3] if subconsultas else [consulta]
-    except Exception:
-        return [consulta]
-
-    

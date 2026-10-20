@@ -9,6 +9,18 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - redis_data:/data
+
   api:
     build: ./backend
     ports:
@@ -16,14 +28,51 @@ services:
     environment:
       APP_QDRANT_URL: http://qdrant:6333
       APP_DB_URL: sqlite:////data/agent4u.db
+      APP_REDIS_URL: redis://redis:6379
+      APP_UPLOAD_DIR: /uploads
       APP_GEMINI_API_KEY: ${APP_GEMINI_API_KEY}
     volumes:
       - api_data:/data
       - model_cache:/models
+      - uploads_data:/uploads
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ./backend
+    command: ["python", "-m", "app.worker"]
+    environment:
+      APP_QDRANT_URL: http://qdrant:6333
+      APP_DB_URL: sqlite:////data/agent4u.db
+      APP_REDIS_URL: redis://redis:6379
+      APP_UPLOAD_DIR: /uploads
+      APP_GEMINI_API_KEY: ${APP_GEMINI_API_KEY}
+    volumes:
+      - api_data:/data
+      - model_cache:/models
+      - uploads_data:/uploads
+    depends_on:
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:8080"
+    environment:
+      GATEWAY_BACKEND_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   qdrant_data:
   api_data:
   model_cache:
+  redis_data:
+  uploads_data:

@@ -1,6 +1,33 @@
 import { ErrorApi, MENSAJES } from '@/shared/api/errores';
 
-const BASE_URL: string = import.meta.env.VITE_API_URL;
+/**
+ * A que backend se habla. Lo fija `VITE_API_URL` **al construir**, no en
+ * ejecucion: Vite sustituye el valor dentro del bundle.
+ *
+ * Por eso hay un `.env.production` versionado con `/api`, que es la ruta que
+ * nginx proxea al backend (ver `despliegue/nginx.conf`). Sin el, `npm run build`
+ * cocinaba en el bundle de produccion lo que hubiera en el `.env` de quien
+ * construyera, que es `http://localhost:8000`: la aplicacion publicada hablaba
+ * con el portatil del que la compilo.
+ *
+ * Esta tipado como opcional a proposito. Antes decia `string` y mentia: si la
+ * variable falta, el valor es `undefined`, y `fetch` recibia la cadena
+ * "undefined/preguntar" y devolvia un 404 incomprensible.
+ */
+const BASE_URL: string | undefined = import.meta.env.VITE_API_URL;
+
+/**
+ * La URL completa de una ruta del backend.
+ *
+ * La comprobacion va aqui y no en el cuerpo del modulo: un `throw` al importar
+ * tumba la carga de la aplicacion entera, y con ella cualquier posibilidad de
+ * contarle al usuario lo que pasa. Asi el fallo viaja como un `ErrorApi`
+ * normal, que la interfaz ya sabe pintar.
+ */
+function urlDe(ruta: string): string {
+  if (!BASE_URL) throw new ErrorApi(MENSAJES.configuracion, 'configuracion');
+  return `${BASE_URL}${ruta}`;
+}
 
 /** Suficiente para una consulta normal; el stream de /preguntar usa el suyo. */
 const TIEMPO_LIMITE_MS = 15_000;
@@ -39,6 +66,12 @@ export async function peticionCruda(
   const { metodo = 'GET', cuerpo, signal, tiempoLimiteMs = TIEMPO_LIMITE_MS } = opciones;
   const { signal: senal } = combinarSenales(signal, tiempoLimiteMs);
 
+  // FUERA del try, y no es colocacion casual: ahi dentro cualquier excepcion se
+  // traduce a un ErrorApi de tipo 'red', asi que un fallo de configuracion se
+  // disfrazaria de "no se pudo conectar con el servidor" y mandaria a mirar si
+  // el backend esta arrancado, que no es el problema.
+  const url = urlDe(ruta);
+
   let respuesta: Response;
   try {
     // Un FormData se manda tal cual y SIN cabecera: el navegador tiene que
@@ -46,7 +79,7 @@ export async function peticionCruda(
     // rompería.
     const esFormulario = cuerpo instanceof FormData;
 
-    respuesta = await fetch(`${BASE_URL}${ruta}`, {
+    respuesta = await fetch(url, {
       method: metodo,
       signal: senal,
       headers:

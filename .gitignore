@@ -7,3 +7,14 @@ agent4u.db
 __pycache__/
 *.pyc
 .DS_Store
+
+# Caches de herramientas de Python. Cada una deja dentro su propio .gitignore,
+# asi que hoy no ensucian; esto es por si alguna deja de hacerlo.
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Cobertura y artefactos de prueba. El frontend ya cubre dist/, test-results/
+# y playwright-report/ en frontend/.gitignore.
+coverage/
+*.log

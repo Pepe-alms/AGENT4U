@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  enVuelo,
+  huecosLibres,
   mensajeDeIngesta,
   reducirIngesta,
+  repartir,
   type AccionIngesta,
   type Trabajo,
 } from '@/features/documentos/ingesta';
@@ -75,5 +78,56 @@ describe('tipoDeRuta', () => {
 
   it('cae a txt si no hay extensión', () => {
     expect(tipoDeRuta('/docs/LEEME')).toBe('txt');
+  });
+});
+
+describe('el cupo de indexaciones en vuelo', () => {
+  const trabajo = (fase: Trabajo['fase'], id: string): Trabajo => ({
+    id,
+    origen: `/docs/${id}.pdf`,
+    clase: 'subida',
+    fase,
+  });
+
+  it('solo cuentan las que el servidor tiene ahora: corriendo o en cola', () => {
+    const trabajos = [
+      trabajo('indexando', 'a'),
+      trabajo('en-cola', 'b'),
+      trabajo('hecho', 'c'),
+      trabajo('error', 'd'),
+    ];
+
+    // 'hecho' y 'error' siguen en la lista hasta que el usuario las quita, pero
+    // en el servidor ya no ocupan nada.
+    expect(enVuelo(trabajos)).toBe(2);
+    expect(huecosLibres(trabajos, 5)).toBe(3);
+  });
+
+  it('sin nada en marcha, caben todas', () => {
+    expect(huecosLibres([], 5)).toBe(5);
+  });
+
+  it('nunca devuelve huecos negativos', () => {
+    const siete = Array.from({ length: 7 }, (_, i) => trabajo('indexando', `t${i}`));
+    expect(huecosLibres(siete, 5)).toBe(0);
+  });
+
+  it('reparte la selección en lo que cabe y lo que sobra', () => {
+    const { caben, sobran } = repartir(['a', 'b', 'c', 'd', 'e', 'f'], 5);
+    expect(caben).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(sobran).toEqual(['f']);
+  });
+
+  it('con cero huecos no manda nada y lo devuelve todo', () => {
+    const { caben, sobran } = repartir(['a', 'b'], 0);
+    expect(caben).toEqual([]);
+    expect(sobran).toEqual(['a', 'b']);
+  });
+
+  it('un 429 se explica, no cae al mensaje genérico', () => {
+    // Existe porque el 429 no estaba traducido: el usuario veía el texto por
+    // defecto, que no dice nada de esperar.
+    expect(mensajeDeIngesta(429, 'generico')).toContain('ocupado');
+    expect(mensajeDeIngesta(429, 'generico')).not.toBe('generico');
   });
 });

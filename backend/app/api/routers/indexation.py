@@ -1,4 +1,5 @@
 import os
+import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
@@ -7,30 +8,68 @@ from sqlalchemy.orm import Session
 
 from app.api.schemas import (
     ErrorOut,
-    FicheroSubidoOut,
+    FicheroEncoladoOut,
     IndexRequest,
     IndexUrlRequest,
-    IndexacionOut,
+    TrabajoEncoladoOut,
 )
 from app.core.config import get_settings
-from app.core.exceptions import DocumentoYaExiste, FalloIngesta
+from app.core.exceptions import DocumentoYaExiste
+from app.db.crud import document as document_crud
 from app.db.session import get_db
-from app.services.indexation_service import indexar_documento
+from app.services.cola_port import ColaIndexacion
 
 router = APIRouter(tags=["indexacion"])
 
-# Se lee en trozos para no cargar en memoria un fichero entero.
+REINTENTAR_EN = 120
+
+RESPUESTAS_COMUNES = {
+    409: {"model": ErrorOut, "description": "Documento ya existe."},
+    429: {
+        "model": ErrorOut,
+        "description": (
+            "Hay demasiados trabajos en cola o ejecutandose. Se responde "
+            "con la cabecera Retry-After."
+        ),
+    },
+}
+
 TROZO_BYTES = 1024 * 1024
 
 
-def _ruta_segura(nombre_cliente: str | None, carpeta: Path) -> Path:
-    """Convierte el nombre que manda el cliente en una ruta dentro de 'carpeta'.
+async def _comprobar_cupo(cola: ColaIndexacion) -> None:
+    """Lanza 429 si no cabe un trabajo mas."""
+    en_vuelo = await cola.en_vuelo()
+    if en_vuelo >= get_settings().index_max_en_vuelo:
+        raise HTTPException(
+            status_code=429,
+            detail="Hay demasiados trabajos en cola o ejecutandose.",
+            headers={"Retry-After": str(REINTENTAR_EN)},
+        )
 
-    El nombre viene del navegador y no es de fiar: puede traer '../' o una ruta
-    absoluta. Se queda solo con el ultimo componente y despues se comprueba que
-    el resultado sigue colgando de 'carpeta'; la segunda comprobacion es la que
-    cubre los casos raros de cada sistema de ficheros.
-    """
+
+async def _encolar_trabajo(
+    cola: ColaIndexacion, db: Session, *,
+    file_path: str, tipo: str, size: int | None,
+) -> dict:
+    """Crea la fila en la BD, encola el trabajo, y devuelve la respuesta 202."""
+    job_id = str(uuid.uuid4())
+    nombre = os.path.basename(file_path)
+
+    try:
+        document_crud.crear_documento_encolado(
+            db, origen=file_path, nombre=nombre, tipo=tipo,
+            tamano=size, job_id=job_id,
+        )
+    except Exception:
+        db.rollback()
+        raise DocumentoYaExiste(file_path)
+
+    await cola.encolar(job_id, file_path=file_path, type=tipo, size=size)
+    return {"job_id": job_id, "status": "en-cola"}
+
+
+def _ruta_segura(nombre_cliente: str | None, carpeta: Path) -> Path:
     base = os.path.basename((nombre_cliente or "").replace("\\", "/")).strip()
 
     if not base or base in (".", ".."):
@@ -45,95 +84,65 @@ def _ruta_segura(nombre_cliente: str | None, carpeta: Path) -> Path:
 
 @router.post(
     "/indexar",
-    response_model=IndexacionOut,
-    summary="Indexar un fichero local",
-    description="Convierte el fichero, lo trocea, vectoriza los fragmentos y "
-                "los guarda en Qdrant. La ruta ('file_path') es unica: "
-                "reindexar la misma devuelve 409. Si la ingesta falla a mitad "
-                "se limpian los vectores ya escritos y el documento queda en "
-                "estado 'error'.",
-    responses={409: {"model": ErrorOut, "description": "Documento ya existe."},
-               500: {"model": ErrorOut, "description": "Error en la ingesta del documento."}},
+    response_model=TrabajoEncoladoOut,
+    status_code=202,
+    summary="Encolar la indexacion de un fichero local",
+    responses=RESPUESTAS_COMUNES,
 )
-def indexar(
-        body: IndexRequest,
-        request: Request,
-        db: Annotated[Session, Depends(get_db)],
-    ):
+async def indexar(
+    body: IndexRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+):
+    cola: ColaIndexacion = request.app.state.cola
+    await _comprobar_cupo(cola)
 
     try:
-        resultado = indexar_documento(
-            db=db,
-            file_path=body.file_path,
-            converter=request.app.state.converter,
-            chunker=request.app.state.chunker,
-            dense_embedder=request.app.state.dense_embedder,
-            sparse_embedder=request.app.state.sparse_embedder,
-            qdrant=request.app.state.qdrant,
-            size=body.size,
-            type=body.type
+        resultado = await _encolar_trabajo(
+            cola, db,
+            file_path=body.file_path, tipo=body.type, size=body.size,
         )
     except DocumentoYaExiste as e:
         raise HTTPException(status_code=409, detail=str(e))
-    except FalloIngesta as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-    return {"status": "indexado", **resultado}
+    return resultado
 
 
 @router.post(
     "/indexar-url",
-    response_model=IndexacionOut,
-    summary="Indexar una pagina web",
-    description="Mismo flujo que POST /indexar, forzando type='url'. La URL "
-                "es unica: reindexar la misma devuelve 409.",
-    responses={409: {"model": ErrorOut, "description": "Documento ya existe."},
-               500: {"model": ErrorOut, "description": "Error en la ingesta del documento."}},
+    response_model=TrabajoEncoladoOut,
+    status_code=202,
+    summary="Encolar la indexacion de una pagina web",
+    responses=RESPUESTAS_COMUNES,
 )
-def indexar_url(
+async def indexar_url(
     body: IndexUrlRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
-    ):
+):
+    cola: ColaIndexacion = request.app.state.cola
+    await _comprobar_cupo(cola)
 
     try:
-        resultado = indexar_documento(
-            db=db,
-            file_path=body.url,
-            converter=request.app.state.converter,
-            chunker=request.app.state.chunker,
-            dense_embedder=request.app.state.dense_embedder,
-            sparse_embedder=request.app.state.sparse_embedder,
-            qdrant=request.app.state.qdrant,
-            size=body.size,
-            type="url"
+        resultado = await _encolar_trabajo(
+            cola, db,
+            file_path=body.url, tipo="url", size=body.size,
         )
     except DocumentoYaExiste as e:
         raise HTTPException(status_code=409, detail=str(e))
-    except FalloIngesta as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-    return {"status": "indexado", **resultado}
+    return resultado
 
 
 @router.post(
     "/indexar-fichero",
-    response_model=FicheroSubidoOut,
-    summary="Subir un fichero e indexarlo",
-    description=(
-        "Recibe el fichero en multipart/form-data, lo guarda en la carpeta de "
-        "subidas (APP_UPLOAD_DIR) y aplica el mismo flujo que POST /indexar "
-        "usando esa ruta como 'file_path'.\n\n"
-        "El nombre lo elige el cliente, asi que se reduce a su ultimo "
-        "componente: no se puede escribir fuera de la carpeta de subidas. "
-        "Si ya hay un documento indexado con esa misma ruta responde 409, "
-        "igual que POST /indexar."
-    ),
+    response_model=FicheroEncoladoOut,
+    status_code=202,
+    summary="Subir un fichero y encolar su indexacion",
     responses={
+        **RESPUESTAS_COMUNES,
         400: {"model": ErrorOut, "description": "Nombre de fichero no valido o fichero vacio."},
-        409: {"model": ErrorOut, "description": "Documento ya existe."},
         413: {"model": ErrorOut, "description": "El fichero supera APP_UPLOAD_MAX_BYTES."},
-        500: {"model": ErrorOut, "description": "Error en la ingesta del documento."},
     },
 )
 async def indexar_fichero(
@@ -147,16 +156,14 @@ async def indexar_fichero(
 
     destino = _ruta_segura(fichero.filename, carpeta)
 
-    # Se escribe mientras se lee, comprobando el tamano sobre la marcha: fiarse
-    # de la cabecera Content-Length dejaria pasar un cuerpo mas grande.
+    parcial = destino.with_name(destino.name + ".parcial")
+
     escritos = 0
     try:
-        with destino.open("wb") as salida:
+        with parcial.open("wb") as salida:
             while trozo := await fichero.read(TROZO_BYTES):
                 escritos += len(trozo)
                 if escritos > settings.upload_max_bytes:
-                    salida.close()
-                    destino.unlink(missing_ok=True)
                     raise HTTPException(
                         status_code=413,
                         detail=(
@@ -165,36 +172,34 @@ async def indexar_fichero(
                         ),
                     )
                 salida.write(trozo)
+
+        if escritos == 0:
+            raise HTTPException(status_code=400, detail="El fichero esta vacio.")
+
+        os.replace(parcial, destino)
     except HTTPException:
+        parcial.unlink(missing_ok=True)
         raise
     except OSError as e:
-        destino.unlink(missing_ok=True)
+        parcial.unlink(missing_ok=True)
         raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
-
-    if escritos == 0:
-        destino.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail="El fichero esta vacio.")
 
     extension = destino.suffix.lstrip(".").lower() or "txt"
 
+    cola: ColaIndexacion = request.app.state.cola
+
     try:
-        resultado = indexar_documento(
-            db=db,
-            file_path=str(destino),
-            converter=request.app.state.converter,
-            chunker=request.app.state.chunker,
-            dense_embedder=request.app.state.dense_embedder,
-            sparse_embedder=request.app.state.sparse_embedder,
-            qdrant=request.app.state.qdrant,
-            size=escritos,
-            type=extension,
+        await _comprobar_cupo(cola)
+    except HTTPException:
+        destino.unlink(missing_ok=True)
+        raise
+
+    try:
+        resultado = await _encolar_trabajo(
+            cola, db,
+            file_path=str(destino), tipo=extension, size=escritos,
         )
     except DocumentoYaExiste as e:
-        # El fichero se queda: es el mismo que ya estaba indexado en esa ruta,
-        # y borrarlo dejaria al documento existente apuntando a la nada.
         raise HTTPException(status_code=409, detail=str(e))
-    except FalloIngesta as e:
-        destino.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=str(e))
 
-    return {"status": "indexado", **resultado, "ruta": str(destino)}
+    return {**resultado, "ruta": str(destino)}

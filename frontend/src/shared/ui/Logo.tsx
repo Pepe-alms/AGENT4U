@@ -63,15 +63,3 @@ export function Sello({ tamano = 28, className }: Props) {
     </svg>
   );
 }
-
-/** El simbolo con el nombre al lado, apretado y en el color del texto. */
-export function Logo({ tamano = 28, className }: Props) {
-  return (
-    <span className={`flex items-center gap-2 ${className ?? ''}`}>
-      <Sello tamano={tamano} />
-      <span className="text-[1.0625rem] leading-none font-semibold tracking-[-0.022em]">
-        Agent4U
-      </span>
-    </span>
-  );
-}

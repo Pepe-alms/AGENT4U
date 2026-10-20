@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 # --------------------------------------------------------------------------
 
 Rol = Literal["user", "assistant"]
-EstadoDocumento = Literal["pendiente", "indexado", "error"]
+EstadoDocumento = Literal["en-cola", "indexando", "pendiente", "indexado", "error"]
 
 
 # --------------------------------------------------------------------------
@@ -72,6 +72,15 @@ class AjustesOut(BaseModel):
     )
     max_fragmentos_defecto: int = Field(description="Valor que se usa si no se pide otro.")
     max_fragmentos_tope: int = Field(description="Maximo que acepta POST /preguntar.")
+    max_indexaciones_en_vuelo: int = Field(
+        description=(
+            "Cuantas peticiones de indexacion acepta el servidor a la vez, "
+            "contando la que corre y las que esperan turno. A partir de ahi "
+            "responde 429 con Retry-After. La interfaz lo usa para no dejar "
+            "adjuntar mas ficheros de los que caben."
+        ),
+        examples=[5],
+    )
 
 
 class IndexRequest(BaseModel):
@@ -224,6 +233,48 @@ class FicheroSubidoOut(IndexacionOut):
     ruta: str = Field(
         description="Ruta en el servidor donde se guardo el fichero.",
         examples=["/srv/agent4u/uploads/manual.pdf"],
+    )
+
+
+# --------------------------------------------------------------------------
+# Respuestas: cola de trabajos
+# --------------------------------------------------------------------------
+
+class TrabajoEncoladoOut(BaseModel):
+    """Respuesta de ``POST /indexar*`` tras la migracion a cola."""
+
+    job_id: str = Field(
+        description="Identificador del trabajo. Se usa para consultar su estado.",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
+    )
+    status: Literal["en-cola"] = Field(
+        description="Siempre 'en-cola' justo despues de encolar."
+    )
+
+
+class FicheroEncoladoOut(TrabajoEncoladoOut):
+    """Respuesta de ``POST /indexar-fichero`` tras la migracion a cola."""
+
+    ruta: str = Field(
+        description="Ruta en el servidor donde se guardo el fichero.",
+        examples=["/srv/agent4u/uploads/manual.pdf"],
+    )
+
+
+class TrabajoEstadoOut(BaseModel):
+    """Respuesta de ``GET /trabajos/{job_id}``."""
+
+    job_id: str = Field(description="Identificador del trabajo.")
+    status: EstadoDocumento = Field(description="Estado actual.")
+    origin: str = Field(description="Ruta o URL del documento.")
+    name: str = Field(description="Nombre del documento.")
+    num_chunks: int = Field(
+        ge=0, default=0,
+        description="Fragmentos generados. 0 si aun no ha terminado.",
+    )
+    error_message: str | None = Field(
+        default=None,
+        description="Mensaje de error, solo si status es 'error'.",
     )
 
 

@@ -736,7 +736,7 @@ function Recorrido() {
  * eso sobrevive a `prefers-reduced-motion` en su estado final en vez de
  * desaparecer.
  */
-export function Inicio() {
+function Inicio() {
   // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
   useScrollToHash();
 

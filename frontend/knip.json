@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/routes.ts",
+    "src/sitio/paginas/*.tsx",
+    "pruebas-e2e/*.spec.ts",
+    "herramientas/*.mjs"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx,css}",
+    "pruebas-e2e/**/*.{ts,mjs}",
+    "herramientas/**/*.mjs"
+  ],
+  "ignoreExportsUsedInFile": { "type": true, "interface": true }
+}

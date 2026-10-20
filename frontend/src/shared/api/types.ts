@@ -50,7 +50,8 @@ export type ConversacionEliminada = {
   id: number;
 };
 
-export type EstadoDocumento = 'pendiente' | 'indexado' | 'error';
+export type EstadoDocumento =
+  'en-cola' | 'indexando' | 'pendiente' | 'indexado' | 'error';
 
 export type Documento = {
   id: number;
@@ -71,13 +72,23 @@ export type DocumentoEliminado = {
   documento: string;
 };
 
-export type Indexacion = {
-  status: 'indexado';
-  num_chunks: number;
+export type TrabajoEncolado = {
+  job_id: string;
+  status: 'en-cola';
 };
 
 /** Respuesta de POST /indexar-fichero: lo mismo, mas donde quedo el fichero. */
-export type FicheroSubido = Indexacion & { ruta: string };
+export type FicheroEncolado = TrabajoEncolado & { ruta: string };
+
+/** Respuesta de GET /trabajos/{job_id}. */
+export type TrabajoEstado = {
+  job_id: string;
+  status: EstadoDocumento;
+  origin: string;
+  name: string;
+  num_chunks: number;
+  error_message: string | null;
+};
 
 /* --- Eventos del stream de POST /preguntar --- */
 
@@ -132,6 +143,8 @@ export type AjustesServidor = {
   modelos: string[];
   max_fragmentos_defecto: number;
   max_fragmentos_tope: number;
+  /** Peticiones de indexacion que el servidor acepta a la vez antes del 429. */
+  max_indexaciones_en_vuelo: number;
 };
 
 /* --- Salud --- */

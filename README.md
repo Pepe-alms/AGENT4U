@@ -12,7 +12,7 @@
 
 Agent4U recibe documentos (PDF/DOCX), los convierte en fragmentos con estructura semántica, los indexa en una base vectorial y responde preguntas en lenguaje natural citando la fuente exacta de cada afirmación. El objetivo del proyecto es doble: servir como un RAG realmente usable sobre documentación propia, y como banco de pruebas para decisiones de diseño de RAG (chunking, embeddings, distancia de similitud, evaluación) documentadas y medidas, no solo intuidas.
 
-El backend es la parte madura del proyecto; el frontend todavía no existe. Este README describe honestamente qué está implementado y qué está planificado — para el detalle de cómo se llegó a cada decisión, ver el [diario de desarrollo](docs/DIARIO_DESARROLLO.md).
+El proyecto tiene dos mitades: un backend FastAPI + Qdrant y un frontend React + Vite que sirve a la vez un sitio editorial sobre el sistema (`/`) y la aplicación del agente (`/app`). Este README describe honestamente qué está implementado, qué está a medias y qué no está: es la única documentación del proyecto.
 
 ## Índice
 
@@ -28,7 +28,6 @@ El backend es la parte madura del proyecto; el frontend todavía no existe. Este
 - [Calidad y desarrollo](#calidad-y-desarrollo)
 - [Flujo de trabajo con Git](#flujo-de-trabajo-con-git)
 - [Roadmap y traza de mejoras](#roadmap-y-traza-de-mejoras)
-- [Documentación adicional](#documentación-adicional)
 - [Licencia](#licencia)
 
 ## Características
@@ -65,7 +64,7 @@ flowchart LR
     end
 ```
 
-Ambos flujos comparten el mismo embedder (`fastembed`) y la misma colección de Qdrant, cargados una sola vez en el `lifespan` de FastAPI (`app/api/app_state.py`) para no pagar el coste de inicialización en cada petición.
+Ambos flujos comparten el mismo embedder (`fastembed`) y la misma colección de Qdrant, cargados una sola vez en el `lifespan` de FastAPI (`app/api/lifespan.py`) para no pagar el coste de inicialización en cada petición.
 
 ## Stack tecnológico
 
@@ -77,16 +76,16 @@ Ambos flujos comparten el mismo embedder (`fastembed`) y la misma colección de 
 | Ingesta / parsing | Trafilatura — limpieza de HTML desde URLs | Planificado |
 | Chunking | Docling `HybridChunker` + tokenizer de e5-large | Hecho |
 | Embeddings densos | fastembed — `intfloat/multilingual-e5-large` (1024 dim) | Hecho |
-| Embeddings dispersos | fastembed — `Qdrant/bm25` | Prototipo suelto (`app/ingest/vector_disperso.py`), no integrado en el retrieval |
+| Embeddings dispersos | fastembed — `Qdrant/bm25` | Hecho, integrados en la búsqueda |
 | Base vectorial | Qdrant (dense, distancia coseno) | Hecho |
-| Recuperación | Híbrida (dense + sparse con RRF) | Planificado |
+| Recuperación | Híbrida (dense + sparse con RRF) + reordenado con cross-encoder | Hecho |
 | Generación | LiteLLM, por defecto `gemini/gemini-flash-lite-latest` | Hecho |
 | Generación | Streaming de respuesta por SSE | Planificado — hoy `/preguntar` devuelve JSON bloqueante |
 | Orquestación agéntica | LangGraph | Planificado — dependencia aún no añadida |
 | Validación / config | Pydantic v2 + pydantic-settings | Hecho |
 | Frontend | React + Vite + TypeScript | Planificado — carpeta `frontend/` reservada, sin scaffold |
 | Contenedores | Docker Compose | Parcial — solo el servicio de Qdrant |
-| Lint / tipado | ruff + mypy configurados | Hecho (ver [deuda técnica](#deuda-técnica-conocida)) |
+| Lint / tipado | `ruff` en verde; `mypy` configurado y no en verde | Parcial (ver [deuda técnica](#deuda-técnica-conocida)) |
 | Tests unitarios | pytest | Configurado, sin `test_*.py` todavía |
 | Evaluación RAG | Arnés propio (25 preguntas, informes HTML/CSV) | Hecho |
 | Evaluación RAG | RAGAS | Planificado / opcional |
@@ -99,30 +98,43 @@ Agent4U/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── app_state.py       # lifespan de FastAPI: carga embedder, Qdrant, Docling y tokenizer al arrancar
-│   │   │   └── schemas.py         # modelos Pydantic de entrada (Consulta, Indexar)
+│   │   │   ├── lifespan.py        # carga los modelos y abre Qdrant una sola vez, al arrancar
+│   │   │   ├── main.py            # la app FastAPI: CORS y montaje de los routers
+│   │   │   ├── schemas.py         # modelos Pydantic de entrada y salida
+│   │   │   └── routers/           # un fichero por área: health, query, indexation, documents, conversations
 │   │   ├── core/
-│   │   │   └── config.py          # Settings vía pydantic-settings, leídas desde .env
-│   │   ├── ingest/
-│   │   │   ├── ingest.py          # script exploratorio del pipeline de ingesta (ruta local hardcodeada, no productivo)
-│   │   │   └── vector_disperso.py # prototipo de embeddings dispersos (BM25), aún no integrado
+│   │   │   ├── config.py          # Settings vía pydantic-settings, leídas desde .env
+│   │   │   └── exceptions.py      # excepciones de dominio, que los routers traducen a códigos HTTP
+│   │   ├── db/
+│   │   │   ├── models/            # tablas SQLAlchemy: documentos y conversaciones
+│   │   │   ├── crud/              # acceso a datos, sin lógica de negocio
+│   │   │   └── session.py         # motor y SessionLocal
 │   │   ├── rag/
-│   │   │   ├── indexation.py      # normalize_text() + embed_texts(): pipeline real detrás de /indexar
-│   │   │   └── generation.py      # build_context() + generate_response(): pipeline real detrás de /preguntar
-│   │   ├── retrieval/
-│   │   │   ├── retrieval.py       # buscar_chunks(): búsqueda densa en Qdrant, usada por /preguntar
-│   │   │   └── llm.py             # script suelto de humo para probar la conexión con LiteLLM/Gemini
-│   │   └── main.py                # app FastAPI y los dos endpoints (/preguntar, /indexar)
+│   │   │   ├── grafo/             # el grafo de LangGraph: nodos y composición
+│   │   │   ├── vectorization.py   # troceado con Docling y subida por lotes a Qdrant
+│   │   │   ├── retrieval.py       # búsqueda híbrida (densa + dispersa) y reordenado
+│   │   │   ├── generation.py      # construcción del contexto
+│   │   │   ├── prompt.py          # las plantillas
+│   │   │   └── streaming.py       # traducción a eventos SSE y persistencia de la respuesta
+│   │   └── services/              # orquestación: indexación, consulta y documentos
 │   ├── tests/
-│   │   ├── response_file.json     # 25 preguntas de evaluación (5 tipos, 11 documentos distintos)
-│   │   ├── response_test.py       # arnés de evaluación end-to-end (no es una suite de pytest)
-│   │   └── results/               # informes HTML/CSV + JSON crudo por cada corrida
+│   │   ├── unit/ integration/ api/  # la suite de pytest, espejo de los módulos que cubre
+│   │   ├── evaluation/            # material manual de evaluación (no lo recolecta pytest)
+│   │   └── README.md              # qué hay en cada nivel y cómo se lanza
+│   ├── Dockerfile
 │   ├── pyproject.toml
 │   └── uv.lock
-├── frontend/                      # reservado para la fase de UI (React + Vite), vacío por ahora
-├── docs/
-│   └── DIARIO_DESARROLLO.md       # notas de aprendizaje y decisiones, día a día
-├── docker-compose.yml             # servicio de Qdrant
+├── frontend/
+│   ├── src/
+│   │   ├── routes.ts              # el mapa de rutas: de aquí salen nav, pie, migas y las pruebas
+│   │   ├── app/                   # la aplicación del agente (/app)
+│   │   ├── sitio/                 # el sitio editorial (/), con sus páginas y datos
+│   │   ├── features/              # chat, documentos, conversaciones, ajustes, comandos, salud
+│   │   └── shared/                # api, hooks, lib, ui y los tokens de estilo
+│   ├── pruebas-e2e/               # Playwright: Chromium y WebKit, con un backend falso
+│   ├── herramientas/              # comprobaciones propias del bundle de producción
+│   └── despliegue/nginx.conf      # SPA con fallback y proxy del SSE sin buffering
+├── docker-compose.yml             # Qdrant y la API
 └── README.md
 ```
 
@@ -149,8 +161,8 @@ cd backend
 uv sync
 
 # 4. Configurar variables de entorno
-#    backend/.env.example existe pero está vacío por ahora;
-#    crea backend/.env con el contenido de la sección siguiente
+#    cp backend/.env.example backend/.env   y rellena GEMINI_API_KEY
+#    cp frontend/.env.example frontend/.env   (la URL del backend)
 
 # 5. Levantar la API
 uv run uvicorn app.main:app --reload
@@ -197,7 +209,7 @@ curl -X POST http://localhost:8000/indexar \
 { "status": "indexado" }
 ```
 
-> El campo `nombre` del payload se valida pero no se usa todavía en el handler (el nombre real del documento se extrae de los metadatos de Docling). Ver [deuda técnica](#deuda-técnica-conocida).
+> El nombre del documento no se manda: se deriva de la propia ruta (`os.path.basename`), así que no hay dos fuentes de verdad que puedan discrepar.
 
 ### `POST /preguntar`
 
@@ -217,7 +229,7 @@ curl -X POST http://localhost:8000/preguntar \
 
 ## Cómo funciona el pipeline
 
-### Ingesta (`app/rag/indexation.py`)
+### Ingesta (`app/rag/vectorization.py`)
 
 `normalize_text()` convierte el documento con Docling, lo trocea con `HybridChunker` y descarta ruido antes de embeber nada:
 
@@ -241,7 +253,7 @@ def id_desde_texto(texto: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, texto))
 ```
 
-### Recuperación (`app/retrieval/retrieval.py`)
+### Recuperación (`app/rag/retrieval.py`)
 
 `buscar_chunks()` embebe la pregunta con el prefijo `query:` (asimetría dense-retrieval estándar en modelos de la familia e5, que se entrenan distinguiendo `query:` de `passage:`) y llama a `qdrant.query_points()`, el método de búsqueda vigente en `qdrant-client` (sustituye al `search()` clásico, ya en desuso).
 
@@ -266,42 +278,54 @@ Reglas estrictas:
 
 ## Evaluación del sistema
 
-`backend/tests/response_test.py` no es una suite de pytest — es un script que ejecuta preguntas reales contra el pipeline completo (Qdrant + LLM en vivo) y mide dos cosas por separado:
+En `backend/tests/evaluation/` viven el material de evaluación manual y los
+sets de preguntas con los que se mide la calidad de las respuestas: 25 preguntas
+sobre 11 documentos, repartidas en cinco tipos —exacta, semántica, tabla,
+discriminación y **ausente**, esta última para comprobar que el sistema reconoce
+cuándo *no* tiene la información en vez de inventarla—.
 
-- **Eficacia**: ¿la respuesta generada es correcta? Se mide por similitud coseno entre el embedding de la respuesta y el de la respuesta esperada (umbral configurable), no por coincidencia literal — un LLM puede parafrasear correctamente. Para preguntas de tipo `ausente`, comprueba que el sistema reconoce cuándo *no* tiene la información en vez de inventar.
-- **Ejecución**: ¿qué documentos recuperó cada consulta, cuánto tardó, hubo errores? Independiente de si la respuesta final fue correcta.
+Pytest no recolecta esa carpeta (ver `python_files` en `pyproject.toml`); los
+scripts se lanzan a mano y sí hablan con Qdrant y el LLM reales:
 
 ```bash
 cd backend
-uv run python tests/response_test.py
-uv run python tests/response_test.py --rondas 3 --umbral-similitud 0.85
+uv run python tests/evaluation/index_hard_docs.py
 ```
 
-Cada corrida genera un directorio `tests/results/run_<timestamp>/` con dos informes HTML, sus CSV equivalentes y el detalle crudo en JSON.
+**El arnés que puntuaba las respuestas de punta a punta no está hoy en el
+repositorio**, solo sus sets de preguntas. El último resultado que quedó
+registrado, con 25 preguntas × 5 rondas = 125 consultas, dio 100% de precisión
+y 100% de retrieval con `gemini/gemini-flash-lite-latest` y un umbral de
+similitud coseno de 0.85. Se cita como referencia histórica, no como una medida
+reproducible ahora mismo: el dataset es pequeño y fijo, y servía de red de
+seguridad de regresión, no de benchmark.
 
-**Último resultado registrado** (`run_20260815_182655`, 25 preguntas × 5 rondas = 125 consultas):
-
-| Métrica | Valor |
-|---|---|
-| Precisión global (respuesta correcta) | 100% |
-| Retrieval global (documento esperado recuperado) | 100% |
-| Errores definitivos | 0 |
-| Modelo evaluado | `gemini/gemini-flash-lite-latest` |
-| Umbral de similitud coseno | 0.85 |
-
-El dataset de evaluación es pequeño y fijo (25 preguntas sobre 11 documentos, repartidas en 5 tipos: exacta, semántica, tabla, discriminación y ausente) — sirve como red de seguridad de regresión para detectar si un cambio degrada el pipeline, no como benchmark estadísticamente robusto.
+Reconstruirlo es trabajo pendiente.
 
 ## Calidad y desarrollo
 
 ```bash
+# Backend
 cd backend
-uv run ruff check .        # lint
-uv run ruff format .       # formateo
-uv run mypy app             # tipado estático
-uv run pytest -v            # tests unitarios
+uv run ruff check app      # lint
+uv run pytest -q           # la suite automática
+
+# Frontend
+cd frontend
+npm run verificar          # typecheck, lint, formato, unidad, e2e, build y bundle
+npm run limpieza           # ficheros sin usar (knip)
 ```
 
-**Estado actual** (honesto, no aspiracional): `ruff` señala 4 avisos de imports sin usar (en su mayoría en los scripts de prototipo) y `mypy` reporta 5 errores de tipado, concentrados en `ingest.py` y en tipos no anotados con precisión en `retrieval.py`/`indexation.py`. `pytest` no falla, pero tampoco recolecta ningún test todavía — ver [deuda técnica](#deuda-técnica-conocida).
+**Estado actual**, medido:
+
+| Comprobación | Resultado |
+|---|---|
+| `ruff check app` | en verde |
+| `pytest` (backend) | 73 pasados |
+| `vitest` (frontend) | 69 pasados |
+| Playwright, Chromium + WebKit | 59 pasados, 5 saltados por capacidad del navegador |
+| `knip` | sin hallazgos |
+| `mypy app` | **no está en verde**: falla por configuración de paquetes, no por tipos |
 
 ## Flujo de trabajo con Git
 
@@ -341,7 +365,7 @@ git push -u origin feature/nombre-corto
 
 | Fase | Alcance | Estado |
 |---|---|---|
-| Retrieval híbrido | Combinar dense + sparse (`BM25`) con RRF | Parcial — sparse prototipado en `vector_disperso.py`, sin integrar |
+| Retrieval híbrido | Combinar dense + sparse (`BM25`) con RRF | Hecho — y con reordenado por cross-encoder encima |
 | Generación con streaming | Respuesta por SSE en `/preguntar` | Planificado — hoy la respuesta es JSON bloqueante |
 | Capa agéntica | Grafo con LangGraph: decidir si recuperar, reformular query, autocrítica | Planificado — sin iniciar |
 | Frontend | Chat con streaming, subida de documentos, visor de fuentes citadas (React + Vite) | Planificado — carpeta reservada, sin scaffold |
@@ -364,17 +388,25 @@ opciones.accelerator_options = AcceleratorOptions(num_threads=4, device=Accelera
 
 ### Deuda técnica conocida
 
-- Sin tests unitarios: `pytest` está configurado (`testpaths`, `asyncio_mode`) pero no recolecta nada todavía; solo existe el arnés de evaluación end-to-end.
-- `ruff`/`mypy` no están en verde (ver [Calidad y desarrollo](#calidad-y-desarrollo)); no hay CI que lo haga cumplir todavía.
-- El campo `nombre` de `Indexar` se acepta en el esquema pero no se usa en el handler de `/indexar`.
-- Inconsistencia de prefijo entre `GEMINI_API_KEY` (sin prefijo) y el resto de variables (`APP_`) en `app/core/config.py`.
-- `app/ingest/ingest.py` y `app/retrieval/llm.py` son scripts exploratorios (con rutas locales hardcodeadas) que conviven con el código productivo — candidatos a mover fuera de `app/` o eliminar.
-- Artefactos de build (`__pycache__/`, `.pyc`, `.DS_Store`) están versionados en git; falta ampliar `.gitignore`.
-- No hay endpoint de *health check* actualmente (existió en una versión anterior de `main.py`, se perdió al cablear las rutas reales).
-
-## Documentación adicional
-
-El [diario de desarrollo](docs/DIARIO_DESARROLLO.md) recoge, día a día, el razonamiento completo detrás de cada decisión (por qué Docling, por qué esta métrica de distancia, cómo funciona `fastembed` por dentro, referencia de la API de `QdrantClient`, etc.) — útil como bitácora de aprendizaje, no como documentación de referencia.
+- **Indexar un documento grande no cabe en una petición HTTP.** Medido: un PDF de
+  176 páginas seguía vectorizando a los 90 minutos, y nginx corta a los 60
+  segundos por defecto. Las protecciones actuales evitan que el proceso se caiga
+  —el trabajo sale del event loop y hay techo de concurrencia con `429`— pero no
+  arreglan la duración. La solución es una cola con el worker en un proceso
+  aparte, respondiendo `202` y dando el progreso por SSE.
+- `mypy app` no está en verde: falla por la configuración de paquetes, antes de
+  llegar a comprobar tipos. No hay CI que haga cumplir lint ni tipado.
+- Inconsistencia de prefijo entre `GEMINI_API_KEY` (sin prefijo) y el resto de
+  variables (`APP_`) en `app/core/config.py`.
+- Los orígenes de CORS están escritos a mano en `app/api/main.py` y solo
+  contienen `localhost`. No molesta con el despliegue previsto, porque el
+  frontend llama a `/api/` por nginx y es el mismo origen, pero cualquier otro
+  despliegue queda bloqueado.
+- No hay Dockerfile de frontend ni servicio de nginx en el compose: la
+  configuración de `frontend/despliegue/nginx.conf` está escrita y todavía no la
+  ejecuta nadie.
+- `texto_crudo` se guarda en el payload de cada fragmento de Qdrant y ninguna
+  consulta lo lee.
 
 ## Licencia
 

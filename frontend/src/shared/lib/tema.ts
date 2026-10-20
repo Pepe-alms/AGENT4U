@@ -50,9 +50,3 @@ export const NOMBRE_TEMA: Record<Tema, string> = {
   claro: 'Claro',
   oscuro: 'Oscuro',
 };
-
-export const ETIQUETA_TEMA: Record<Tema, string> = {
-  sistema: 'Tema: el del sistema',
-  claro: 'Tema: claro',
-  oscuro: 'Tema: oscuro',
-};

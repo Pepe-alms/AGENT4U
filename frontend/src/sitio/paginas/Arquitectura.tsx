@@ -323,7 +323,7 @@ function FlujoIngesta() {
   );
 }
 
-export function Arquitectura() {
+function Arquitectura() {
   // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
   useScrollToHash();
   const sinMovimiento = useSinMovimiento();

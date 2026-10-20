@@ -3,8 +3,9 @@ import { ErrorApi } from '@/shared/api/errores';
 import type {
   Documento,
   DocumentoEliminado,
-  FicheroSubido,
-  Indexacion,
+  FicheroEncolado,
+  TrabajoEncolado,
+  TrabajoEstado,
 } from '@/shared/api/types';
 
 type RespuestaLista = { documentos: Documento[] };
@@ -54,35 +55,29 @@ export function tipoDeRuta(ruta: string): string {
 }
 
 /**
- * POST /indexar. **`file_path` es una ruta del sistema de ficheros del
- * servidor**, no un fichero subido: el backend no tiene ningún endpoint
- * multipart. Contrato: backend/app/api/schemas.py:44
+ * POST /indexar. Encola la indexacion y devuelve 202 con el job_id.
  *
  * La ruta es única: reindexar la misma devuelve 409.
  */
 export function indexarFichero(
   rutaServidor: string,
-  opciones: { signal?: AbortSignal; tiempoLimiteMs?: number } = {},
-): Promise<Indexacion> {
-  return peticion<Indexacion>('/indexar', {
+  opciones: { signal?: AbortSignal } = {},
+): Promise<TrabajoEncolado> {
+  return peticion<TrabajoEncolado>('/indexar', {
     metodo: 'POST',
     cuerpo: { file_path: rutaServidor, type: tipoDeRuta(rutaServidor) },
-    // La ingesta convierte, trocea y vectoriza: tarda mucho más que una
-    // consulta normal, así que el límite por defecto de 15 s no vale.
-    tiempoLimiteMs: opciones.tiempoLimiteMs ?? 0,
     signal: opciones.signal,
   });
 }
 
-/** POST /indexar-url. La URL también es única: repetirla devuelve 409. */
+/** POST /indexar-url. Encola la indexacion y devuelve 202. */
 export function indexarUrl(
   url: string,
   opciones: { signal?: AbortSignal } = {},
-): Promise<Indexacion> {
-  return peticion<Indexacion>('/indexar-url', {
+): Promise<TrabajoEncolado> {
+  return peticion<TrabajoEncolado>('/indexar-url', {
     metodo: 'POST',
     cuerpo: { url },
-    tiempoLimiteMs: 0,
     signal: opciones.signal,
   });
 }
@@ -91,7 +86,7 @@ export function indexarUrl(
 export const TAMANO_MAXIMO = 50 * 1024 * 1024;
 
 /**
- * POST /indexar-fichero. Sube el fichero y lo indexa en una sola petición.
+ * POST /indexar-fichero. Sube el fichero y encola su indexacion.
  *
  * El nombre que viaja es el del fichero elegido; el backend se queda solo con
  * su último componente, así que no puede escribir fuera de su carpeta de
@@ -100,16 +95,23 @@ export const TAMANO_MAXIMO = 50 * 1024 * 1024;
 export function subirFichero(
   fichero: File,
   opciones: { signal?: AbortSignal } = {},
-): Promise<FicheroSubido> {
+): Promise<FicheroEncolado> {
   const formulario = new FormData();
   formulario.append('fichero', fichero, fichero.name);
 
-  return peticion<FicheroSubido>('/indexar-fichero', {
+  return peticion<FicheroEncolado>('/indexar-fichero', {
     metodo: 'POST',
     cuerpo: formulario,
-    tiempoLimiteMs: 0,
     signal: opciones.signal,
   });
+}
+
+/** GET /trabajos/{jobId}. Consulta el estado de una indexacion encolada. */
+export function obtenerEstadoTrabajo(
+  jobId: string,
+  opciones: { signal?: AbortSignal } = {},
+): Promise<TrabajoEstado> {
+  return peticion<TrabajoEstado>(`/trabajos/${encodeURIComponent(jobId)}`, opciones);
 }
 
 /** Qué se puede subir, por extensión. El backend no valida la lista. */

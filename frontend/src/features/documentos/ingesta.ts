@@ -10,6 +10,19 @@ export type Trabajo = {
   mensaje?: string;
 };
 
+/**
+ * Cuántas indexaciones se dan por aceptables mientras `GET /ajustes` no
+ * conteste.
+ *
+ * Es el valor por defecto del backend (`index_max_concurrentes` +
+ * `index_max_en_cola`), repetido aquí a sabiendas y solo para el hueco entre
+ * que la app arranca y el servidor responde. En cuanto `/ajustes` llega, manda
+ * el suyo: el servidor puede estar configurado con otro, y entonces este número
+ * está mal. Por eso el límite de verdad sigue siendo el 429 del servidor, y
+ * esto es nada más que cortesía en la interfaz.
+ */
+export const MAX_EN_VUELO_PROVISIONAL = 5;
+
 export type AccionIngesta =
   | { tipo: 'encolar'; id: string; origen: string; clase: Trabajo['clase'] }
   | { tipo: 'empezar'; id: string }
@@ -55,8 +68,38 @@ export function reducirIngesta(trabajos: Trabajo[], accion: AccionIngesta): Trab
  */
 export function mensajeDeIngesta(estado: number | undefined, porDefecto: string): string {
   if (estado === 409) return 'Ya estaba indexado. No hace falta volver a hacerlo.';
+  if (estado === 429)
+    return 'El servidor está ocupado con otras indexaciones. Inténtalo en unos minutos.';
   if (estado === 413) return 'El fichero es demasiado grande para el servidor.';
   if (estado === 400) return 'El servidor ha rechazado el fichero: puede estar vacío.';
   if (estado === 500) return 'La ingesta falló. Revisa que la ruta exista y sea legible.';
   return porDefecto;
+}
+
+/** Trabajos que el servidor tiene ahora mismo: corriendo o esperando turno. */
+export function enVuelo(trabajos: Trabajo[]): number {
+  return trabajos.filter((t) => t.fase === 'en-cola' || t.fase === 'indexando').length;
+}
+
+/**
+ * Cuántos trabajos más se pueden mandar sin que el servidor responda 429.
+ *
+ * Cuenta los que están en vuelo, no los de la lista: los que ya acabaron —bien
+ * o mal— no ocupan nada en el servidor, aunque sigan visibles hasta que el
+ * usuario los quite.
+ */
+export function huecosLibres(trabajos: Trabajo[], maxEnVuelo: number): number {
+  return Math.max(0, maxEnVuelo - enVuelo(trabajos));
+}
+
+/**
+ * Parte una selección en lo que cabe y lo que sobra.
+ *
+ * Se trunca en el cliente en vez de mandarlo todo y dejar que el servidor
+ * rechace lo que no quepa. Mandarlo todo tiene dos problemas: el usuario sube
+ * diez ficheros y ve cinco errores sin entender por qué justo esos cinco, y
+ * cada petición rechazada ha subido ya su cuerpo entero por la red para nada.
+ */
+export function repartir<T>(items: T[], huecos: number): { caben: T[]; sobran: T[] } {
+  return { caben: items.slice(0, huecos), sobran: items.slice(huecos) };
 }

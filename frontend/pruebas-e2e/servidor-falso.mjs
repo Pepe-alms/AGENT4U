@@ -7,6 +7,7 @@
  * ninguno, y POST /preguntar devuelve SSE, no JSON.
  */
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 
 const PUERTO = Number(process.argv[2] ?? 8099);
 
@@ -28,7 +29,12 @@ function estadoDe(req) {
   const clave = req.headers['x-sesion-prueba'] ?? 'global';
   let estado = sesiones.get(clave);
   if (!estado) {
-    estado = { documentos: [], conversaciones: [], siguienteId: 1000 };
+    estado = {
+      documentos: [],
+      conversaciones: [],
+      trabajos: new Map(),
+      siguienteId: 1000,
+    };
     sesiones.set(clave, estado);
   }
   return estado;
@@ -125,6 +131,9 @@ createServer(async (req, res) => {
       modelos: ['gemini/gemini-flash-lite-latest'],
       max_fragmentos_defecto: 10,
       max_fragmentos_tope: 20,
+      // El mismo techo que el backend real por defecto: 1 corriendo + 4 en
+      // cola. La interfaz lo usa para no dejar adjuntar un sexto fichero.
+      max_indexaciones_en_vuelo: 5,
     });
   }
 
@@ -151,6 +160,13 @@ createServer(async (req, res) => {
     );
   }
 
+  if (url?.startsWith('/trabajos/') && method === 'GET') {
+    const jobId = decodeURIComponent(url.slice('/trabajos/'.length));
+    const trabajo = sesion.trabajos.get(jobId);
+    if (!trabajo) return responderJson(res, 404, { detail: 'Trabajo no encontrado.' });
+    return responderJson(res, 200, trabajo);
+  }
+
   if (url === '/indexar-fichero' && method === 'POST') {
     const cuerpo = (await leerCuerpo(req)).toString('utf8', 0, 4000);
     const nombre = /filename="([^"]*)"/.exec(cuerpo)?.[1] ?? 'subido.pdf';
@@ -158,6 +174,7 @@ createServer(async (req, res) => {
     if (documentos.some((d) => d.origin === ruta)) {
       return responderJson(res, 409, { detail: `El documento ${ruta} ya existe.` });
     }
+    const jobId = randomUUID();
     documentos.push({
       id: documentos.length + 1,
       origin: ruta,
@@ -169,7 +186,15 @@ createServer(async (req, res) => {
       num_chunks: 12,
       error_message: null,
     });
-    return responderJson(res, 200, { status: 'indexado', num_chunks: 12, ruta });
+    sesion.trabajos.set(jobId, {
+      job_id: jobId,
+      status: 'indexado',
+      origin: ruta,
+      name: nombre,
+      num_chunks: 12,
+      error_message: null,
+    });
+    return responderJson(res, 202, { job_id: jobId, status: 'en-cola', ruta });
   }
 
   if (url === '/preguntar' && method === 'POST') {

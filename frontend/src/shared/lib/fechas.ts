@@ -15,7 +15,7 @@ export function formatearFecha(iso: string): string {
 }
 
 /** Las etiquetas van de lo más reciente a lo más antiguo. */
-export const GRUPOS = ['Hoy', 'Ayer', 'Últimos 7 días', 'Anteriores'] as const;
+const GRUPOS = ['Hoy', 'Ayer', 'Últimos 7 días', 'Anteriores'] as const;
 
 export type Grupo = (typeof GRUPOS)[number];
 

@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "arq>=0.26",
     "docling>=2.118.1",
     "dotenv>=0.9.9",
     "fastapi>=0.139.2",
@@ -15,6 +16,7 @@ dependencies = [
     "pydantic-settings>=2.14.2",
     "python-multipart>=0.0.32",
     "qdrant-client>=1.18.0",
+    "redis>=5.2",
     "sqlalchemy>=2.0.52",
     "transformers>=5.8.1",
     "uvicorn[standard]>=0.51.0",
