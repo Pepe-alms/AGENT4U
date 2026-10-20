@@ -13,6 +13,8 @@ def acumular(actual: list | None, nuevo: list | None) -> list:
 class EstadoRAG(TypedDict, total=False):
     query: str
     historial: list
+    # Lo pone POST /preguntar; si no viene, cada nodo usa su valor por defecto.
+    max_fragmentos: int
     consulta_busqueda: str
     chunks_parciales: Annotated[list[dict], acumular]
     chunks: list[dict]
@@ -58,6 +60,7 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
             sparse_embedder,
             qdrant,
             cross_encoder,
+            max_fragmentos=estado.get("max_fragmentos", 10),
         )
         for c in chunks:
             c["subconsulta"] = consulta

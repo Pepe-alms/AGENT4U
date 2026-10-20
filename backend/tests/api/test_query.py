@@ -14,7 +14,9 @@ def test_consulta_valida_devuelve_un_stream_sse(client, parsear_sse):
     assert respuesta.headers["content-type"].startswith("text/event-stream")
 
     eventos = parsear_sse([respuesta.text])
-    assert [e["tipo"] for e in eventos] == ["inicio", "fuentes", "texto", "texto", "fin"]
+    assert [e["tipo"] for e in eventos] == [
+        "inicio", "paso", "paso", "fuentes", "texto", "texto", "fin",
+    ]
     assert "".join(e["texto"] for e in eventos if e["tipo"] == "texto") == "Hola mundo"
 
 

@@ -1,0 +1,265 @@
+/*
+ * Tokens de AGENT4U. Fuente de verdad: .agent/design-system.md
+ *
+ * El color se nombra por ROL (fondo, superficie, texto, acento), nunca por
+ * tono: asi un tema es una redefinicion de los mismos nombres y ningun
+ * componente escribe un color literal. Es lo que ha permitido cambiar la
+ * identidad cuatro veces sin tocar un componente de dominio.
+ *
+ * Dos capas, y el orden importa:
+ *
+ *   1. Los valores crudos viven en `:root` y se redefinen por tema. Son CSS
+ *      plano, cambian en caliente y no los conoce Tailwind.
+ *   2. `@theme inline` los expone como utilidades (`bg-fondo`, `text-suave`).
+ *      El `inline` no es decorativo: sin el, Tailwind COPIA el valor en cada
+ *      utilidad y el cambio de tema deja de propagarse.
+ *
+ * La identidad sigue la guia de estilo de OpenAI: lienzo blanco, tipo casi
+ * negro y **ningun color de marca**. La estructura la dan hairlines al 12% de
+ * negro, no sombras; los radios son de 6px en las tarjetas y pildora en todo
+ * lo interactivo; y el unico elemento relleno de la pantalla es la accion
+ * principal, en negro. Lo demas es tipografia y aire.
+ */
+
+@theme inline {
+  /* --- Tipografia ---
+     Inter primero, que es el sustituto que la propia guia recomienda para
+     OpenAI Sans y viene empaquetado. La del sistema queda de respaldo. */
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  /* Solo cifras y metadatos tecnicos: fragmentos, paginas, scores, atajos. */
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- Espaciado ---
+     Tailwind construye TODA su escala multiplicando esta base, asi que el modo
+     compacto aprieta la interfaz entera con una variable. Solo el espacio: el
+     texto y las alturas minimas de los controles van en rem fijos, porque
+     encoger el area pulsable es justo lo que no debe hacer. */
+  --spacing: calc(0.25rem * var(--escala-densidad));
+
+  /* --- Radios ---
+     6px en las tarjetas: la guia avisa de que 12 o 16 desplazan el sistema
+     hacia "SaaS amable", y es exactamente lo que teniamos. La pildora se
+     reserva a lo interactivo y es la firma geometrica. */
+  --radius-s: 0.25rem;
+  --radius-m: 0.375rem;
+  /* El composer: a una linea se lee como pildora y aguanta al crecer, cosa
+     que `9999px` no hace en una caja de ocho lineas. */
+  --radius-l: 1.5rem;
+
+  /* --- Color, por rol --- */
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-superficie-suave: var(--superficie-suave);
+  --color-superficie-hover: var(--superficie-hover);
+
+  --color-borde: var(--borde);
+  --color-borde-fuerte: var(--borde-fuerte);
+
+  --color-texto: var(--txt);
+  --color-suave: var(--txt-suave);
+  --color-tenue: var(--txt-tenue);
+
+  /* El "acento" es el negro del tema. No hay color de marca: la unica
+     puntuacion cromatica del sistema es el boton relleno. */
+  --color-acento: var(--acento);
+  --color-acento-hover: var(--acento-hover);
+  --color-sobre-acento: var(--acento-texto);
+  --color-acento-suave: var(--acento-suave);
+
+  --color-error: var(--error);
+  --color-error-fondo: var(--error-fondo);
+  --color-error-borde: var(--error-borde);
+
+  --color-exito: var(--exito);
+  --color-exito-fondo: var(--exito-fondo);
+  --color-exito-borde: var(--exito-borde);
+
+  --color-aviso: var(--aviso);
+  --color-aviso-fondo: var(--aviso-fondo);
+  --color-aviso-borde: var(--aviso-borde);
+
+  /* --- Sombras ---
+     Practicamente no existen: la guia dice explicitamente que las tarjetas no
+     llevan sombra y que la estructura la dan los hairlines y el aire. Solo
+     sobreviven para lo que flota de verdad sobre el resto (modales y
+     popovers), que la guia no cubre. */
+  --shadow-s: var(--sombra-s);
+  --shadow-m: var(--sombra-m);
+  --shadow-l: var(--sombra-l);
+  --shadow-acento: var(--brillo-acento);
+
+  /* --- Movimiento --- */
+  --ease-marca: cubic-bezier(0.2, 0.9, 0.2, 1);
+  --ease-entrada: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- Anchos --- */
+  --container-lectura: 70ch;
+}
+
+:root {
+  --escala-densidad: 1;
+
+  /* Tracking negativo que se cierra segun crece el tamaño: a 48px, -0.03em.
+     Es lo que da a los titulares la autoridad comprimida de un periodico. */
+  --tracking-display: -0.03em;
+  --tracking-etiqueta: 0;
+
+  --duracion-rapida: 140ms;
+  --duracion-media: 260ms;
+  --duracion-lenta: 600ms;
+  --curva: cubic-bezier(0.2, 0.9, 0.2, 1);
+  --curva-entrada: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- Tema claro: el de por defecto, y el que describe la guia --- */
+  color-scheme: light;
+
+  /* Paper. El lienzo y las tarjetas son el MISMO blanco: lo que las separa es
+     el hairline, no un escalon de color. */
+  --fondo: #ffffff;
+  --superficie: #ffffff;
+  --superficie-suave: #f1f1f1;
+  --superficie-hover: #ebebeb;
+
+  /* Hairline: negro semitransparente y no un gris fijo, para que mantenga el
+     mismo peso visual sobre blanco y sobre Ash. */
+  --borde: rgb(0 0 0 / 12%);
+  --borde-fuerte: rgb(0 0 0 / 28%);
+
+  --txt: #000000;
+  /* Graphite, medido: 5.74:1 sobre blanco y 5.08:1 sobre Ash. */
+  --txt-suave: #666666;
+  /* El Smoke #8f8f8f de la guia da 2.86:1 sobre Ash y no llega a AA ni de
+     lejos. Este da 5.33:1 y 4.72:1. */
+  --txt-tenue: #6b6b6b;
+
+  --acento: #000000;
+  --acento-hover: #262626;
+  --acento-texto: #ffffff;
+  --acento-suave: #f1f1f1;
+
+  /* El sistema es monocromo, pero un error sin color seria un error que no se
+     ve. Se reservan los tres de estado y nada mas. */
+  --error: #b42318;
+  --error-fondo: #fef3f2;
+  --error-borde: #fecdc9;
+
+  --exito: #067647;
+  --exito-fondo: #ecfdf3;
+  --exito-borde: #abefc6;
+
+  --aviso: #854a0e;
+  --aviso-fondo: #fffaeb;
+  --aviso-borde: #fedf89;
+
+  --foco: #000000;
+
+  --sombra-s: none;
+  --sombra-m: rgb(0 0 0 / 2%) 0 4px 6px 0, rgb(0 0 0 / 5%) 0 0 2px 0;
+  --sombra-l: 0 8px 28px -8px rgb(0 0 0 / 18%), 0 2px 8px -2px rgb(0 0 0 / 8%);
+  --brillo-acento: 0 0 0 3px rgb(0 0 0 / 12%);
+}
+
+/* --- Tema oscuro ---
+   La guia solo describe el claro. Esto es la misma idea invertida: lienzo
+   negro, tipo blanco, hairlines en blanco al 14% y el boton relleno en blanco.
+   Se mantiene porque el tema es funcionalidad, no decoracion. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema='claro']) {
+    color-scheme: dark;
+
+    --fondo: #000000;
+    --superficie: #000000;
+    --superficie-suave: #171717;
+    --superficie-hover: #262626;
+
+    --borde: rgb(255 255 255 / 14%);
+    --borde-fuerte: rgb(255 255 255 / 32%);
+
+    --txt: #ffffff;
+    --txt-suave: #a1a1a1;
+    --txt-tenue: #8a8a8a;
+
+    --acento: #ffffff;
+    --acento-hover: #e5e5e5;
+    --acento-texto: #000000;
+    --acento-suave: #171717;
+
+    --error: #fda29b;
+    --error-fondo: #2a1512;
+    --error-borde: #5c2a24;
+
+    --exito: #75e0a7;
+    --exito-fondo: #10231a;
+    --exito-borde: #2b5440;
+
+    --aviso: #fec84b;
+    --aviso-fondo: #2a2011;
+    --aviso-borde: #57431c;
+
+    --foco: #ffffff;
+
+    --sombra-s: none;
+    --sombra-m: rgb(0 0 0 / 40%) 0 4px 6px 0, rgb(0 0 0 / 30%) 0 0 2px 0;
+    --sombra-l: 0 8px 28px -8px rgb(0 0 0 / 70%), 0 2px 8px -2px rgb(0 0 0 / 50%);
+    --brillo-acento: 0 0 0 3px rgb(255 255 255 / 22%);
+  }
+}
+
+/* Duplicado a proposito: CSS no permite agrupar un selector con una media
+   query sin repetir los valores. */
+:root[data-tema='oscuro'] {
+  color-scheme: dark;
+
+  --fondo: #000000;
+  --superficie: #000000;
+  --superficie-suave: #171717;
+  --superficie-hover: #262626;
+
+  --borde: rgb(255 255 255 / 14%);
+  --borde-fuerte: rgb(255 255 255 / 32%);
+
+  --txt: #ffffff;
+  --txt-suave: #a1a1a1;
+  --txt-tenue: #8a8a8a;
+
+  --acento: #ffffff;
+  --acento-hover: #e5e5e5;
+  --acento-texto: #000000;
+  --acento-suave: #171717;
+
+  --error: #fda29b;
+  --error-fondo: #2a1512;
+  --error-borde: #5c2a24;
+
+  --exito: #75e0a7;
+  --exito-fondo: #10231a;
+  --exito-borde: #2b5440;
+
+  --aviso: #fec84b;
+  --aviso-fondo: #2a2011;
+  --aviso-borde: #57431c;
+
+  --foco: #ffffff;
+
+  --sombra-s: none;
+  --sombra-m: rgb(0 0 0 / 40%) 0 4px 6px 0, rgb(0 0 0 / 30%) 0 0 2px 0;
+  --sombra-l: 0 8px 28px -8px rgb(0 0 0 / 70%), 0 2px 8px -2px rgb(0 0 0 / 50%);
+  --brillo-acento: 0 0 0 3px rgb(255 255 255 / 22%);
+}
+
+/* Densidad compacta: cabe mas en pantalla sin tocar el tamaño del texto ni el
+   de los controles. Solo mueve --spacing, del que cuelga toda la escala. */
+:root[data-densidad='compacta'] {
+  --escala-densidad: 0.72;
+}
+
+/* Quien pide menos movimiento recibe la misma interfaz, sin animaciones. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duracion-rapida: 0ms;
+    --duracion-media: 0ms;
+    --duracion-lenta: 0ms;
+  }
+}

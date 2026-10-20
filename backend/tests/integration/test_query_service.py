@@ -70,7 +70,10 @@ def test_una_conversacion_existente_se_reutiliza_y_el_grafo_recibe_el_historial(
     conversation_crud.anadir_mensaje(db, conv.id, rol="user", contenido="¿Que es CAP?")
     conversation_crud.anadir_mensaje(db, conv.id, rol="assistant", contenido="Un teorema.")
 
-    preguntar(db, grafo, query="¿Y por que?", conversacion_id=conv.id)
+    # Se consume el generador: el grafo corre al emitir, no al construirlo. El
+    # trabajo contra la base de datos si es inmediato, y por eso los tests que
+    # solo miran la conversacion no necesitan consumir nada.
+    list(preguntar(db, grafo, query="¿Y por que?", conversacion_id=conv.id))
 
     assert len(conversation_crud.listar_conversaciones(db, usuario="local")) == 1
 
@@ -84,12 +87,20 @@ def test_al_consumir_el_stream_se_emiten_los_eventos_y_se_persiste_la_respuesta(
 
     eventos = parsear_sse(list(generador))
 
-    assert [e["tipo"] for e in eventos] == ["inicio", "fuentes", "texto", "texto", "fin"]
-    assert eventos[1]["fuentes"] == [{
+    # Un 'paso' por nodo que termina, antes de las fuentes y del texto.
+    assert [e["tipo"] for e in eventos] == [
+        "inicio", "paso", "paso", "fuentes", "texto", "texto", "fin",
+    ]
+
+    fuentes = next(e for e in eventos if e["tipo"] == "fuentes")["fuentes"]
+    assert fuentes == [{
         "nombre": "cap.pdf",
         "origen": "/docs/cap.pdf",
         "headings": ["Teorema CAP"],
         "paginas": [7],
+        "texto": "CAP dice que...",
+        "score": 0.9,
+        "subconsulta": "",
     }]
 
     conv = conversation_crud.listar_conversaciones(db, usuario="local")[0]
@@ -114,9 +125,32 @@ def test_si_el_llm_falla_se_emite_un_evento_error_y_no_se_guarda_respuesta(db, g
 
     eventos = parsear_sse(list(generador))
 
-    assert [e["tipo"] for e in eventos] == ["inicio", "fuentes", "error"]
+    assert [e["tipo"] for e in eventos] == ["inicio", "paso", "paso", "fuentes", "error"]
     assert "429" in eventos[-1]["mensaje"]
 
     conv = conversation_crud.listar_conversaciones(db, usuario="local")[0]
     mensajes = conversation_crud.obtener_ultimos_mensajes(db, conv.id)
     assert [m.rol for m in mensajes] == ["user"]
+
+
+def test_cada_nodo_emite_un_paso_con_sus_cifras(db, grafo_con_pasos, llm, parsear_sse):
+    """Los 'paso' llevan hechos, no frases: el frontend pone las palabras.
+
+    Existe porque este evento se puede perder sin que nada se queje: el parser
+    SSE del frontend ignoraba 'paso' y la unica señal era que la pantalla se
+    quedaba quieta. Ni error en consola, ni fallo de red.
+    """
+    eventos = parsear_sse(list(preguntar(db, grafo_con_pasos)))
+
+    pasos = [e for e in eventos if e["tipo"] == "paso"]
+    assert [p["nodo"] for p in pasos] == [
+        "multiconsulta", "buscar", "fusionar", "evaluar", "construir",
+    ]
+    # Cada paso trae su duracion, y las cifras propias de su nodo.
+    assert all(isinstance(p["ms"], int) for p in pasos)
+    assert pasos[0]["subconsultas"] == 3
+    assert pasos[1]["fragmentos"] == 2
+    assert pasos[2]["fragmentos"] == 1
+    assert pasos[3] == {**pasos[3], "score": 4.5, "pobre": False}
+    # 'construir' no aporta cifras: solo el nodo y el tiempo.
+    assert set(pasos[4]) == {"tipo", "nodo", "ms"}

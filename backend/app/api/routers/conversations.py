@@ -57,3 +57,23 @@ def obtener_conversacion(conversacion_id: int, db: Annotated[Session, Depends(ge
     if conv is None:
         raise HTTPException(status_code=404, detail="Conversación no encontrada")
     return conv
+
+
+@router.patch(
+    "/conversaciones/{conversacion_id}",
+    response_model=ConversacionResumenOut,
+    summary="Renombrar una conversacion",
+    description="Cambia el titulo. **No toca 'actualizada_en'**: renombrar no "
+                "cuenta como actividad, asi que la conversacion no sube al "
+                "principio de la lista.",
+    responses={404: {"model": ErrorOut, "description": "Conversación no encontrada."}},
+)
+def renombrar_conversacion(
+    conversacion_id: int,
+    body: RenombrarConversacionIn,
+    db: Annotated[Session, Depends(get_db)],
+):
+    conv = conversation_crud.renombrar_conversacion(db, conversacion_id, body.titulo)
+    if conv is None:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    return conv

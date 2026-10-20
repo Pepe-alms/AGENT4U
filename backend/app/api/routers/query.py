@@ -56,6 +56,22 @@ router = APIRouter(tags=["consulta"])
     },
 )
 def preguntar(body: QueryRequest, request: Request, db: Annotated[Session, Depends(get_db)]):
+    settings = get_settings()
+
+    # Lista blanca: aceptar cualquier cadena dejaria que el cliente apunte a un
+    # modelo caro o inexistente, y el fallo saldria a mitad del stream.
+    modelo = body.modelo or settings.llm_model
+    if modelo not in _modelos_permitidos():
+        raise HTTPException(
+            status_code=422,
+            detail=f"Modelo no permitido: {modelo}. Disponibles: {', '.join(_modelos_permitidos())}",
+        )
+
+    if body.max_fragmentos is not None and body.max_fragmentos > settings.max_fragmentos_tope:
+        raise HTTPException(
+            status_code=422,
+            detail=f"max_fragmentos no puede pasar de {settings.max_fragmentos_tope}.",
+        )
 
     try:
         generador = responder(
@@ -66,8 +82,9 @@ def preguntar(body: QueryRequest, request: Request, db: Annotated[Session, Depen
             sparse_embedder=request.app.state.sparse_embedder,
             cross_encoder=request.app.state.cross_encoder,
             qdrant=request.app.state.qdrant,
-            model=get_settings().llm_model,
+            model=modelo,
             grafo=request.app.state.grafo,
+            max_fragmentos=body.max_fragmentos,
         )
     except ConversacionNoEncontrada as e:
         raise HTTPException(status_code=404, detail=str(e))
