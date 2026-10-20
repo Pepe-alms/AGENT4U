@@ -5,42 +5,12 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from typing import Annotated
 from sqlalchemy.orm import Session
 
-from app.api.schemas import (
-    ErrorOut,
-    FicheroSubidoOut,
-    IndexRequest,
-    IndexUrlRequest,
-    IndexacionOut,
-)
-from app.core.config import get_settings
+from app.api.schemas import ErrorOut, IndexRequest, IndexUrlRequest, IndexacionOut
 from app.core.exceptions import DocumentoYaExiste, FalloIngesta
 from app.db.session import get_db
 from app.services.indexation_service import indexar_documento
 
 router = APIRouter(tags=["indexacion"])
-
-# Se lee en trozos para no cargar en memoria un fichero entero.
-TROZO_BYTES = 1024 * 1024
-
-
-def _ruta_segura(nombre_cliente: str | None, carpeta: Path) -> Path:
-    """Convierte el nombre que manda el cliente en una ruta dentro de 'carpeta'.
-
-    El nombre viene del navegador y no es de fiar: puede traer '../' o una ruta
-    absoluta. Se queda solo con el ultimo componente y despues se comprueba que
-    el resultado sigue colgando de 'carpeta'; la segunda comprobacion es la que
-    cubre los casos raros de cada sistema de ficheros.
-    """
-    base = os.path.basename((nombre_cliente or "").replace("\\", "/")).strip()
-
-    if not base or base in (".", ".."):
-        raise HTTPException(status_code=400, detail="Nombre de fichero no valido.")
-
-    destino = (carpeta / base).resolve()
-    if not destino.is_relative_to(carpeta.resolve()):
-        raise HTTPException(status_code=400, detail="Nombre de fichero no valido.")
-
-    return destino
 
 
 @router.post(

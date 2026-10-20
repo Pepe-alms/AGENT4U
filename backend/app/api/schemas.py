@@ -28,25 +28,23 @@ class ErrorOut(BaseModel):
 # --------------------------------------------------------------------------
 
 class QueryRequest(BaseModel):
-    query: str
-    conversacion_id: int | None = None
-    max_fragmentos: int | None = Field(
-        default=None,
-        ge=1,
-        description=(
-            "Fragmentos que se pasan al modelo tras reordenar. Si se omite se "
-            "usa APP_MAX_FRAGMENTOS_DEFECTO. El tope esta en "
-            "APP_MAX_FRAGMENTOS_TOPE y pedir mas devuelve 422."
-        ),
-        examples=[10],
+    """Cuerpo de ``POST /preguntar``."""
+
+    query: str = Field(
+        min_length=1,
+        max_length=4000,
+        description="Pregunta del usuario. No puede estar vacia.",
+        examples=["¿Que dice el teorema CAP?"],
     )
-    modelo: str | None = Field(
+    conversacion_id: int | None = Field(
         default=None,
         description=(
-            "Modelo a usar. Tiene que estar en APP_LLM_MODELOS; cualquier otro "
-            "devuelve 422. Si se omite se usa APP_LLM_MODEL."
+            "Hilo al que se añade la pregunta. Si se omite, es null o es una "
+            "cadena vacia, se crea una conversacion nueva cuyo titulo son los "
+            "primeros 60 caracteres de la pregunta. Si se envia un id que no "
+            "existe, la respuesta es 404."
         ),
-        examples=["gemini/gemini-flash-lite-latest"],
+        examples=[12345],
     )
 
     @field_validator("conversacion_id", mode="before")
@@ -57,21 +55,6 @@ class QueryRequest(BaseModel):
         if isinstance(v, str) and not v.strip():
             return None
         return v
-
-
-class AjustesOut(BaseModel):
-    """Respuesta de ``GET /ajustes``: que puede tocar el cliente.
-
-    Existe para que la interfaz no tenga que inventarse las opciones ni
-    duplicar los limites del servidor: los pide y pinta lo que haya.
-    """
-
-    modelos: list[str] = Field(
-        description="Modelos que acepta POST /preguntar, el primero es el de por defecto.",
-        examples=[["gemini/gemini-flash-lite-latest"]],
-    )
-    max_fragmentos_defecto: int = Field(description="Valor que se usa si no se pide otro.")
-    max_fragmentos_tope: int = Field(description="Maximo que acepta POST /preguntar.")
 
 
 class IndexRequest(BaseModel):
@@ -213,61 +196,6 @@ class IndexacionOut(BaseModel):
     )
 
 
-class FicheroSubidoOut(IndexacionOut):
-    """Respuesta de ``POST /indexar-fichero``.
-
-    Ademas de lo que devuelve la indexacion normal, informa de donde quedo el
-    fichero: esa ruta es el 'origin' del documento y la que habria que usar
-    para reindexarlo o localizarlo.
-    """
-
-    ruta: str = Field(
-        description="Ruta en el servidor donde se guardo el fichero.",
-        examples=["/srv/agent4u/uploads/manual.pdf"],
-    )
-
-
-# --------------------------------------------------------------------------
-# Respuestas: salud
-# --------------------------------------------------------------------------
-
-class SaludOut(BaseModel):
-    """Respuesta de ``GET /health``.
-
-    Solo dice que el proceso esta en pie y aceptando peticiones. No comprueba
-    ninguna dependencia: para eso esta ``GET /health/qdrant``.
-    """
-
-    status: Literal["ok"]
-
-
-class SaludQdrantOut(BaseModel):
-    """Respuesta de ``GET /health/qdrant``.
-
-    OJO: siempre responde 200, incluso cuando Qdrant esta caido. Hay que mirar
-    el campo 'status', no el codigo HTTP, igual que en
-    ``DELETE /documentos/{documento}``. El motivo es que un fallo de Qdrant no
-    es un fallo de este endpoint: el backend ha respondido correctamente que su
-    dependencia no esta disponible, y asi el cliente puede distinguir
-    "backend caido" de "backend vivo con Qdrant caido".
-    """
-
-    status: Literal["ok", "error"] = Field(
-        description="'ok' si Qdrant responde; 'error' si no."
-    )
-    coleccion: str = Field(
-        description="Coleccion configurada en APP_QDRANT_COLLECTION.",
-        examples=["Agent4U"],
-    )
-    existe: bool = Field(
-        description="Si esa coleccion existe en Qdrant. False cuando status es 'error'."
-    )
-    detalle: str | None = Field(
-        default=None,
-        description="Causa del fallo. Solo tiene valor si status == 'error'.",
-    )
-
-
 # --------------------------------------------------------------------------
 # Respuestas: conversaciones
 # --------------------------------------------------------------------------
@@ -298,30 +226,6 @@ class FuenteOut(BaseModel):
         default_factory=list,
         description="Paginas del documento en las que aparece el fragmento.",
         examples=[[7]],
-    )
-    texto: str = Field(
-        default="",
-        description="El fragmento recuperado, tal cual se indexo.",
-        examples=["Un sistema distribuido no puede garantizar las tres a la vez."],
-    )
-    score: float | None = Field(
-        default=None,
-        description=(
-            "Relevancia que le dio el reordenador. No esta acotada a 0..1 y "
-            "puede ser negativa: solo sirve para comparar fragmentos entre si "
-            "dentro de una misma respuesta. Null en los mensajes guardados "
-            "antes de que se empezara a enviar."
-        ),
-        examples=[2.41],
-    )
-    subconsulta: str = Field(
-        default="",
-        description=(
-            "La consulta derivada que encontro este fragmento, que con "
-            "multiconsulta no es la que escribio el usuario. Cadena vacia si "
-            "no se registro."
-        ),
-        examples=["garantias del teorema CAP"],
     )
 
 
@@ -374,28 +278,6 @@ class ConversacionDetalleOut(ConversacionResumenOut):
     mensajes: list[MensajeOut] = Field(
         description="Mensajes del hilo, del mas antiguo al mas reciente."
     )
-
-
-class RenombrarConversacionIn(BaseModel):
-    """Cuerpo de ``PATCH /conversaciones/{conversacion_id}``."""
-
-    titulo: str = Field(
-        min_length=1,
-        max_length=256,
-        description=(
-            "Titulo nuevo. Se recortan los espacios de los extremos y no puede "
-            "quedar vacio. El limite de 256 es el de la columna."
-        ),
-        examples=["Notas sobre el teorema CAP"],
-    )
-
-    @field_validator("titulo")
-    @classmethod
-    def _sin_espacios_sobrantes(cls, valor: str) -> str:
-        limpio = valor.strip()
-        if not limpio:
-            raise ValueError("El titulo no puede estar vacio.")
-        return limpio
 
 
 class ConversacionEliminadaOut(BaseModel):
