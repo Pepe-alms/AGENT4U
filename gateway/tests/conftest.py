@@ -38,6 +38,7 @@ class FakeBackendClient:
                 "error_message": None,
             },
         }
+        self.cupo_lleno = False
 
     # ── ajustes ──────────────────────────────────────────────────────
 
@@ -69,9 +70,17 @@ class FakeBackendClient:
     # ── indexacion ───────────────────────────────────────────────────
 
     async def indexar(self, file_path: str, type: str, size: int | None) -> dict:
+        if self.cupo_lleno:
+            raise BackendHttpError(429, "Hay demasiados trabajos en cola o ejecutandose.")
+        if any(d["origin"] == file_path for d in self.documentos):
+            raise BackendHttpError(409, "Ya existe")
         return {"job_id": "fake-job-1", "status": "en-cola"}
 
     async def indexar_url(self, url: str, size: int | None) -> dict:
+        if self.cupo_lleno:
+            raise BackendHttpError(429, "Hay demasiados trabajos en cola o ejecutandose.")
+        if url == "https://existe.com/ya-indexado":
+            raise BackendHttpError(409, "Ya existe")
         return {"job_id": "fake-job-2", "status": "en-cola"}
 
     # ── conversaciones ───────────────────────────────────────────────

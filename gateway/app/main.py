@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from strawberry.fastapi import GraphQLRouter
 
 from app.clients.http_client import HttpBackendClient
 from app.config import get_settings
+from app.proxy import router as proxy_router
 from app.schema import schema
 
 
@@ -13,8 +15,12 @@ from app.schema import schema
 async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.client = HttpBackendClient(settings.backend_url)
+    app.state.proxy_client = httpx.AsyncClient(
+        base_url=settings.backend_url, timeout=None
+    )
     yield
     await app.state.client.close()
+    await app.state.proxy_client.aclose()
 
 
 async def get_context(request: Request) -> dict:
@@ -32,3 +38,4 @@ app.add_middleware(
 
 graphql_router = GraphQLRouter(schema, context_getter=get_context)
 app.include_router(graphql_router, prefix="/graphql")
+app.include_router(proxy_router)

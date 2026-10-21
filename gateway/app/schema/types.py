@@ -81,3 +81,21 @@ class SaludQdrant:
 class Salud:
     backend: str
     qdrant: SaludQdrant
+
+
+@strawberry.type
+class TrabajoEncolado:
+    job_id: str
+    status: str
+
+
+@strawberry.type
+class DocumentoEliminado:
+    status: str
+    documento: str
+
+
+@strawberry.type
+class ConversacionEliminada:
+    status: str
+    id: int
