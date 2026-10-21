@@ -10,7 +10,7 @@ Es el primer día, así que no hay entrega previa. A partir de mañana esta secc
 > - Añadió **Redis + un worker ARQ** y un **gateway GraphQL**.
 > - Borró `CLAUDE.md`, `docs/DIARIO_DESARROLLO.md` y `frontend/.agent/`.
 >
-> El plan y esta píldora ya están ajustados a ese commit. Lo borrado sigue en el historial de git: `git show 1edd3b3:docs/DIARIO_DESARROLLO.md`.
+> El plan y esta píldora ya están ajustados a ese commit. El análisis se hace siempre sobre `main` tal como está.
 
 ---
 
@@ -140,7 +140,12 @@ Tras el `yield` se cierran la `cola` (con `await`, porque es asíncrona) y `qdra
 
 4. **`/health/qdrant` devuelve 200 aunque Qdrant falle** para distinguir *"el backend está caído"* de *"el backend está vivo pero su dependencia falla"*. Es la separación clásica entre **liveness** y **readiness o dependencias**.
 
-5. **Búsqueda híbrida: dense + sparse + reranker.** Tu diseño original (`DIARIO_DESARROLLO.md`, líneas 17 y 99, en el historial) era **BGE-M3**, un solo modelo que da vector denso y disperso. Lo que hay son **tres modelos**: e5-large (justificado en la línea 231 del diario y en *Decisiones de diseño* del README), BM25 (línea 446) y el reranker de Jina (activado el 29/08, línea 667).
+5. **Búsqueda híbrida: dense + sparse + reranker, con tres modelos separados.**
+   - e5-large para el vector denso; el README lo justifica en *Decisiones de diseño*.
+   - BM25 para el vector disperso léxico.
+   - El reranker de Jina.
+
+   La alternativa obvia era **BGE-M3**, un solo modelo que da vector denso y disperso a la vez: menos RAM y un solo modelo que mantener. A cambio pierdes flexibilidad: no puedes cambiar una pieza sin cambiar las otras. Lo desmontamos el día 07.
 
 ### Cosas que no cuadran, detectadas hoy (las retomamos el día 21)
 
@@ -212,7 +217,7 @@ Abre `http://localhost:8000/docs` y lista los endpoints agrupados por su *tag*.
 4. Pega la salida de `/health/qdrant` con Qdrant caído. ¿Por qué 200? ¿Te parece buena decisión? Argumenta.
 5. ¿Por qué dentro de Docker la URL de Qdrant es `http://qdrant:6333` y en tu Mac `http://localhost:6333`? ¿De dónde sale cada valor (`docker-compose.yml` frente a `config.py`)?
 6. ¿Qué hace `depends_on: condition: service_healthy` y qué cadena de arranque provoca entre `redis`, `api` y `gateway`?
-7. Explica el cambio de **BGE-M3** (diseño original) a **e5 + BM25 + reranker**. ¿Qué se ganó y qué se perdió? Fuente: `git show 1edd3b3:docs/DIARIO_DESARROLLO.md`.
+7. Compara **BGE-M3** (un modelo para denso y disperso) con lo que hay, **e5 + BM25 + reranker**. ¿Qué gana y qué pierde cada opción? Fuente: *Decisiones de diseño* del `README.md` y tu propio razonamiento.
 
 **Bonus (opcional):** `docker compose up --build` con todo dentro de Docker.
 - El healthcheck de `api` tiene `start_period: 15s` y 3 reintentos cada 10 s. Si en frío la API tarda varios minutos en cargar modelos, ¿qué le pasa al `gateway`? Compruébalo, no lo supongas.

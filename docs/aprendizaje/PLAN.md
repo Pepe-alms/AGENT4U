@@ -10,21 +10,17 @@ funcionalidad propia sin depender del agente.
 - **Correo diario:** 8:30 (hora de Madrid). La píldora también queda en `pildoras/dia-XX.md`.
 - **Tus entregas:** `entregas/dia-XX.md`. Cada píldora empieza con una crítica de la entrega anterior.
 
-> Este plan se rehízo el 21-oct tras el commit `fb93eea` ("Chore/limpieza ficheros #38"),
-> que añadió **Redis + worker ARQ** y el **gateway GraphQL**. Si la arquitectura vuelve a
-> cambiar, la píldora del día se adapta al código que haya en `main` en ese momento.
+> El análisis se hace siempre sobre el código de `main` tal como esté ese día, sin distinguir quién escribió cada parte.
+> Si la arquitectura cambia, la píldora del día se adapta al código real.
 
 ## Fuentes del "por qué"
 
-- `README.md` raíz, con las secciones *Arquitectura*, *Decisiones de diseño* y *Deuda técnica conocida*.
-- `backend/README.md`, `backend/tests/README.md` y `gateway/README.md`.
-- Los comentarios del código: el agente justifica muchas decisiones en línea, por ejemplo en `config.py` y `cola_port.py`.
-- **El historial de git.** El commit `fb93eea` borró `docs/DIARIO_DESARROLLO.md` (tu diario de decisiones del backend), `CLAUDE.md` y `frontend/.agent/` (el razonamiento del agente, con 48 iteraciones). Siguen accesibles en el historial:
-  ```bash
-  git show 1edd3b3:docs/DIARIO_DESARROLLO.md | less
-  git show 1edd3b3:frontend/.agent/roadmap.md | less
-  git ls-tree -r --name-only 1edd3b3 frontend/.agent
-  ```
+- El propio código y sus comentarios. Muchas decisiones están justificadas en línea, por ejemplo en `config.py` y `cola_port.py`.
+- `README.md` raíz (*Arquitectura*, *Decisiones de diseño*, *Deuda técnica conocida*), `backend/README.md`, `backend/tests/README.md` y `gateway/README.md`.
+- El `git log` de cada área, para ver cómo y cuándo llegó cada pieza a su forma actual.
+- Cuando el repo no lo explique, el razonamiento de ingeniería: qué problema resuelve la decisión, qué alternativas había y qué coste tiene.
+
+Esta formación sustituye a la documentación de proceso que se retiró del repo. El conocimiento queda en `ARCHITECTURE.md`, y sobre todo en ti.
 
 ---
 
@@ -62,7 +58,7 @@ funcionalidad propia sin depender del agente.
 | 18 (L) | Sáb 7-nov | Tests del frontend: Vitest, Testing Library, Playwright y axe | `src/**/*.test.*`, `pruebas-e2e/*`, `playwright.config.ts` | Escribir un test unitario y uno e2e |
 | 19 (L) | Dom 8-nov | CI, linters y Docker multiservicio | `.github/workflows/backend.yml`, scripts de `package.json`, ruff/mypy/oxlint/eslint/prettier/knip | Añadir al CI los jobs del gateway y del frontend (hoy no existen) |
 | 20 | Lun 9-nov | Arnés de evaluación del RAG | `backend/tests/evaluation/*` | Ejecutar un subconjunto e interpretar las métricas |
-| 21 | Mar 10-nov | Sitio editorial, historia del agente y deuda técnica | `src/sitio/*`, historial de `frontend/.agent/` | Hacer un inventario priorizado de deuda técnica y zonas peligrosas |
+| 21 | Mar 10-nov | Sitio editorial y deuda técnica global | `src/sitio/*`, todo el repo | Hacer un inventario priorizado de deuda técnica y zonas peligrosas |
 | 22 | Mié 11-nov | Tomar el mando | — | Escribir el ADR de tu primera funcionalidad propia y cerrar `ARCHITECTURE.md` |
 
 ---
