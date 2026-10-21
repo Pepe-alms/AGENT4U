@@ -40,7 +40,11 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-      start_period: 15s
+      # El lifespan carga los modelos (e5-large, bm25, cross-encoder) antes de
+      # aceptar peticiones, y la primera vez los descarga. Con 15s Docker la
+      # daba por muerta a mitad. Un margen largo no retrasa nada: en cuanto
+      # /health responde, pasa a healthy.
+      start_period: 10m
     depends_on:
       qdrant:
         condition: service_started
@@ -73,7 +77,9 @@ services:
     environment:
       GATEWAY_BACKEND_URL: http://api:8000
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/graphql')"]
+      # Una consulta real y minima. Un GET a /graphql sin query y sin
+      # "Accept: text/html" (urllib no lo manda) devuelve 400.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/graphql?query=%7B__typename%7D')"]
       interval: 10s
       timeout: 3s
       retries: 3
