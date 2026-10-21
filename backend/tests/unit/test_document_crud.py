@@ -6,11 +6,7 @@ conftest raiz).
 
 import uuid
 
-import pytest
-from sqlalchemy import select
-
 from app.db.crud import document as document_crud
-from app.db.models.document import Document
 
 
 def test_crear_documento_encolado_tiene_estado_en_cola(db):
@@ -56,7 +52,7 @@ def test_contar_en_vuelo_solo_cuenta_en_cola_e_indexando(db):
     j2 = str(uuid.uuid4())
     j3 = str(uuid.uuid4())
 
-    doc1 = document_crud.crear_documento_encolado(
+    document_crud.crear_documento_encolado(
         db, origen="/d1.pdf", nombre="d1.pdf", tipo="pdf", tamano=1, job_id=j1,
     )
     doc2 = document_crud.crear_documento_encolado(

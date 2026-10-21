@@ -1,0 +1,9 @@
+node_modules
+dist
+test-results
+playwright-report
+
+# Ficheros locales de cada maquina: no pintan nada en la imagen.
+# .env.production SI tiene que entrar: es el que fija VITE_API_URL=/api.
+.env
+.env.local

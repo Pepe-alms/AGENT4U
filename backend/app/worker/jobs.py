@@ -43,9 +43,6 @@ async def indexar_job(
     borrar_por_origen(qdrant, origin)
 
     def _trabajo():
-        import os
-        from app.rag.vectorization import embed_texts, normalize_text
-
         chunks, records = normalize_text(
             file_path=file_path, converter=converter,
             chunker=chunker, name=name, type=type,

@@ -4,8 +4,6 @@ Verifican que la interfaz se comporta como esperan los endpoints: encolar
 suma en vuelo, terminar los descuenta, y close limpia.
 """
 
-import pytest
-
 from app.services.cola_port import ColaEnMemoria, ColaIndexacion
 
 

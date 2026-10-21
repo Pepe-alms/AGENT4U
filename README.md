@@ -12,7 +12,7 @@
 
 Agent4U recibe documentos (PDF/DOCX), los convierte en fragmentos con estructura semántica, los indexa en una base vectorial y responde preguntas en lenguaje natural citando la fuente exacta de cada afirmación. El objetivo del proyecto es doble: servir como un RAG realmente usable sobre documentación propia, y como banco de pruebas para decisiones de diseño de RAG (chunking, embeddings, distancia de similitud, evaluación) documentadas y medidas, no solo intuidas.
 
-El proyecto tiene dos mitades: un backend FastAPI + Qdrant y un frontend React + Vite que sirve a la vez un sitio editorial sobre el sistema (`/`) y la aplicación del agente (`/app`). Este README describe honestamente qué está implementado, qué está a medias y qué no está: es la única documentación del proyecto.
+El proyecto tiene tres piezas: un backend FastAPI + Qdrant + Redis/ARQ, un gateway GraphQL que es el único punto de entrada del frontend, y un frontend React + Vite que sirve a la vez un sitio editorial sobre el sistema (`/`) y la aplicación del agente (`/app`). Este README describe honestamente qué está implementado, qué está a medias y qué no está: es la única documentación del proyecto.
 
 ## Índice
 
@@ -43,28 +43,35 @@ El proyecto tiene dos mitades: un backend FastAPI + Qdrant y un frontend React +
 
 ## Arquitectura
 
+El frontend solo habla con el gateway — nunca directamente con el backend. El gateway traduce GraphQL a HTTP contra el backend y reenvía sin tocar los dos flujos que no caben en una respuesta JSON: el streaming SSE de `/preguntar` y la subida multipart de `/indexar-fichero`.
+
 ```mermaid
 flowchart LR
-    subgraph ING["Ingesta - POST /indexar"]
-        A["PDF / DOCX"] --> B["DocumentConverter (Docling)"]
-        B --> C["HybridChunker + tokenizer e5-large"]
-        C --> D["Filtro de ruido y longitud minima"]
-        D --> E["fastembed: multilingual-e5-large"]
-        E --> F[("Qdrant - coleccion Test_1")]
+    FE["Frontend (React + Vite)"]
+
+    FE -->|"GraphQL: queries y mutations"| GW["Gateway (Strawberry + FastAPI)"]
+    FE -->|"REST passthrough: SSE /preguntar, multipart /indexar-fichero"| GW
+
+    GW -->|"HTTP"| API["Backend (FastAPI)"]
+
+    subgraph ING["Ingesta - POST /indexar, /indexar-url, /indexar-fichero"]
+        API -->|"encola el trabajo"| REDIS[("Redis")]
+        REDIS -->|"ARQ"| WORKER["Worker: Docling + fastembed"]
+        WORKER --> QDRANT[("Qdrant")]
     end
 
     subgraph CONS["Consulta - POST /preguntar"]
-        G["Pregunta del usuario"] --> H["fastembed: query embedding"]
-        H --> I["Qdrant query_points (top-k)"]
-        F -.-> I
-        I --> J["Chunks + payload (doc, pagina, score)"]
-        J --> K["Construccion de contexto con citas"]
-        K --> L["LiteLLM -> Gemini Flash Lite"]
-        L --> M["Respuesta con citas [documento]"]
+        API --> RETRIEVAL["Busqueda hibrida (dense+sparse) + reordenado"]
+        RETRIEVAL -.-> QDRANT
+        RETRIEVAL --> LLM["LiteLLM -> Gemini Flash Lite"]
+        LLM -->|"SSE, token a token"| API
     end
+
+    API --> DB[("SQLite: documentos y conversaciones")]
+    WORKER --> DB
 ```
 
-Ambos flujos comparten el mismo embedder (`fastembed`) y la misma colección de Qdrant, cargados una sola vez en el `lifespan` de FastAPI (`app/api/lifespan.py`) para no pagar el coste de inicialización en cada petición.
+El endpoint `POST /indexar*` responde `202` en cuanto el trabajo queda en la cola de Redis — no bloquea la petición. El worker (`backend/app/worker/`, proceso aparte) lo recoge, convierte el documento con Docling, genera los embeddings y marca el resultado final en la base de datos; el frontend sondea `GET /trabajos/{job_id}` (vía el gateway) hasta que termina. Backend y worker comparten el mismo embedder (`fastembed`) y la misma colección de Qdrant, cargados una sola vez al arrancar para no pagar el coste de inicialización en cada petición.
 
 ## Stack tecnológico
 
@@ -72,24 +79,26 @@ Ambos flujos comparten el mismo embedder (`fastembed`) y la misma colección de 
 |---|---|---|
 | Backend / API | Python 3.12 + FastAPI (uvicorn) | Hecho |
 | Gestión de dependencias | uv | Hecho |
-| Ingesta / parsing | Docling — PDF/DOCX con estructura | Hecho |
-| Ingesta / parsing | Trafilatura — limpieza de HTML desde URLs | Planificado |
+| Gateway | GraphQL (Strawberry) + FastAPI, único punto de entrada del frontend | Hecho |
+| Cola de indexación | Redis + ARQ, worker en proceso aparte | Hecho |
+| Ingesta / parsing | Docling — PDF/DOCX con estructura, también URLs | Hecho |
+| Ingesta / parsing | Trafilatura — limpieza de HTML adicional desde URLs | Planificado |
 | Chunking | Docling `HybridChunker` + tokenizer de e5-large | Hecho |
 | Embeddings densos | fastembed — `intfloat/multilingual-e5-large` (1024 dim) | Hecho |
 | Embeddings dispersos | fastembed — `Qdrant/bm25` | Hecho, integrados en la búsqueda |
 | Base vectorial | Qdrant (dense, distancia coseno) | Hecho |
 | Recuperación | Híbrida (dense + sparse con RRF) + reordenado con cross-encoder | Hecho |
 | Generación | LiteLLM, por defecto `gemini/gemini-flash-lite-latest` | Hecho |
-| Generación | Streaming de respuesta por SSE | Planificado — hoy `/preguntar` devuelve JSON bloqueante |
-| Orquestación agéntica | LangGraph | Planificado — dependencia aún no añadida |
-| Validación / config | Pydantic v2 + pydantic-settings | Hecho |
-| Frontend | React + Vite + TypeScript | Planificado — carpeta `frontend/` reservada, sin scaffold |
-| Contenedores | Docker Compose | Parcial — solo el servicio de Qdrant |
-| Lint / tipado | `ruff` en verde; `mypy` configurado y no en verde | Parcial (ver [deuda técnica](#deuda-técnica-conocida)) |
-| Tests unitarios | pytest | Configurado, sin `test_*.py` todavía |
+| Generación | Streaming de respuesta por SSE en `/preguntar` | Hecho |
+| Orquestación agéntica | LangGraph (`app/rag/grafo/`) | Hecho |
+| Validación / config | Pydantic v2 + pydantic-settings, prefijo por servicio (`APP_`, `GATEWAY_`) | Hecho |
+| Frontend | React + Vite + TypeScript, chat con streaming, ingesta, conversaciones | Hecho |
+| Contenedores | Docker Compose — qdrant, redis, api, worker, gateway; frontend (nginx) en el perfil `frontend` | Hecho |
+| Lint / tipado | `ruff` en verde (backend y gateway); `mypy` configurado y no en verde | Parcial (ver [deuda técnica](#deuda-técnica-conocida)) |
+| Tests | pytest (backend + gateway), vitest + Playwright (frontend) | Hecho — ver [Calidad y desarrollo](#calidad-y-desarrollo) |
 | Evaluación RAG | Arnés propio (25 preguntas, informes HTML/CSV) | Hecho |
 | Evaluación RAG | RAGAS | Planificado / opcional |
-| CI/CD | GitHub Actions | Planificado |
+| CI/CD | GitHub Actions | Parcial — solo backend (`.github/workflows/backend.yml`) |
 
 ## Estructura del proyecto
 
@@ -98,12 +107,12 @@ Agent4U/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── lifespan.py        # carga los modelos y abre Qdrant una sola vez, al arrancar
+│   │   │   ├── lifespan.py        # abre Qdrant/Redis una sola vez, al arrancar
 │   │   │   ├── main.py            # la app FastAPI: CORS y montaje de los routers
 │   │   │   ├── schemas.py         # modelos Pydantic de entrada y salida
-│   │   │   └── routers/           # un fichero por área: health, query, indexation, documents, conversations
+│   │   │   └── routers/           # un fichero por área: health, query, indexation, jobs, documents, conversations
 │   │   ├── core/
-│   │   │   ├── config.py          # Settings vía pydantic-settings, leídas desde .env
+│   │   │   ├── config.py          # Settings vía pydantic-settings, prefijo APP_
 │   │   │   └── exceptions.py      # excepciones de dominio, que los routers traducen a códigos HTTP
 │   │   ├── db/
 │   │   │   ├── models/            # tablas SQLAlchemy: documentos y conversaciones
@@ -116,7 +125,8 @@ Agent4U/
 │   │   │   ├── generation.py      # construcción del contexto
 │   │   │   ├── prompt.py          # las plantillas
 │   │   │   └── streaming.py       # traducción a eventos SSE y persistencia de la respuesta
-│   │   └── services/              # orquestación: indexación, consulta y documentos
+│   │   ├── services/              # orquestación: indexación, consulta y documentos
+│   │   └── worker/                # proceso ARQ aparte: recoge trabajos de Redis y los indexa
 │   ├── tests/
 │   │   ├── unit/ integration/ api/  # la suite de pytest, espejo de los módulos que cubre
 │   │   ├── evaluation/            # material manual de evaluación (no lo recolecta pytest)
@@ -124,69 +134,117 @@ Agent4U/
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   └── uv.lock
+├── gateway/
+│   ├── app/
+│   │   ├── main.py                # FastAPI: CORS, router GraphQL y proxy REST
+│   │   ├── config.py              # Settings vía pydantic-settings, prefijo GATEWAY_
+│   │   ├── clients/                # BackendClient (Protocol) + HttpBackendClient (adaptador httpx)
+│   │   ├── schema/                 # tipos, Query y Mutation de Strawberry
+│   │   └── proxy.py               # POST /preguntar (SSE) y /indexar-fichero (multipart), sin GraphQL
+│   ├── tests/
+│   ├── Dockerfile
+│   └── pyproject.toml
 ├── frontend/
 │   ├── src/
 │   │   ├── routes.ts              # el mapa de rutas: de aquí salen nav, pie, migas y las pruebas
 │   │   ├── app/                   # la aplicación del agente (/app)
 │   │   ├── sitio/                 # el sitio editorial (/), con sus páginas y datos
 │   │   ├── features/              # chat, documentos, conversaciones, ajustes, comandos, salud
-│   │   └── shared/                # api, hooks, lib, ui y los tokens de estilo
-│   ├── pruebas-e2e/               # Playwright: Chromium y WebKit, con un backend falso
+│   │   └── shared/                # api (incluye el cliente GraphQL), hooks, lib, ui y tokens de estilo
+│   ├── pruebas-e2e/               # Playwright: Chromium y WebKit, con un backend+gateway falso
 │   ├── herramientas/              # comprobaciones propias del bundle de producción
-│   └── despliegue/nginx.conf      # SPA con fallback y proxy del SSE sin buffering
-├── docker-compose.yml             # Qdrant y la API
+│   ├── despliegue/nginx.conf      # SPA con fallback y proxy de /api/ al gateway
+│   └── Dockerfile                 # build de producción: Node compila, nginx sirve
+├── docker-compose.yml             # qdrant, redis, api, worker, gateway (+ frontend con --profile frontend)
 └── README.md
 ```
 
+**Convención de nombres**: identificadores de dominio y lógica de negocio en español (`obtener_documentos`, `ColaIndexacion`, `useIngesta`); nombres ligados a una convención externa, en inglés (`Document` como modelo SQLAlchemy, `Query`/`Mutation` de GraphQL, `BackendClient`). No es una mezcla arbitraria — se mantiene así a propósito en los tres servicios.
+
 ## Puesta en marcha
 
-**Requisitos**: Docker Desktop (o Docker Engine) y [uv](https://docs.astral.sh/uv/) instalados.
+**Requisitos**: Docker Desktop (o Docker Engine), [uv](https://docs.astral.sh/uv/) y Node.js 20+ instalados.
 
 ```bash
 docker --version
 uv --version
+node --version
 ```
+
+### Con Docker Compose (recomendado)
+
+Levanta los 5 servicios de `docker-compose.yml` — qdrant, redis, api, worker, gateway — de una vez:
 
 ```bash
-# 1. Clonar y entrar en el proyecto
 git clone https://github.com/Pepe-alms/AGENT4U.git
 cd AGENT4U
-
-# 2. Levantar Qdrant
-docker compose up -d qdrant
-# Dashboard disponible en http://localhost:6333/dashboard
-
-# 3. Instalar dependencias del backend (runtime + dev)
-cd backend
-uv sync
-
-# 4. Configurar variables de entorno
-#    cp backend/.env.example backend/.env   y rellena GEMINI_API_KEY
-#    cp frontend/.env.example frontend/.env   (la URL del backend)
-
-# 5. Levantar la API
-uv run uvicorn app.main:app --reload
-# http://127.0.0.1:8000/docs para la documentación interactiva (Swagger UI)
+cp backend/.env.example backend/.env   # y rellena APP_GEMINI_API_KEY
+APP_GEMINI_API_KEY=tu-clave docker compose up --build
 ```
 
-La primera ejecución descarga los modelos de ML de Docling y fastembed desde Hugging Face Hub (requiere red); a partir de ahí quedan cacheados en local (`~/.cache/huggingface/`) y el pipeline corre offline.
+- Backend: `http://localhost:8000/docs` (Swagger UI)
+- Gateway: `http://localhost:8080/graphql` (GraphQL Playground)
+- Qdrant: `http://localhost:6333/dashboard`
+
+Para levantar también el frontend en su build de producción (nginx sirviendo el bundle y proxeando `/api/` al gateway):
+
+```bash
+APP_GEMINI_API_KEY=tu-clave docker compose --profile frontend up --build
+# http://localhost:3000
+```
+
+Para desarrollar el frontend es mejor no usar Docker y tener recarga en caliente:
+
+```bash
+cd frontend
+cp .env.example .env   # VITE_API_URL apunta al gateway, no al backend
+npm install
+npm run dev
+# http://localhost:5173
+```
+
+### Sin Docker, servicio a servicio
+
+Útil para desarrollar un solo servicio sin reconstruir la imagen entera.
+
+```bash
+# Qdrant y Redis, lo mas simple es Docker igual
+docker compose up -d qdrant redis
+
+# Backend (necesita Qdrant y Redis arriba)
+cd backend
+uv sync
+cp .env.example .env   # y rellena APP_GEMINI_API_KEY
+uv run uvicorn app.api.main:app --reload
+uv run python -m app.worker   # el worker es un proceso aparte, en otra terminal
+
+# Gateway (necesita el backend arriba)
+cd gateway
+uv sync
+uv run uvicorn app.main:app --reload --port 8080
+
+# Frontend (necesita el gateway arriba)
+cd frontend
+npm install
+npm run dev
+```
+
+La primera ejecución del backend descarga los modelos de ML de Docling y fastembed desde Hugging Face Hub (requiere red); a partir de ahí quedan cacheados en local (`~/.cache/huggingface/`) y el pipeline corre offline.
 
 ## Variables de entorno
 
 | Variable | Prefijo | Obligatoria | Valor por defecto | Descripción |
 |---|---|---|---|---|
-| `GEMINI_API_KEY` | ninguno | Sí | — | API key de [Google AI Studio](https://aistudio.google.com/), usada por LiteLLM para llamar a Gemini |
+| `APP_GEMINI_API_KEY` | `APP_` | Sí | — | API key de [Google AI Studio](https://aistudio.google.com/), usada por LiteLLM para llamar a Gemini |
 | `APP_QDRANT_URL` | `APP_` | No | `http://localhost:6333` | URL del servidor Qdrant |
 | `APP_LLM_MODEL` | `APP_` | No | `gemini/gemini-flash-lite-latest` | Identificador de modelo que recibe LiteLLM |
 
 ```bash
 # backend/.env
-GEMINI_API_KEY=tu-api-key-de-google-ai-studio
+APP_GEMINI_API_KEY=tu-api-key-de-google-ai-studio
 APP_QDRANT_URL=http://localhost:6333
 APP_LLM_MODEL=gemini/gemini-flash-lite-latest
 ```
-
-> `GEMINI_API_KEY` se lee sin prefijo (`os.getenv` directo en `app/core/config.py`), mientras que el resto de variables usan el prefijo `APP_` vía `pydantic-settings`. Es una inconsistencia menor, pendiente de unificar — ver [deuda técnica](#deuda-técnica-conocida).
 
 ## Uso de la API
 
@@ -310,6 +368,11 @@ cd backend
 uv run ruff check app      # lint
 uv run pytest -q           # la suite automática
 
+# Gateway
+cd gateway
+uv run ruff check .
+uv run pytest -q
+
 # Frontend
 cd frontend
 npm run verificar          # typecheck, lint, formato, unidad, e2e, build y bundle
@@ -320,12 +383,13 @@ npm run limpieza           # ficheros sin usar (knip)
 
 | Comprobación | Resultado |
 |---|---|
-| `ruff check app` | en verde |
-| `pytest` (backend) | 73 pasados |
-| `vitest` (frontend) | 69 pasados |
+| `ruff check` (backend y gateway) | en verde |
+| `pytest` (backend) | 91 pasados |
+| `pytest` (gateway) | 45 pasados |
+| `vitest` (frontend) | 88 pasados |
 | Playwright, Chromium + WebKit | 59 pasados, 5 saltados por capacidad del navegador |
-| `knip` | sin hallazgos |
-| `mypy app` | **no está en verde**: falla por configuración de paquetes, no por tipos |
+| `knip` (frontend) | sin hallazgos |
+| `mypy app` (backend) | **no está en verde**: falla por configuración de paquetes, no por tipos |
 
 ## Flujo de trabajo con Git
 
@@ -366,11 +430,14 @@ git push -u origin feature/nombre-corto
 | Fase | Alcance | Estado |
 |---|---|---|
 | Retrieval híbrido | Combinar dense + sparse (`BM25`) con RRF | Hecho — y con reordenado por cross-encoder encima |
-| Generación con streaming | Respuesta por SSE en `/preguntar` | Planificado — hoy la respuesta es JSON bloqueante |
-| Capa agéntica | Grafo con LangGraph: decidir si recuperar, reformular query, autocrítica | Planificado — sin iniciar |
-| Frontend | Chat con streaming, subida de documentos, visor de fuentes citadas (React + Vite) | Planificado — carpeta reservada, sin scaffold |
-| CI/CD | GitHub Actions: lint → tests → evaluación → build | Planificado — sin workflows todavía |
-| Evaluación | Adoptar RAGAS o ampliar el arnés propio con más preguntas | Parcial — arnés propio ya operativo (ver [Evaluación del sistema](#evaluación-del-sistema)) |
+| Generación con streaming | Respuesta por SSE en `/preguntar` | Hecho |
+| Capa agéntica | Grafo con LangGraph: decidir si recuperar, reformular query, autocrítica | Hecho (`app/rag/grafo/`) |
+| Cola de indexación | Redis + ARQ, worker en proceso aparte, `202` + sondeo en vez de bloquear | Hecho |
+| Gateway GraphQL | Strawberry + FastAPI entre frontend y backend, paso hacia microservicios | Hecho |
+| Frontend | Chat con streaming, ingesta, conversaciones, visor de fuentes citadas (React + Vite) | Hecho |
+| CI/CD | GitHub Actions: lint → tests → build | Parcial — solo backend y solo tests; falta gateway, frontend y lint/tipado |
+| Evaluación | Adoptar RAGAS o reconstruir el arnés de punta a punta (ver [Evaluación del sistema](#evaluación-del-sistema)) | Pendiente |
+| Despliegue del frontend | Dockerfile (Node + nginx) y servicio en `docker-compose.yml`, perfil `frontend` | Hecho |
 
 ### Ideas anotadas para la ingesta
 
@@ -388,23 +455,13 @@ opciones.accelerator_options = AcceleratorOptions(num_threads=4, device=Accelera
 
 ### Deuda técnica conocida
 
-- **Indexar un documento grande no cabe en una petición HTTP.** Medido: un PDF de
-  176 páginas seguía vectorizando a los 90 minutos, y nginx corta a los 60
-  segundos por defecto. Las protecciones actuales evitan que el proceso se caiga
-  —el trabajo sale del event loop y hay techo de concurrencia con `429`— pero no
-  arreglan la duración. La solución es una cola con el worker en un proceso
-  aparte, respondiendo `202` y dando el progreso por SSE.
 - `mypy app` no está en verde: falla por la configuración de paquetes, antes de
-  llegar a comprobar tipos. No hay CI que haga cumplir lint ni tipado.
-- Inconsistencia de prefijo entre `GEMINI_API_KEY` (sin prefijo) y el resto de
-  variables (`APP_`) en `app/core/config.py`.
+  llegar a comprobar tipos. El CI de backend (`.github/workflows/backend.yml`)
+  solo corre tests, no lint ni tipado; gateway y frontend no tienen workflow.
 - Los orígenes de CORS están escritos a mano en `app/api/main.py` y solo
   contienen `localhost`. No molesta con el despliegue previsto, porque el
   frontend llama a `/api/` por nginx y es el mismo origen, pero cualquier otro
   despliegue queda bloqueado.
-- No hay Dockerfile de frontend ni servicio de nginx en el compose: la
-  configuración de `frontend/despliegue/nginx.conf` está escrita y todavía no la
-  ejecuta nadie.
 - `texto_crudo` se guarda en el payload de cada fragmento de Qdrant y ninguna
   consulta lo lee.
 

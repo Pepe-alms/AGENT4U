@@ -4,11 +4,7 @@ Tras la migracion a cola, la indexacion no bloquea la peticion. Los tests del
 semaforo ya no aplican. Lo que queda por verificar es que el cupo (429) se
 respeta mirando `cola.en_vuelo()`.
 """
-import uuid
-
-from app.api.main import app
 from app.core.config import get_settings
-from app.services.cola_port import ColaEnMemoria
 
 
 CUERPO = {"file_path": "/docs/manual.pdf", "name": "manual.pdf", "type": "pdf", "size": 10}
