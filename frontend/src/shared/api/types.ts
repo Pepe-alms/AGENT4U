@@ -149,8 +149,6 @@ export type AjustesServidor = {
 
 /* --- Salud --- */
 
-export type SaludBackend = { status: 'ok' };
-
 /**
  * OJO: `GET /health/qdrant` responde **200 aunque Qdrant este caido**. Hay que
  * mirar `status`, no el codigo HTTP, igual que en DELETE /documentos.
