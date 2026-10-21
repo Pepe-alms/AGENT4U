@@ -1,14 +1,17 @@
 import { StrictMode } from 'react';
-import App from './App';
-import {createRoot} from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 
-//https://developer.mozilla.org/es/docs/Learn_web_development/Core/Frameworks_libraries/React_getting_started
+import { Raiz } from '@/app/Raiz';
+import { Animacion } from '@/shared/ui/Animacion';
+import '@/shared/styles/global.css';
 
 const contenedor = document.getElementById('root');
-const root = createRoot(contenedor as HTMLElement);
+if (!contenedor) throw new Error('No existe el elemento #root en index.html');
 
-root.render(
+createRoot(contenedor).render(
   <StrictMode>
-    <App />
-  </StrictMode>
+    <Animacion>
+      <Raiz />
+    </Animacion>
+  </StrictMode>,
 );

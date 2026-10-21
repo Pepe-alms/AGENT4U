@@ -7,6 +7,7 @@
  * ninguno, y POST /preguntar devuelve SSE, no JSON.
  */
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 
 const PUERTO = Number(process.argv[2] ?? 8099);
 
@@ -28,7 +29,12 @@ function estadoDe(req) {
   const clave = req.headers['x-sesion-prueba'] ?? 'global';
   let estado = sesiones.get(clave);
   if (!estado) {
-    estado = { documentos: [], conversaciones: [], siguienteId: 1000 };
+    estado = {
+      documentos: [],
+      conversaciones: [],
+      trabajos: new Map(),
+      siguienteId: 1000,
+    };
     sesiones.set(clave, estado);
   }
   return estado;
@@ -96,6 +102,182 @@ function leerCuerpo(req) {
   });
 }
 
+/** Como responderJson, pero con el envoltorio {data, errors} de GraphQL. */
+function responderGraphQL(res, datos, errores) {
+  responderJson(res, 200, errores ? { data: null, errors: errores } : { data: datos });
+}
+
+/**
+ * Doble de POST /graphql del gateway real. No parsea GraphQL de verdad: el
+ * campo pedido se identifica con el nombre que sigue a la primera `{` de la
+ * query, que es justo donde cae tanto `{ ajustes { ... } }` como
+ * `query($id: Int!) { conversacion(id: $id) { ... } }`.
+ */
+async function manejarGraphQL(req, res, sesion) {
+  const { documentos, conversaciones } = sesion;
+  const cuerpo = JSON.parse((await leerCuerpo(req)).toString() || '{}');
+  const { query = '', variables = {} } = cuerpo;
+  const campo = /\{\s*([a-zA-Z_]+)/.exec(query)?.[1];
+
+  switch (campo) {
+    case 'ajustes':
+      return responderGraphQL(res, {
+        ajustes: {
+          modelos: ['gemini/gemini-flash-lite-latest'],
+          max_fragmentos_defecto: 10,
+          max_fragmentos_tope: 20,
+          // El mismo techo que el backend real por defecto: 1 corriendo + 4
+          // en cola. La interfaz lo usa para no dejar adjuntar un sexto
+          // fichero.
+          max_indexaciones_en_vuelo: 5,
+        },
+      });
+
+    case 'documentos':
+      return responderGraphQL(res, { documentos });
+
+    case 'trabajo':
+      return responderGraphQL(res, {
+        trabajo: sesion.trabajos.get(variables.jobId) ?? null,
+      });
+
+    case 'conversaciones':
+      return responderGraphQL(res, {
+        conversaciones: conversaciones.map(({ mensajes: _mensajes, ...resto }) => resto),
+      });
+
+    case 'conversacion': {
+      const conv = conversaciones.find((c) => c.id === variables.id);
+      return responderGraphQL(res, {
+        conversacion: conv ? { ...conv, mensajes: conv.mensajes ?? [] } : null,
+      });
+    }
+
+    case 'salud':
+      return responderGraphQL(res, {
+        salud: {
+          backend: 'ok',
+          qdrant: {
+            status: 'ok',
+            coleccion: 'Agent4U',
+            existe: documentos.length > 0,
+            detalle: null,
+          },
+        },
+      });
+
+    case 'indexar': {
+      const ruta = variables.filePath;
+      if (documentos.some((d) => d.origin === ruta)) {
+        return responderGraphQL(res, null, [
+          { message: `El documento ${ruta} ya existe.`, extensions: { status: 409 } },
+        ]);
+      }
+      const jobId = randomUUID();
+      const nombre = ruta.split('/').pop() ?? ruta;
+      documentos.push({
+        id: documentos.length + 1,
+        origin: ruta,
+        name: nombre,
+        type: variables.type,
+        size: null,
+        created_at: new Date().toISOString(),
+        state: 'indexado',
+        num_chunks: 12,
+        error_message: null,
+      });
+      sesion.trabajos.set(jobId, {
+        job_id: jobId,
+        status: 'indexado',
+        origin: ruta,
+        name: nombre,
+        num_chunks: 12,
+        error_message: null,
+      });
+      return responderGraphQL(res, { indexar: { job_id: jobId, status: 'en-cola' } });
+    }
+
+    case 'indexar_url': {
+      const url = variables.url;
+      if (documentos.some((d) => d.origin === url)) {
+        return responderGraphQL(res, null, [
+          { message: `El documento ${url} ya existe.`, extensions: { status: 409 } },
+        ]);
+      }
+      const jobId = randomUUID();
+      documentos.push({
+        id: documentos.length + 1,
+        origin: url,
+        name: url,
+        type: 'url',
+        size: null,
+        created_at: new Date().toISOString(),
+        state: 'indexado',
+        num_chunks: 12,
+        error_message: null,
+      });
+      sesion.trabajos.set(jobId, {
+        job_id: jobId,
+        status: 'indexado',
+        origin: url,
+        name: url,
+        num_chunks: 12,
+        error_message: null,
+      });
+      return responderGraphQL(res, { indexar_url: { job_id: jobId, status: 'en-cola' } });
+    }
+
+    case 'eliminar_documento': {
+      const indice = documentos.findIndex((d) => d.name === variables.nombre);
+      if (indice === -1) {
+        return responderGraphQL(res, null, [
+          { message: 'Documento no encontrado.', extensions: { status: 404 } },
+        ]);
+      }
+      documentos.splice(indice, 1);
+      return responderGraphQL(res, {
+        eliminar_documento: { status: 'eliminado', documento: variables.nombre },
+      });
+    }
+
+    case 'eliminar_conversacion': {
+      const indice = conversaciones.findIndex((c) => c.id === variables.id);
+      if (indice === -1) {
+        return responderGraphQL(res, null, [
+          { message: 'Conversación no encontrada', extensions: { status: 404 } },
+        ]);
+      }
+      conversaciones.splice(indice, 1);
+      return responderGraphQL(res, {
+        eliminar_conversacion: { status: 'eliminada', id: variables.id },
+      });
+    }
+
+    case 'renombrar_conversacion': {
+      const conv = conversaciones.find((c) => c.id === variables.id);
+      if (!conv) {
+        return responderGraphQL(res, null, [
+          { message: 'Conversación no encontrada', extensions: { status: 404 } },
+        ]);
+      }
+      conv.titulo = variables.titulo;
+      return responderGraphQL(res, {
+        renombrar_conversacion: {
+          id: conv.id,
+          titulo: conv.titulo,
+          creada_en: conv.creada_en,
+          actualizada_en: conv.actualizada_en,
+        },
+      });
+    }
+
+    default:
+      return responderGraphQL(res, null, [
+        { message: `Operación GraphQL no soportada: ${campo}` },
+      ]);
+  }
+}
+
 createServer(async (req, res) => {
   const { method, url } = req;
   const { documentos, conversaciones } = estadoDe(req);
@@ -111,44 +293,13 @@ createServer(async (req, res) => {
     return res.end();
   }
 
+  // Sonda de arranque de Playwright (playwright.config.ts): tiene que seguir
+  // siendo REST, porque se comprueba con un GET antes de que exista ningun
+  // frontend que hable GraphQL.
   if (url === '/health') return responderJson(res, 200, { status: 'ok' });
-  if (url === '/health/qdrant') {
-    return responderJson(res, 200, {
-      status: 'ok',
-      coleccion: 'Agent4U',
-      existe: documentos.length > 0,
-      detalle: null,
-    });
-  }
-  if (url === '/ajustes') {
-    return responderJson(res, 200, {
-      modelos: ['gemini/gemini-flash-lite-latest'],
-      max_fragmentos_defecto: 10,
-      max_fragmentos_tope: 20,
-    });
-  }
 
-  if (url?.startsWith('/documentos')) {
-    // Igual que el backend real: 404 cuando la colección está vacía.
-    if (documentos.length === 0)
-      return responderJson(res, 404, { detail: 'No hay documentos.' });
-    return responderJson(res, 200, { documentos });
-  }
-
-  if (url?.startsWith('/conversaciones')) {
-    const partes = url.split('/');
-    if (partes[2]) {
-      const conv = conversaciones.find((c) => String(c.id) === partes[2]);
-      if (!conv) return responderJson(res, 404, { detail: 'Conversación no encontrada' });
-      return responderJson(res, 200, { ...conv, mensajes: conv.mensajes ?? [] });
-    }
-    // El listado no lleva mensajes, igual que el backend real: solo el
-    // detalle de una conversación los trae.
-    return responderJson(
-      res,
-      200,
-      conversaciones.map(({ mensajes: _mensajes, ...resto }) => resto),
-    );
+  if (url === '/graphql' && method === 'POST') {
+    return manejarGraphQL(req, res, sesion);
   }
 
   if (url === '/indexar-fichero' && method === 'POST') {
@@ -158,6 +309,7 @@ createServer(async (req, res) => {
     if (documentos.some((d) => d.origin === ruta)) {
       return responderJson(res, 409, { detail: `El documento ${ruta} ya existe.` });
     }
+    const jobId = randomUUID();
     documentos.push({
       id: documentos.length + 1,
       origin: ruta,
@@ -169,7 +321,15 @@ createServer(async (req, res) => {
       num_chunks: 12,
       error_message: null,
     });
-    return responderJson(res, 200, { status: 'indexado', num_chunks: 12, ruta });
+    sesion.trabajos.set(jobId, {
+      job_id: jobId,
+      status: 'indexado',
+      origin: ruta,
+      name: nombre,
+      num_chunks: 12,
+      error_message: null,
+    });
+    return responderJson(res, 202, { job_id: jobId, status: 'en-cola', ruta });
   }
 
   if (url === '/preguntar' && method === 'POST') {

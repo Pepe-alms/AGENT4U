@@ -81,7 +81,7 @@ function Piezas({ capa }: { capa: Capa }) {
   );
 }
 
-export function Tecnologias() {
+function Tecnologias() {
   // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
   useScrollToHash();
 

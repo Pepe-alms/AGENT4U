@@ -1,0 +1,20 @@
+[project]
+name = "agent4u-gateway"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "strawberry-graphql[fastapi]>=0.243",
+    "httpx>=0.28",
+    "uvicorn>=0.34",
+    "pydantic-settings>=2.6",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -1,12 +1,12 @@
 [project]
 name = "agent4u-backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "API RAG de Agent4U: ingesta de documentos, cola de indexacion y respuesta con citas."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "arq>=0.26",
     "docling>=2.118.1",
-    "dotenv>=0.9.9",
     "fastapi>=0.139.2",
     "fastembed>=0.8.0",
     "langgraph>=1.2.11",
@@ -39,7 +39,6 @@ line-length = 200
 dev = [
     "httpx>=0.28.1",
     "mypy>=2.3.0",
-    "pandas>=3.0.5",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.15.22",

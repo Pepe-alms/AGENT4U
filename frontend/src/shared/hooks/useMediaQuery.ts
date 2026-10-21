@@ -26,7 +26,7 @@ export function useMediaQuery(consulta: string): boolean {
 export const CONSULTA_ESCRITORIO = '(min-width: 1024px)';
 
 /** Quien pide menos movimiento. */
-export const CONSULTA_SIN_MOVIMIENTO = '(prefers-reduced-motion: reduce)';
+const CONSULTA_SIN_MOVIMIENTO = '(prefers-reduced-motion: reduce)';
 
 /**
  * Si el usuario pide menos movimiento.

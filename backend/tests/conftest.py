@@ -17,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 # Importar el modulo de conversaciones registra sus tablas en el mismo Base.
+from app.db.crud import document as document_crud
 from app.db.models import conversation as _conversation_models  # noqa: F401
 from app.db.models.document import Base
 
@@ -53,6 +54,53 @@ def db(session_factory):
         yield sesion
 
 
+@pytest.fixture
+def documentos_frescos(session_factory):
+    """Lee los documentos con una sesion nueva, como hace una peticion real.
+
+    No es un adorno: el estado final lo escribe la indexacion con su propia
+    sesion (ver `_marcar_estado`). La sesion del test tiene ese mismo documento
+    en su identity map desde antes de aquel commit, y SQLAlchemy no sobreescribe
+    atributos que ya estaban cargados. Leer por ahi devuelve 'pendiente' aunque
+    en la base ponga 'error', y el test da por roto codigo que funciona.
+
+    Me costo un rato: el test del camino de error fallaba y el del camino bueno
+    pasaba, con el mismo codigo debajo. El que pasaba lo hacia por suerte.
+    """
+    def leer():
+        with session_factory() as sesion:
+            return document_crud.listar_documentos(sesion)
+
+    return leer
+
+
+@pytest.fixture(autouse=True)
+def nunca_la_base_de_datos_real(monkeypatch, session_factory):
+    """Ningun test puede escribir en el sqlite del proyecto.
+
+    `SessionLocal` es un global, y lo usan los servicios que siguen trabajando
+    cuando la peticion que los lanzo ya termino: el streaming de la respuesta y
+    la indexacion. Un test que llegue a ese codigo escribe en `agent4u.db` de
+    verdad.
+
+    Esto no es precaucion teorica. Al dar a la indexacion su propia sesion,
+    tres tests marcaron el documento 1 REAL como 'error' con el mensaje del
+    doble de Qdrant, porque el `doc_id` de la base en memoria coincidia con uno
+    de la buena. Hubo que repararlo a mano.
+
+    Autouse a proposito: que no dependa de que cada test se acuerde de pedirlo.
+    """
+    import app.rag.streaming as streaming
+    import app.services.indexation_service as indexacion
+    import app.services.cola_arq as cola_arq
+    import app.worker.jobs as worker_jobs
+
+    monkeypatch.setattr(streaming, "SessionLocal", session_factory)
+    monkeypatch.setattr(indexacion, "SessionLocal", session_factory)
+    monkeypatch.setattr(cola_arq, "SessionLocal", session_factory)
+    monkeypatch.setattr(worker_jobs, "SessionLocal", session_factory)
+
+
 # ---------------------------------------------------------------------------
 # Historial de conversacion
 # ---------------------------------------------------------------------------
@@ -85,6 +133,10 @@ class FakeQdrant:
         self.fallar_delete = fallar_delete
         self.fallar_upsert = fallar_upsert
         self.puntos: list = []
+        # Cuantos puntos trajo cada `upsert`. Importa aparte de `puntos`:
+        # subir 400 de golpe o en dos lotes de 200 da el mismo total y muy
+        # distinta memoria.
+        self.lotes: list[int] = []
         self.colecciones_creadas: list[str] = []
         self.borrados: list[str] = []
         self.filtros_borrado: list = []
@@ -99,6 +151,7 @@ class FakeQdrant:
     def upsert(self, collection_name: str, points: list) -> None:
         if self.fallar_upsert:
             raise RuntimeError("Qdrant rechazo el upsert")
+        self.lotes.append(len(points))
         self.puntos.extend(points)
 
     def delete(self, collection_name: str, points_selector) -> None:
@@ -263,11 +316,20 @@ class LLMFalso:
 # ---------------------------------------------------------------------------
 
 class FakeGrafo:
-    """Sustituye al grafo compilado: devuelve un estado fijo y anota la entrada."""
+    """Sustituye al grafo compilado: devuelve un estado fijo y anota la entrada.
+
+    Expone `stream` ademas de `invoke` porque es lo que usa `responder`: con
+    `stream_mode="updates"` LangGraph entrega un `{nodo: lo_que_escribio}` por
+    cada nodo que termina, no el estado completo. Replicar esa forma es lo que
+    hace que el doble sirva para algo: si devolviera el estado entero en cada
+    tramo, los tests pasarian aunque `responder` dejara de recomponerlo.
+    """
 
     def __init__(self, resultado: dict, tramos: list[dict] | None = None):
         self.resultado = resultado
         self.estados_recibidos: list[dict] = []
+        # Por defecto, un nodo por clave del resultado: el minimo que recompone
+        # el estado del que vive `responder_stream`.
         self._tramos = tramos if tramos is not None else [
             {"construir": {"messages": resultado.get("messages", [])}},
             {"fusionar": {"chunks": resultado.get("chunks", [])}},

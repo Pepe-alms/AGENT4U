@@ -231,16 +231,3 @@ export const TECNOLOGIAS: Tecnologia[] = [
       'Cada fuente viaja con su puntuación y la subconsulta que la encontró, para poder auditar por qué el agente eligió lo que eligió.',
   },
 ];
-
-/**
- * Las piezas del diagrama de arquitectura que usan cada capa.
- *
- * Se deriva de NODOS en vez de escribirse otra vez: una segunda lista a mano
- * es una lista que acaba sin actualizar.
- */
-export function piezasDeCapa(
-  capa: Capa,
-  nodos: Array<{ id: string; nombre: string; capa?: Capa }>,
-) {
-  return nodos.filter((n) => n.capa === capa);
-}

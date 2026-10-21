@@ -9,8 +9,10 @@ import type { EstadoRecurso } from '@/shared/hooks/useRecurso';
 import { Badge, Button, IconButton, Skeleton, Spinner } from '@/shared/ui';
 
 const TONO: Record<EstadoDocumento, 'exito' | 'aviso' | 'error'> = {
-  indexado: 'exito',
+  'en-cola': 'aviso',
+  indexando: 'aviso',
   pendiente: 'aviso',
+  indexado: 'exito',
   error: 'error',
 };
 

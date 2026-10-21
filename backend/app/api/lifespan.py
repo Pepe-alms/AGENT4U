@@ -27,6 +27,10 @@ from transformers import AutoTokenizer
 
 from app.db.session import crear_esquema
 
+## Cola de indexacion
+
+from app.services.cola_arq import ColaArq
+
 ## Grafo
 
 from app.rag.grafo.grafo_create import crear_grafo
@@ -56,6 +60,8 @@ async def lifespan(app: FastAPI):
 
     crear_esquema()
 
+    app.state.cola = ColaArq(settings.redis_url)
+
     app.state.grafo = crear_grafo(
         dense_embedder=app.state.dense_embedder,
         sparse_embedder=app.state.sparse_embedder,
@@ -65,4 +71,5 @@ async def lifespan(app: FastAPI):
     )
 
     yield
+    await app.state.cola.close()
     app.state.qdrant.close()

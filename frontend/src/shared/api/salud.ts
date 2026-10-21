@@ -1,5 +1,5 @@
-import { peticion } from '@/shared/api/cliente';
-import type { SaludBackend, SaludQdrant } from '@/shared/api/types';
+import { graphql } from '@/shared/api/graphql';
+import type { SaludQdrant } from '@/shared/api/types';
 
 export type EstadoQdrant = 'ok' | 'sin-coleccion' | 'error' | 'desconocido';
 
@@ -9,56 +9,65 @@ export type Salud = {
   /** Solo cuando se ha podido preguntar a Qdrant. */
   coleccion?: string;
   detalle?: string;
-  /** Lo que tardo /health en contestar. Undefined si no contesto. */
+  /** Lo que tardo la consulta combinada. Undefined si no contesto. */
   latenciaMs?: number;
 };
 
-/** Las sondas tienen que ser rapidas: si tardan, ya son una mala senal. */
+/** La sonda tiene que ser rapida: si tarda, ya es una mala senal. */
 const LIMITE_MS = 5_000;
 
+const QUERY_SALUD = `{
+  salud {
+    backend
+    qdrant { status coleccion existe detalle }
+  }
+}`;
+
+type RespuestaSalud = {
+  salud: { backend: string; qdrant: SaludQdrant };
+};
+
 /**
- * Dos preguntas en vez de una: si el backend no responde, el estado de Qdrant
- * es **desconocido**, no "caido". Decir que Qdrant esta mal cuando en realidad
- * no se ha podido preguntar seria mentir al usuario.
+ * query { salud }. Una unica consulta que combina lo que antes eran dos
+ * peticiones (`/health` y `/health/qdrant`): el resolver del gateway las hace
+ * por nosotros, asi que un fallo de red tumba ambas a la vez. Es justo lo
+ * mismo que pasaba antes si el backend estaba caido, asi que el resultado no
+ * cambia: solo que ya no se puede cronometrar `/health` por separado.
  */
 export async function comprobarSalud(
   opciones: { signal?: AbortSignal } = {},
 ): Promise<Salud> {
-  // Se cronometra solo /health: es la sonda barata y la que de verdad mide
-  // el viaje de ida y vuelta. Incluir la de Qdrant mezclaria dos cosas.
   const arranque = performance.now();
-  try {
-    await peticion<SaludBackend>('/health', { ...opciones, tiempoLimiteMs: LIMITE_MS });
-  } catch {
-    return { backend: 'caido', qdrant: 'desconocido' };
-  }
-  const latenciaMs = Math.round(performance.now() - arranque);
 
+  let respuesta: RespuestaSalud;
   try {
-    const qdrant = await peticion<SaludQdrant>('/health/qdrant', {
+    respuesta = await graphql<RespuestaSalud>(QUERY_SALUD, undefined, {
       ...opciones,
       tiempoLimiteMs: LIMITE_MS,
     });
+  } catch {
+    return { backend: 'caido', qdrant: 'desconocido' };
+  }
 
-    if (qdrant.status === 'error') {
-      return {
-        backend: 'ok',
-        latenciaMs,
-        qdrant: 'error',
-        coleccion: qdrant.coleccion,
-        detalle: qdrant.detalle ?? undefined,
-      };
-    }
+  const latenciaMs = Math.round(performance.now() - arranque);
+  const { qdrant } = respuesta.salud;
 
+  if (qdrant.status === 'error') {
     return {
       backend: 'ok',
       latenciaMs,
-      // Qdrant responde pero la coleccion no existe: todavia no se ha indexado
-      // nada. No es una averia, pero preguntar no va a devolver nada.
-      qdrant: qdrant.existe ? 'ok' : 'sin-coleccion',
+      qdrant: 'error',
       coleccion: qdrant.coleccion,
+      detalle: qdrant.detalle ?? undefined,
     };
-  } catch {
-    return { backend: 'ok', latenciaMs, qdrant: 'desconocido' };
   }
+
+  return {
+    backend: 'ok',
+    latenciaMs,
+    // Qdrant responde pero la coleccion no existe: todavia no se ha indexado
+    // nada. No es una averia, pero preguntar no va a devolver nada.
+    qdrant: qdrant.existe ? 'ok' : 'sin-coleccion',
+    coleccion: qdrant.coleccion,
+  };
 }

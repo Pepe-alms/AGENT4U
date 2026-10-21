@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
@@ -13,7 +13,7 @@ settings = get_settings()
 
 engine = create_engine(
     settings.db_url,
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False, "timeout": 30},
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
@@ -21,6 +21,10 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 
 def crear_esquema() -> None:
     Base.metadata.create_all(engine)
+    if "sqlite" in settings.db_url:
+        with engine.connect() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.commit()
 
 
 def get_db() -> Generator[Session, None, None]:

@@ -9,6 +9,18 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - redis_data:/data
+
   api:
     build: ./backend
     ports:
@@ -16,14 +28,80 @@ services:
     environment:
       APP_QDRANT_URL: http://qdrant:6333
       APP_DB_URL: sqlite:////data/agent4u.db
+      APP_REDIS_URL: redis://redis:6379
+      APP_UPLOAD_DIR: /uploads
       APP_GEMINI_API_KEY: ${APP_GEMINI_API_KEY}
     volumes:
       - api_data:/data
       - model_cache:/models
+      - uploads_data:/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ./backend
+    command: ["python", "-m", "app.worker"]
+    environment:
+      APP_QDRANT_URL: http://qdrant:6333
+      APP_DB_URL: sqlite:////data/agent4u.db
+      APP_REDIS_URL: redis://redis:6379
+      APP_UPLOAD_DIR: /uploads
+      APP_GEMINI_API_KEY: ${APP_GEMINI_API_KEY}
+    volumes:
+      - api_data:/data
+      - model_cache:/models
+      - uploads_data:/uploads
+    depends_on:
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:8080"
+    environment:
+      GATEWAY_BACKEND_URL: http://api:8000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/graphql')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Build de produccion (bundle estatico + nginx), no desarrollo: para trabajar
+  # en el frontend sigue siendo mejor `npm run dev`. Va en un perfil para que
+  # `docker compose up` no lo construya; se activa con --profile frontend.
+  frontend:
+    build: ./frontend
+    profiles: ["frontend"]
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      gateway:
+        condition: service_healthy
 
 volumes:
   qdrant_data:
   api_data:
   model_cache:
+  redis_data:
+  uploads_data:

@@ -1,43 +1,55 @@
 import { peticion } from '@/shared/api/cliente';
 import { ErrorApi } from '@/shared/api/errores';
+import { graphql } from '@/shared/api/graphql';
 import type {
   Documento,
   DocumentoEliminado,
-  FicheroSubido,
-  Indexacion,
+  FicheroEncolado,
+  TrabajoEncolado,
+  TrabajoEstado,
 } from '@/shared/api/types';
 
-type RespuestaLista = { documentos: Documento[] };
+const QUERY_DOCUMENTOS = `{
+  documentos {
+    id origin name type size created_at state num_chunks error_message
+  }
+}`;
 
 /**
- * OJO: el backend responde **404 cuando no hay ningun documento**, no una lista
- * vacia (backend/app/api/schemas.py:143). Esa rareza se absorbe aqui para que
- * ninguna vista tenga que saberlo: "no hay documentos" es una lista vacia.
+ * query { documentos }. El resolver del gateway ya absorbe el 404 que manda
+ * el backend cuando no hay ninguno: aqui "sin documentos" es, directamente,
+ * una lista vacia.
  */
 export async function obtenerDocumentos(
   opciones: { signal?: AbortSignal } = {},
 ): Promise<Documento[]> {
-  try {
-    const respuesta = await peticion<RespuestaLista>('/documentos', opciones);
-    return respuesta.documentos;
-  } catch (error) {
-    if (error instanceof ErrorApi && error.estado === 404) return [];
-    throw error;
-  }
+  const { documentos } = await graphql<{ documentos: Documento[] }>(
+    QUERY_DOCUMENTOS,
+    undefined,
+    opciones,
+  );
+  return documentos;
 }
 
+const MUTATION_ELIMINAR_DOCUMENTO = `
+  mutation($nombre: String!) {
+    eliminar_documento(nombre: $nombre) { status documento }
+  }
+`;
+
 /**
- * El parametro es el **nombre** del documento, no su id. Hay dos desenlaces con
- * codigo 200: hay que mirar `status`, no el codigo HTTP.
+ * mutation { eliminar_documento }. El parametro es el **nombre** del
+ * documento, no su id. Hay dos desenlaces con status 200: hay que mirar
+ * `status`, no si la mutation lanzo error.
  */
-export function eliminarDocumento(
+export async function eliminarDocumento(
   nombre: string,
   opciones: { signal?: AbortSignal } = {},
-) {
-  return peticion<DocumentoEliminado>(`/documentos/${encodeURIComponent(nombre)}`, {
-    ...opciones,
-    metodo: 'DELETE',
-  });
+): Promise<DocumentoEliminado> {
+  const { eliminar_documento: resultado } = await graphql<{
+    eliminar_documento: DocumentoEliminado;
+  }>(MUTATION_ELIMINAR_DOCUMENTO, { nombre }, opciones);
+  return resultado;
 }
 
 /**
@@ -53,46 +65,55 @@ export function tipoDeRuta(ruta: string): string {
   return extension && extension.length <= 5 ? extension : 'txt';
 }
 
+const MUTATION_INDEXAR = `
+  mutation($filePath: String!, $type: String!) {
+    indexar(file_path: $filePath, type: $type) { job_id status }
+  }
+`;
+
 /**
- * POST /indexar. **`file_path` es una ruta del sistema de ficheros del
- * servidor**, no un fichero subido: el backend no tiene ningún endpoint
- * multipart. Contrato: backend/app/api/schemas.py:44
+ * mutation { indexar }. Encola la indexacion y devuelve el job_id.
  *
- * La ruta es única: reindexar la misma devuelve 409.
+ * La ruta es única: reindexar la misma lanza un error con `estado` 409.
  */
-export function indexarFichero(
+export async function indexarFichero(
   rutaServidor: string,
-  opciones: { signal?: AbortSignal; tiempoLimiteMs?: number } = {},
-): Promise<Indexacion> {
-  return peticion<Indexacion>('/indexar', {
-    metodo: 'POST',
-    cuerpo: { file_path: rutaServidor, type: tipoDeRuta(rutaServidor) },
-    // La ingesta convierte, trocea y vectoriza: tarda mucho más que una
-    // consulta normal, así que el límite por defecto de 15 s no vale.
-    tiempoLimiteMs: opciones.tiempoLimiteMs ?? 0,
-    signal: opciones.signal,
-  });
+  opciones: { signal?: AbortSignal } = {},
+): Promise<TrabajoEncolado> {
+  const { indexar } = await graphql<{ indexar: TrabajoEncolado }>(
+    MUTATION_INDEXAR,
+    { filePath: rutaServidor, type: tipoDeRuta(rutaServidor) },
+    opciones,
+  );
+  return indexar;
 }
 
-/** POST /indexar-url. La URL también es única: repetirla devuelve 409. */
-export function indexarUrl(
+const MUTATION_INDEXAR_URL = `
+  mutation($url: String!) {
+    indexar_url(url: $url) { job_id status }
+  }
+`;
+
+/** mutation { indexar_url }. Encola la indexacion de una pagina web. */
+export async function indexarUrl(
   url: string,
   opciones: { signal?: AbortSignal } = {},
-): Promise<Indexacion> {
-  return peticion<Indexacion>('/indexar-url', {
-    metodo: 'POST',
-    cuerpo: { url },
-    tiempoLimiteMs: 0,
-    signal: opciones.signal,
-  });
+): Promise<TrabajoEncolado> {
+  const { indexar_url: resultado } = await graphql<{ indexar_url: TrabajoEncolado }>(
+    MUTATION_INDEXAR_URL,
+    { url },
+    opciones,
+  );
+  return resultado;
 }
 
 /** Techo del cliente, en bytes. El backend aplica el suyo (APP_UPLOAD_MAX_BYTES). */
 export const TAMANO_MAXIMO = 50 * 1024 * 1024;
 
 /**
- * POST /indexar-fichero. Sube el fichero y lo indexa en una sola petición.
+ * POST /indexar-fichero. Sube el fichero y encola su indexacion.
  *
+ * Se queda en REST: es el proxy multipart del gateway, no pasa por GraphQL.
  * El nombre que viaja es el del fichero elegido; el backend se queda solo con
  * su último componente, así que no puede escribir fuera de su carpeta de
  * subidas. La ruta final llega en la respuesta.
@@ -100,16 +121,45 @@ export const TAMANO_MAXIMO = 50 * 1024 * 1024;
 export function subirFichero(
   fichero: File,
   opciones: { signal?: AbortSignal } = {},
-): Promise<FicheroSubido> {
+): Promise<FicheroEncolado> {
   const formulario = new FormData();
   formulario.append('fichero', fichero, fichero.name);
 
-  return peticion<FicheroSubido>('/indexar-fichero', {
+  return peticion<FicheroEncolado>('/indexar-fichero', {
     metodo: 'POST',
     cuerpo: formulario,
-    tiempoLimiteMs: 0,
     signal: opciones.signal,
   });
+}
+
+const QUERY_TRABAJO = `
+  query($jobId: String!) {
+    trabajo(job_id: $jobId) {
+      job_id status origin name num_chunks error_message
+    }
+  }
+`;
+
+/**
+ * query { trabajo }. Consulta el estado de una indexacion encolada.
+ *
+ * El resolver devuelve `null` si el job no existe; aqui se traduce a un
+ * ErrorApi con `estado` 404, igual que antes viajaba el codigo HTTP, para que
+ * el sondeo de useIngesta.ts siga reintentando sin cambios.
+ */
+export async function obtenerEstadoTrabajo(
+  jobId: string,
+  opciones: { signal?: AbortSignal } = {},
+): Promise<TrabajoEstado> {
+  const { trabajo } = await graphql<{ trabajo: TrabajoEstado | null }>(
+    QUERY_TRABAJO,
+    { jobId },
+    opciones,
+  );
+  if (trabajo === null) {
+    throw new ErrorApi('Trabajo no encontrado.', 'http', 404);
+  }
+  return trabajo;
 }
 
 /** Qué se puede subir, por extensión. El backend no valida la lista. */

@@ -7,6 +7,7 @@ from app.api.schemas import (
     ConversacionEliminadaOut,
     ConversacionResumenOut,
     ErrorOut,
+    RenombrarConversacionIn,
 )
 from app.db.session import get_db
 from app.db.crud import conversation as conversation_crud

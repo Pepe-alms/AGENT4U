@@ -1,5 +1,3 @@
-import { useMemo, useState } from 'react';
-
 import { Link, useLocation } from 'react-router';
 
 import { Revelar } from '@/sitio/componentes/Revelar';
@@ -9,12 +7,12 @@ import { useScrollToHash } from '@/sitio/useScrollToHash';
 /**
  * La 404.
  *
- * No es un callejon: dice que ruta se pidio, ofrece un buscador sobre las
- * secciones que SI existen y deja la portada a un clic. Una 404 con solo
- * "no encontrado" obliga a volver con el boton de atras, que es pedirle al
- * usuario que arregle el problema por su cuenta.
+ * No es un callejon: dice que ruta se pidio, lista las secciones que SI
+ * existen y deja la portada a un clic. Una 404 con solo "no encontrado"
+ * obliga a volver con el boton de atras, que es pedirle al usuario que
+ * arregle el problema por su cuenta.
  */
-export function NoEncontrada() {
+function NoEncontrada() {
   // El ancla del hash, con la pagina ya montada: ver useScrollToHash.
   useScrollToHash();
 
@@ -51,13 +49,9 @@ export function NoEncontrada() {
           <p className="text-[0.875rem] font-medium text-suave">Secciones del sitio</p>
         </Revelar>
 
-        {/*
-          Lista directa y no buscador: con tres secciones, un campo de busqueda
-          es mas chrome que ayuda —hay que escribir para ver lo que ya cabe
-          entero en pantalla—. El componente de busqueda sigue en el codigo,
-          desactivado: se reactiva cuando pasen de 8. Ver `BuscadorSecciones`
-          al final de este fichero.
-        */}
+        {/* Lista directa: con tres secciones, un campo de busqueda es mas
+            estorbo que ayuda —hay que escribir para ver lo que ya cabe entero
+            en pantalla—. Si el sitio pasa de ocho, se replantea. */}
         <ul className="flex flex-col gap-3">
           {RUTAS_NAV.map((ruta, indice) => (
             <Revelar key={ruta.id} indice={indice + 4} como="li">
@@ -82,64 +76,6 @@ export function NoEncontrada() {
         </Link>
       </section>
     </>
-  );
-}
-
-/* ============================================================================
- * EL BUSCADOR, DESACTIVADO
- *
- * No se usa: con tres secciones, la lista directa de arriba las enseña todas
- * sin que haya que escribir nada. Se queda aqui porque el dia que el sitio
- * pase de OCHO secciones la lista deja de caber de un vistazo y esto vuelve a
- * tener sentido. Para reactivarlo: montarlo en lugar de la lista.
- * ==========================================================================*/
-
-export function BuscadorSecciones() {
-  const [consulta, setConsulta] = useState('');
-
-  const resultados = useMemo(() => {
-    const limpia = consulta.trim().toLowerCase();
-    if (!limpia) return RUTAS_NAV;
-    return RUTAS_NAV.filter((ruta) =>
-      `${ruta.label} ${ruta.title} ${ruta.description}`.toLowerCase().includes(limpia),
-    );
-  }, [consulta]);
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <label htmlFor="buscar-seccion" className="text-[0.875rem] font-medium">
-          Buscar una sección
-        </label>
-        <input
-          id="buscar-seccion"
-          type="search"
-          value={consulta}
-          onChange={(evento) => setConsulta(evento.target.value)}
-          placeholder="arquitectura, tecnologías…"
-          className="h-12 w-full max-w-[28rem] rounded-full border border-borde bg-transparent px-5 text-base text-texto transition-colors placeholder:text-tenue focus:border-borde-fuerte focus:outline-none"
-        />
-      </div>
-
-      <p className="text-[0.875rem] text-tenue" aria-live="polite">
-        {resultados.length} {resultados.length === 1 ? 'sección' : 'secciones'}
-        {consulta.trim() ? ` para «${consulta.trim()}»` : ''}
-      </p>
-
-      <ul className="flex flex-col gap-3">
-        {resultados.map((ruta) => (
-          <li key={ruta.id}>
-            <Link
-              to={ruta.path}
-              className="flex flex-col gap-1 rounded-m border border-borde p-5 transition-colors hover:bg-superficie-suave"
-            >
-              <span className="text-[1.0625rem] font-medium">{ruta.label}</span>
-              <span className="text-[0.9375rem] text-suave">{ruta.description}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 

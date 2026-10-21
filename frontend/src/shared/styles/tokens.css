@@ -1,5 +1,5 @@
 /*
- * Tokens de AGENT4U. Fuente de verdad: .agent/design-system.md
+ * Tokens de AGENT4U. Este fichero ES la fuente de verdad del sistema visual.
  *
  * El color se nombra por ROL (fondo, superficie, texto, acento), nunca por
  * tono: asi un tema es una redefinicion de los mismos nombres y ningun
@@ -81,18 +81,18 @@
   --color-aviso-borde: var(--aviso-borde);
 
   /* --- Sombras ---
-     Practicamente no existen: la guia dice explicitamente que las tarjetas no
-     llevan sombra y que la estructura la dan los hairlines y el aire. Solo
-     sobreviven para lo que flota de verdad sobre el resto (modales y
-     popovers), que la guia no cubre. */
-  --shadow-s: var(--sombra-s);
-  --shadow-m: var(--sombra-m);
+     Una sola, y es la unica que la guia admite: la estructura la dan los
+     hairlines y el aire, no las sombras. Esta sobrevive para lo que flota de
+     verdad sobre el resto —modales y popovers—, que la guia no cubre.
+     Habia cuatro; las otras tres no las usaba nadie desde que el rediseño
+     cambio sombras por hairlines. */
   --shadow-l: var(--sombra-l);
-  --shadow-acento: var(--brillo-acento);
 
-  /* --- Movimiento --- */
-  --ease-marca: cubic-bezier(0.2, 0.9, 0.2, 1);
-  --ease-entrada: cubic-bezier(0.16, 1, 0.3, 1);
+  /* --- Tipografia: tracking ---
+     Negativo que se cierra segun crece el tamaño: a 48px, -0.03em. Es lo que
+     da a los titulares la autoridad comprimida de un periodico. Lo consume
+     `global.css` en la escala de titulares, con `var()`. */
+  --tracking-display: -0.03em;
 
   /* --- Anchos --- */
   --container-lectura: 70ch;
@@ -100,11 +100,6 @@
 
 :root {
   --escala-densidad: 1;
-
-  /* Tracking negativo que se cierra segun crece el tamaño: a 48px, -0.03em.
-     Es lo que da a los titulares la autoridad comprimida de un periodico. */
-  --tracking-display: -0.03em;
-  --tracking-etiqueta: 0;
 
   --duracion-rapida: 140ms;
   --duracion-media: 260ms;
@@ -154,11 +149,7 @@
   --aviso-borde: #fedf89;
 
   --foco: #000000;
-
-  --sombra-s: none;
-  --sombra-m: rgb(0 0 0 / 2%) 0 4px 6px 0, rgb(0 0 0 / 5%) 0 0 2px 0;
   --sombra-l: 0 8px 28px -8px rgb(0 0 0 / 18%), 0 2px 8px -2px rgb(0 0 0 / 8%);
-  --brillo-acento: 0 0 0 3px rgb(0 0 0 / 12%);
 }
 
 /* --- Tema oscuro ---
@@ -199,11 +190,7 @@
     --aviso-borde: #57431c;
 
     --foco: #ffffff;
-
-    --sombra-s: none;
-    --sombra-m: rgb(0 0 0 / 40%) 0 4px 6px 0, rgb(0 0 0 / 30%) 0 0 2px 0;
     --sombra-l: 0 8px 28px -8px rgb(0 0 0 / 70%), 0 2px 8px -2px rgb(0 0 0 / 50%);
-    --brillo-acento: 0 0 0 3px rgb(255 255 255 / 22%);
   }
 }
 
@@ -242,11 +229,7 @@
   --aviso-borde: #57431c;
 
   --foco: #ffffff;
-
-  --sombra-s: none;
-  --sombra-m: rgb(0 0 0 / 40%) 0 4px 6px 0, rgb(0 0 0 / 30%) 0 0 2px 0;
   --sombra-l: 0 8px 28px -8px rgb(0 0 0 / 70%), 0 2px 8px -2px rgb(0 0 0 / 50%);
-  --brillo-acento: 0 0 0 3px rgb(255 255 255 / 22%);
 }
 
 /* Densidad compacta: cabe mas en pantalla sin tocar el tamaño del texto ni el

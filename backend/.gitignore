@@ -1,0 +1,12 @@
+# Entorno virtual de uv. Hoy se oculta solo porque `.venv/.gitignore` (que
+# deja el propio `uv venv` dentro) se autoignora; esta regla no depende de eso.
+.venv/
+
+# Caches de herramientas de Python. Ya cubiertas por el .gitignore raiz con
+# patrones sin ancla, pero se listan aqui tambien para que este fichero sea
+# autosuficiente si algun dia se separa el repo.
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

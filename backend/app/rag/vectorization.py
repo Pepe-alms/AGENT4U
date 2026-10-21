@@ -1,7 +1,5 @@
-import os
 import uuid
 import datetime
-import numpy as np
 from qdrant_client.models import PointStruct, VectorParams, Distance, SparseVectorParams, models
 
 from app.core.config import get_settings
@@ -50,40 +48,77 @@ def normalize_text(file_path: str, converter, chunker, name: str, type: str):
 
     return texts_to_embed, records
 
-def embed_texts(chunks: list, dense_embedder: str, sparse_embedder: str, qdrant, records: list):
-    dense_vectors = np.array(list(dense_embedder.embed(chunks)))
-    sparse_vectors = np.array(list(sparse_embedder.embed(chunks)))
+def asegurar_coleccion(qdrant) -> None:
+    """Crea la coleccion si no existe.
 
+    Se llama ANTES de vectorizar, no despues: si Qdrant esta caido conviene
+    enterarse en el primer segundo y no tras varios minutos de CPU quemados en
+    embeddings que no se van a poder guardar.
+    """
+    if qdrant.collection_exists(collection_name=COLLECTION_NAME):
+        return
 
-    if not qdrant.collection_exists(collection_name=COLLECTION_NAME):
-        qdrant.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config={
-                "dense_vector": VectorParams(size= 1024, distance=Distance.COSINE)
-                },
-            sparse_vectors_config={
-                "sparse_vector": SparseVectorParams(modifier= models.Modifier.IDF)
-                }
-            )
-
-    points = [
-        PointStruct(
-            id=id_from_text(record["texto"]),
-            vector={
-                "dense_vector": dense_vector.tolist(),
-                "sparse_vector": models.SparseVector(
-                    indices= sparse_vector.indices.tolist(),
-                    values= sparse_vector.values.tolist()),
-            },
-            payload=record,
-        )
-        for record, dense_vector, sparse_vector in zip(records, dense_vectors, sparse_vectors)
-    ]
-
-    qdrant.upsert(
+    qdrant.create_collection(
         collection_name=COLLECTION_NAME,
-        points=points
+        vectors_config={
+            "dense_vector": VectorParams(size=1024, distance=Distance.COSINE)
+        },
+        sparse_vectors_config={
+            "sparse_vector": SparseVectorParams(modifier=models.Modifier.IDF)
+        },
     )
+
+
+def _punto(record: dict, denso, disperso) -> PointStruct:
+    return PointStruct(
+        id=id_from_text(record["texto"]),
+        vector={
+            "dense_vector": denso.tolist(),
+            "sparse_vector": models.SparseVector(
+                indices=disperso.indices.tolist(),
+                values=disperso.values.tolist(),
+            ),
+        },
+        payload=record,
+    )
+
+
+def embed_texts(chunks: list, dense_embedder, sparse_embedder, qdrant, records: list):
+    """Vectoriza los fragmentos y los sube a Qdrant POR LOTES.
+
+    La version anterior hacia `np.array(list(embedder.embed(chunks)))`, que
+    materializa el documento entero vectorizado, y despues un unico `upsert`
+    con todos los puntos. Dos problemas:
+
+      1. Cada vector denso pasa por `.tolist()`, y una lista de 1024 floats de
+         Python ocupa 32.824 bytes frente a los 4.096 del mismo vector en
+         float32. Ocho veces mas, multiplicado por todos los fragmentos a la
+         vez.
+      2. Un solo cuerpo HTTP con todo dentro.
+
+    Trabajando por lotes, en memoria solo hay `index_lote_upsert` puntos, sea
+    el documento de diez paginas o de mil. El coste de los embeddings no
+    cambia; lo que cambia es que deja de crecer con el tamaño del documento.
+    """
+    asegurar_coleccion(qdrant)
+
+    tamano_lote = get_settings().index_lote_upsert
+
+    # Generadores, no listas: lo que vectoriza es `zip`, fragmento a fragmento.
+    densos = dense_embedder.embed(chunks)
+    dispersos = sparse_embedder.embed(chunks)
+
+    lote: list[PointStruct] = []
+    for record, denso, disperso in zip(records, densos, dispersos):
+        lote.append(_punto(record, denso, disperso))
+
+        if len(lote) >= tamano_lote:
+            qdrant.upsert(collection_name=COLLECTION_NAME, points=lote)
+            lote = []
+
+    if lote:
+        qdrant.upsert(collection_name=COLLECTION_NAME, points=lote)
+
 
 def borrar_por_origen(qdrant, origen: str) -> bool:
     """Borra los puntos cuyo campo 'origen' o 'nombre' coincida. Devuelve False

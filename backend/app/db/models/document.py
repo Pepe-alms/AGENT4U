@@ -19,5 +19,6 @@ class Document(Base):
         DateTime, default=datetime.datetime.now
     )
     state: Mapped[str] = mapped_column(String(32), default="pendiente")
+    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     num_chunks: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

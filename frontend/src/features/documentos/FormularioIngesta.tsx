@@ -7,6 +7,7 @@ import {
   type FormEvent,
 } from 'react';
 
+import { repartir } from '@/features/documentos/ingesta';
 import type { Ingesta } from '@/features/documentos/useIngesta';
 import { EXTENSIONES, extensionAdmitida, TAMANO_MAXIMO } from '@/shared/api/documentos';
 import { Badge, Button, IconButton, Input, Spinner } from '@/shared/ui';
@@ -25,6 +26,11 @@ const ICONO_QUITAR = (
 
 type Modo = 'url' | 'fichero';
 
+/** «1 fichero» / «3 ficheros». Repetir esto en cada mensaje se nota al leerlo. */
+function plural(n: number): string {
+  return `${n} ${n === 1 ? 'fichero' : 'ficheros'}`;
+}
+
 export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
   const [modo, setModo] = useState<Modo>('url');
   const [valor, setValor] = useState('');
@@ -32,6 +38,8 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const selector = useRef<HTMLInputElement>(null);
   const idModos = useId();
+  const idCupo = useId();
+  const lleno = ingesta.huecos === 0;
 
   function enviar(evento: FormEvent) {
     evento.preventDefault();
@@ -41,15 +49,23 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
   }
 
   /**
-   * Filtra lo que no se puede indexar antes de molestar al servidor: mejor un
-   * aviso inmediato que esperar a una subida que va a acabar en error.
+   * Decide qué se manda y, si algo se queda fuera, lo dice.
+   *
+   * Tres filtros en orden: extensión, tamaño y cupo. El del cupo va último
+   * porque es el único que no depende del fichero sino del momento: el mismo
+   * fichero cabe ahora y no cabe dentro de un segundo.
+   *
+   * Se trunca aquí, antes de subir nada. Mandarlo todo y dejar que el servidor
+   * conteste 429 significa subir cuerpos completos por la red para nada, y
+   * dejar al usuario mirando varios errores sin entender por qué justo esos.
    */
   function admitir(ficheros: File[]): File[] {
     const malos = ficheros.filter((f) => !extensionAdmitida(f.name));
     const gordos = ficheros.filter((f) => f.size > TAMANO_MAXIMO);
-    const buenos = ficheros.filter(
+    const validos = ficheros.filter(
       (f) => extensionAdmitida(f.name) && f.size <= TAMANO_MAXIMO,
     );
+    const { caben, sobran } = repartir(validos, ingesta.huecos);
 
     if (malos.length > 0) {
       setAviso(
@@ -57,16 +73,29 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
       );
     } else if (gordos.length > 0) {
       setAviso(`«${gordos[0]!.name}» pasa de 50 MB, el máximo por fichero.`);
-    } else {
+    } else if (sobran.length === 0) {
       setAviso(null);
+    } else if (caben.length === 0) {
+      setAviso(
+        `El servidor procesa ${ingesta.maxEnVuelo} a la vez como máximo, y ya están ` +
+          `los ${ingesta.maxEnVuelo}. Espera a que acabe alguna.`,
+      );
+    } else {
+      setAviso(
+        `Solo caben ${caben.length} más. Se han añadido ${plural(caben.length)} y ` +
+          `se ${sobran.length === 1 ? 'ha' : 'han'} dejado fuera ${plural(sobran.length)}: ` +
+          `${sobran.map((f) => f.name).join(', ')}.`,
+      );
     }
 
-    return buenos;
+    return caben;
   }
 
   function alSoltar(evento: DragEvent) {
     evento.preventDefault();
     setArrastrando(false);
+    // Un <button disabled> no dispara click, pero sí puede recibir un drop, así
+    // que el cupo se vuelve a comprobar aquí.
     const buenos = admitir([...evento.dataTransfer.files]);
     if (buenos.length > 0) ingesta.subir(buenos);
   }
@@ -120,9 +149,12 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
               también abrir el selector con Enter o Espacio desde el teclado. */}
           <button
             type="button"
+            disabled={lleno}
+            aria-describedby={idCupo}
             className={clases(
               'flex flex-col items-center gap-1.5 rounded-m border border-dashed border-borde-fuerte px-4 py-8 text-center transition-colors',
               arrastrando && 'border-acento bg-acento-suave',
+              lleno && 'cursor-not-allowed opacity-50',
             )}
             onClick={() => selector.current?.click()}
             onDragOver={(e) => {
@@ -133,20 +165,37 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
             onDrop={alSoltar}
           >
             <span className={'text-sm font-medium text-texto'}>
-              Suelta tus ficheros aquí
+              {lleno ? 'No caben más por ahora' : 'Suelta tus ficheros aquí'}
             </span>
-            <span>o pulsa para elegirlos · {EXTENSIONES.join(', ')}</span>
+            <span>
+              {lleno
+                ? 'Espera a que acaben las que están en marcha'
+                : `o pulsa para elegirlos · ${EXTENSIONES.join(', ')}`}
+            </span>
           </button>
           <input
             ref={selector}
             type="file"
             multiple
+            disabled={lleno}
             className="solo-lectores"
             accept={EXTENSIONES.map((e) => `.${e}`).join(',')}
             onChange={alElegir}
             tabIndex={-1}
             aria-hidden="true"
           />
+
+          {/*
+            El cupo, siempre a la vista y no solo cuando se llena: saber que el
+            tope son cinco ANTES de elegir quince ficheros evita el viaje
+            entero. `aria-live="polite"` porque el número baja y sube solo, al
+            ritmo de las indexaciones, sin que el usuario haya tocado nada.
+          */}
+          <p id={idCupo} className={'text-[0.6875rem] text-tenue'} aria-live="polite">
+            {lleno
+              ? `${ingesta.maxEnVuelo} de ${ingesta.maxEnVuelo} en marcha: no caben más`
+              : `Caben ${plural(ingesta.huecos)} más (${ingesta.maxEnVuelo} a la vez como máximo)`}
+          </p>
           {aviso ? (
             <p
               className={
@@ -166,7 +215,9 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
         </>
       )}
 
-      <Button type="submit" disabled={!valor.trim()}>
+      {/* También sin huecos: una URL o una ruta del servidor son la misma
+          indexación por detrás, y ocupan sitio igual que una subida. */}
+      <Button type="submit" disabled={!valor.trim() || lleno}>
         Indexar
       </Button>
 
