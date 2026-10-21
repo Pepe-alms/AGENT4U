@@ -236,7 +236,9 @@ cp docs/aprendizaje/entregas/PLANTILLA.md docs/aprendizaje/entregas/dia-01.md
 # ...rellénala...
 git add docs/aprendizaje/entregas/dia-01.md
 git commit -m "entrega día 01" && git push
-``` Si quieres feedback antes, usa `docs/aprendizaje/PROMPT_REVISION.md` en Claude Code.
+```
+
+Si quieres feedback antes, usa `docs/aprendizaje/PROMPT_REVISION.md` en Claude Code.
 
 ---
 
