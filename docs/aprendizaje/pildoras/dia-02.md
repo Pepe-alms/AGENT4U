@@ -434,7 +434,7 @@ Hoy el `Retry-After` del 429 es una constante (`routers/indexation.py:24`, `REIN
 - [ ] Las 8 preguntas respondidas con tus palabras.
 - [ ] Párrafo para `ARCHITECTURE.md` al final de la entrega.
 
-Entrega (antes de las 8:30 de mañana):
+Entrega (antes de las 8:30 del **sábado 24-oct**; desde hoy las píldoras van en días alternos):
 
 ```bash
 git fetch origin && git switch aprendizaje && git pull
@@ -463,4 +463,4 @@ Tu párrafo para la sección *2. Configuración* debería cubrir:
 
 Y aprovecha para escribir también el párrafo del día 01 que faltó, la sección *1. Visión general*: servicios, almacenes, qué se carga al arrancar y orden de arranque.
 
-**Mañana (día 03):** contratos de la API con Pydantic. Abrimos `app/api/schemas.py` y `core/exceptions.py`. Vas a predecir **antes de llamar** el JSON exacto de tres endpoints (incluido `/health/qdrant` con Qdrant caído, esta vez de verdad) y veremos cómo `response_model` filtra lo que sale de la API.
+**El sábado 24-oct (día 03):** contratos de la API con Pydantic. Abrimos `app/api/schemas.py` y `core/exceptions.py`. Vas a predecir **antes de llamar** el JSON exacto de tres endpoints (incluido `/health/qdrant` con Qdrant caído, esta vez de verdad) y veremos cómo `response_model` filtra lo que sale de la API.
