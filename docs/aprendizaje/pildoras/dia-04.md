@@ -12,7 +12,7 @@ Van dos seguidas, así que te lo digo una vez y sin drama: el plan solo funciona
 - Tus cambios al healthcheck siguen en `aprendizaje` y no en `main`: `git diff --stat origin/main origin/aprendizaje -- docker-compose.yml` → `8 insertions(+), 2 deletions(-)`.
 - El evento `paso` sigue fuera del contrato SSE (día 03).
 
-El ejercicio de hoy **no depende** del de ayer: sale de `main` limpio.
+El ejercicio de hoy **no depende** del día 03: sale de `main` limpio.
 
 ---
 
