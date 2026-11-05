@@ -147,7 +147,7 @@ def traductor_evento (tipo: str, datos: dict) -> str:
     return f"data: {json.dumps({'tipo': tipo, **datos}, ensure_ascii=False)}\n\n"
 ```
 
-Toda la serialización SSE de AGENT4U es esta línea (`streaming.py:8-9`). `ensure_ascii=False` deja las tildes en UTF-8 en vez de `é`, y el `\n\n` final es el separador de eventos.
+Toda la serialización SSE de AGENT4U es esta línea (`streaming.py:8-9`). `ensure_ascii=False` deja las tildes tal cual, en UTF-8, en vez de escaparlas como secuencias de seis caracteres (barra invertida, `u` y cuatro dígitos hexadecimales), y el `\n\n` final es el separador de eventos.
 
 `responder_stream` (`:34-75`) emite primero `fuentes`, y después:
 
