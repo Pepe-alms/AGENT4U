@@ -29,6 +29,7 @@ def fuente_desde_chunk(c: dict) -> dict:
         "texto": c.get("chunk", ""),
         "score": c.get("score"),
         "subconsulta": c.get("subconsulta", ""),
+        "documento_id": c.get("documento_id"),
     }
 
 

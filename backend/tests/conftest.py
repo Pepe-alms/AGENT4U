@@ -359,7 +359,8 @@ def grafo():
         "messages": [{"role": "user", "content": "Contexto + pregunta"}],
         "chunks": [
             {"nombre": "cap.pdf", "origen": "/docs/cap.pdf",
-             "headings": ["Teorema CAP"], "paginas": [7], "chunk": "CAP dice que...", "score": 0.9},
+             "headings": ["Teorema CAP"], "paginas": [7], "chunk": "CAP dice que...", "score": 0.9,
+             "documento_id": 3},
         ],
     })
 

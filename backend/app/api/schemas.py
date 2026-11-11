@@ -374,6 +374,15 @@ class FuenteOut(BaseModel):
         ),
         examples=["garantias del teorema CAP"],
     )
+    documento_id: int | None = Field(
+        default=None,
+        description=(
+            "Id del documento en GET /documentos. Null en los mensajes "
+            "guardados antes de que se registrara, y en los fragmentos "
+            "indexados antes de que existiera el campo."
+        ),
+        examples=[3],
+    )
 
 
 class MensajeOut(BaseModel):
