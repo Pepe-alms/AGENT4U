@@ -49,17 +49,51 @@ class TestNodoFusionar:
         assert [c["chunk"] for c in resultado["chunks"]] == ["alto", "medio", "bajo"]
 
     def test_una_rama_se_queda_con_el_presupuesto_completo(self, fusionar):
-        estado = {"chunks_parciales": [frag(f"f{i}", i / 100) for i in range(15)]}
+        estado = {
+            "chunks_parciales": [frag(f"f{i}", i / 100) for i in range(15)],
+            "max_fragmentos": 9,
+        }
 
         resultado = fusionar(estado)
 
         assert len(resultado["chunks"]) == 9
 
+    def test_sin_max_fragmentos_usa_el_valor_por_defecto_de_settings(self, fusionar, monkeypatch):
+        from app.core.config import get_settings
+        monkeypatch.setattr(get_settings(), "max_fragmentos_defecto", 7)
+        estado = {"chunks_parciales": [frag(f"f{i}", i / 100) for i in range(15)]}
+
+        resultado = fusionar(estado)
+
+        assert len(resultado["chunks"]) == 7
+
+    @pytest.mark.parametrize("max_fragmentos, ramas", [(6, 3), (5, 2), (2, 4), (1, 3)])
+    def test_varias_subconsultas_no_superan_max_fragmentos(self, fusionar, max_fragmentos, ramas):
+        """Con mas ramas que presupuesto, la cuota minima de uno por rama se
+        pasaba del total pedido."""
+        letras = "abcdefgh"[:ramas]
+        estado = {
+            "chunks_parciales": [
+                frag(f"{letra}{i}", 0.5, subconsulta=letra)
+                for letra in letras
+                for i in range(5)
+            ],
+            "max_fragmentos": max_fragmentos,
+        }
+
+        resultado = fusionar(estado)
+
+        # Puede quedarse por debajo (la cuota es una division entera), nunca
+        # por encima. Y ninguna rama se queda sin representar si cabe.
+        assert 0 < len(resultado["chunks"]) <= max_fragmentos
+        ramas_presentes = {c["subconsulta"] for c in resultado["chunks"]}
+        assert len(ramas_presentes) == min(ramas, max_fragmentos)
+
     def test_dos_ramas_reparten_cuota_y_ninguna_monopoliza(self, fusionar):
         rama_a = [frag(f"a{i}", 0.9, subconsulta="a") for i in range(6)]
         rama_b = [frag(f"b{i}", 0.1, subconsulta="b") for i in range(6)]
 
-        resultado = fusionar({"chunks_parciales": rama_a + rama_b})
+        resultado = fusionar({"chunks_parciales": rama_a + rama_b, "max_fragmentos": 8})
 
         textos = [c["chunk"] for c in resultado["chunks"]]
         assert len(textos) == 8
@@ -73,7 +107,7 @@ class TestNodoFusionar:
             for i in range(5)
         ]
 
-        resultado = fusionar({"chunks_parciales": ramas})
+        resultado = fusionar({"chunks_parciales": ramas, "max_fragmentos": 9})
 
         assert len(resultado["chunks"]) == 9
 
