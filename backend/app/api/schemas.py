@@ -472,6 +472,32 @@ class EventoInicio(BaseModel):
     conversacion_id: int = Field(examples=[12345])
 
 
+class EventoPaso(BaseModel):
+    """Un nodo del grafo acaba de terminar. Llega uno por nodo, entre 'inicio'
+    y 'fuentes'; un mismo nodo puede repetirse (una rama de 'buscar' por
+    subconsulta, o una vuelta mas si 'evaluar' decide reescribir). Lleva hechos
+    y no frases: el texto que ve el usuario lo pone el cliente."""
+
+    tipo: Literal["paso"]
+    nodo: str = Field(description="Nombre del nodo.", examples=["buscar"])
+    ms: int = Field(description="Milisegundos desde el paso anterior.", examples=[412])
+    subconsultas: int | None = Field(
+        default=None, description="Solo en 'multiconsulta': en cuantas se dividio la pregunta."
+    )
+    fragmentos: int | None = Field(
+        default=None, description="Solo en 'buscar' y 'fusionar': fragmentos que salieron."
+    )
+    score: float | None = Field(
+        default=None, description="Solo en 'evaluar': la mejor puntuacion del reordenador."
+    )
+    pobre: bool | None = Field(
+        default=None, description="Solo en 'evaluar': si el contexto se considero insuficiente."
+    )
+    intento: int | None = Field(
+        default=None, description="Solo en 'reescribir': numero de reintento."
+    )
+
+
 class EventoFuentes(BaseModel):
     """Documentos recuperados, enviados antes de generar el texto para poder
     pintarlos mientras se escribe la respuesta. Puede venir vacio."""
@@ -505,7 +531,7 @@ class EventoFin(BaseModel):
 
 
 EventoSSE = Annotated[
-    EventoInicio | EventoFuentes | EventoTexto | EventoError | EventoFin,
+    EventoInicio | EventoPaso | EventoFuentes | EventoTexto | EventoError | EventoFin,
     Field(discriminator="tipo"),
 ]
 

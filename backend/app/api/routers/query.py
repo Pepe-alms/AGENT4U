@@ -54,9 +54,10 @@ def ajustes():
     description=(
         "Responde con un stream Server-Sent Events, no con JSON. Cada evento "
         "llega como una linea `data: {...}` seguida de una linea en blanco, y "
-        "su campo `tipo` indica cual de los modelos EventoInicio / "
+        "su campo `tipo` indica cual de los modelos EventoInicio / EventoPaso / "
         "EventoFuentes / EventoTexto / EventoError / EventoFin es.\n\n"
-        "Orden garantizado: `inicio`, `fuentes`, N x `texto` y, para cerrar, "
+        "Orden garantizado: `inicio`, un `paso` por nodo del grafo, `fuentes`, "
+        "N x `texto` y, para cerrar, "
         "`fin` (exito) o `error` (el modelo fallo a mitad). Los eventos "
         "`texto` son incrementales: hay que concatenarlos.\n\n"
         "Un fallo del modelo llega como evento `error` dentro de un stream con "

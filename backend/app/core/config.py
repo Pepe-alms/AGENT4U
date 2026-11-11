@@ -45,9 +45,10 @@ class Settings(BaseSettings):
     # indexaciones simultaneas no van a la mitad de velocidad cada una, van
     # peor. Subirlo solo tiene sentido con nucleos de sobra.
     index_max_concurrentes: int = 1
-    # Cuantas pueden ESPERAR su turno. A partir de ahi se responde 429 en vez
-    # de aceptar la peticion: sin este techo, una avalancha llena el threadpool
-    # de hilos bloqueados y el proceso se queda sin memoria.
+    # Cuantas pueden ESPERAR su turno en la cola de Redis. Pasado
+    # concurrentes + en_cola, POST /indexar* responde 429 en vez de encolar:
+    # sin este techo, una avalancha llena la cola de trabajos (y el disco de
+    # subidas) que el worker tardaria horas en despachar.
     index_max_en_cola: int = 4
     # Puntos por `upsert`. Subir todos de golpe mantiene en memoria el
     # documento entero vectorizado y manda un unico cuerpo HTTP enorme.
