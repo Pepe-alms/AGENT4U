@@ -22,6 +22,20 @@ class Settings(BaseSettings):
     max_fragmentos_defecto: int = 10
     max_fragmentos_tope: int = 20
 
+    # --- Modelos ---
+    # La API los usa para consultar y el worker para indexar. Viven aqui, y
+    # solo aqui, porque si uno cambia y el otro no se indexa con un modelo y
+    # se consulta con otro sin que nada falle: solo empeoran las respuestas.
+    modelo_denso: str = "intfloat/multilingual-e5-large"
+    # Tiene que coincidir con la salida de `modelo_denso`. Solo se usa al crear
+    # la coleccion: cambiarlo con la coleccion ya creada obliga a recrearla.
+    dimension_densa: int = 1024
+    modelo_disperso: str = "Qdrant/bm25"
+    idioma_disperso: str = "spanish"
+    modelo_reranker: str = "jinaai/jina-reranker-v2-base-multilingual"
+    # Techo de tokens por fragmento, medido con el tokenizer de `modelo_denso`.
+    chunk_max_tokens: int = 500
+
     # --- Redis ---
     redis_url: str = "redis://localhost:6379"
 

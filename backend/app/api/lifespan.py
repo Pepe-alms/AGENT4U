@@ -1,27 +1,11 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-## Embeder y QdrantClient
-
-# Embeder Denso
-from fastembed import TextEmbedding
-# Embeder Dispersa
-from fastembed import SparseTextEmbedding
-# CrossEncoder
-from fastembed.rerank.cross_encoder import TextCrossEncoder
+## Modelos y QdrantClient
 
 from qdrant_client import QdrantClient
 from app.core.config import get_settings
-
-## Ingesta
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.chunking import HybridChunker
-
-## Tokenizador
-from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
-from transformers import AutoTokenizer
+from app.rag.modelos import crear_cross_encoder, crear_embedder_denso, crear_embedder_disperso
 
 ## SQL
 
@@ -41,22 +25,13 @@ from app.rag.grafo.grafo_create import crear_grafo
 async def lifespan(app: FastAPI):
     settings = get_settings()
 
-    app.state.dense_embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
-    app.state.sparse_embedder = SparseTextEmbedding(model_name= "Qdrant/bm25", language= "spanish")
-    app.state.cross_encoder = TextCrossEncoder(model_name = "jinaai/jina-reranker-v2-base-multilingual")
+    app.state.dense_embedder = crear_embedder_denso(settings)
+    app.state.sparse_embedder = crear_embedder_disperso(settings)
+    app.state.cross_encoder = crear_cross_encoder(settings)
     app.state.qdrant = QdrantClient(url=settings.qdrant_url)
 
-    opciones_pdf = PdfPipelineOptions(do_ocr=False, do_table_structure=True)
-    app.state.converter = DocumentConverter(
-        format_options={
-            InputFormat.PDF: PdfFormatOption(pipeline_options=opciones_pdf),
-        }
-    )
-
-    tokenizer = HuggingFaceTokenizer(
-        tokenizer=AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large"),
-        max_tokens=500,)
-    app.state.chunker = HybridChunker(tokenizer=tokenizer)
+    # Docling (converter y chunker) no se carga aqui: la ingesta la hace el
+    # worker, y ningun endpoint de la API los usa.
 
     crear_esquema()
 
