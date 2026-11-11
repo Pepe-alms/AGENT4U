@@ -36,9 +36,14 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
         }
 
     def repartir(estado:EstadoRAG):
+        # Cada Send arranca la rama solo con lo que se le pasa, no con el
+        # estado entero: si max_fragmentos no va aqui, buscar no lo ve.
+        extra = {}
+        if estado.get("max_fragmentos") is not None:
+            extra["max_fragmentos"] = estado["max_fragmentos"]
         return [Send(
-            "buscar", 
-            {"consulta_busqueda": subconsulta}) 
+            "buscar",
+            {"consulta_busqueda": subconsulta, **extra})
             for subconsulta in estado["subconsultas"]]
 
     def nodo_reformular(estado: EstadoRAG):
@@ -60,7 +65,7 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
             sparse_embedder,
             qdrant,
             cross_encoder,
-            max_fragmentos=estado.get("max_fragmentos", 10),
+            max_fragmentos=estado.get("max_fragmentos") or get_settings().max_fragmentos_defecto,
         )
         for c in chunks:
             c["subconsulta"] = consulta
