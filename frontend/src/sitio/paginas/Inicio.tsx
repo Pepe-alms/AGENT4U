@@ -8,7 +8,7 @@ import { ArticleCard } from '@/sitio/componentes/ArticleCard';
 import { Revelar } from '@/sitio/componentes/Revelar';
 import { useRevelado } from '@/sitio/useRevelado';
 import { AnteriorSiguiente } from '@/sitio/componentes/AnteriorSiguiente';
-import { RUTA_APP, RUTAS_NAV } from '@/routes';
+import { RUTAS_NAV, rutaAppConPregunta } from '@/routes';
 import { useScrollToHash } from '@/sitio/useScrollToHash';
 import { useSinMovimiento } from '@/shared/hooks/useMediaQuery';
 import {
@@ -172,8 +172,10 @@ function Hero() {
             evento.preventDefault();
             // Navegacion dura y no `navigate`: /app es la aplicacion, otro
             // arbol de React. Entrar con el router la montaria dentro del
-            // layout del sitio, con su barra y su pie encima.
-            if (valor.trim()) window.location.assign(RUTA_APP);
+            // layout del sitio, con su barra y su pie encima. Por eso la
+            // pregunta viaja en la URL: el estado de esta pagina se pierde.
+            const pregunta = valor.trim();
+            if (pregunta) window.location.assign(rutaAppConPregunta(pregunta));
           }}
         >
           <div className="relative flex items-center">
