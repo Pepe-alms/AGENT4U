@@ -17,18 +17,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.chunking import HybridChunker
-from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
-from transformers import AutoTokenizer
-from fastembed import SparseTextEmbedding, TextEmbedding
 from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
 from app.core.exceptions import DocumentoYaExiste, FalloIngesta
 from app.db.session import SessionLocal, crear_esquema
+from app.rag.modelos import (
+    crear_chunker, crear_converter, crear_embedder_denso, crear_embedder_disperso,
+)
 from app.services.indexation_service import indexar_documento
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -56,19 +52,11 @@ def main(nombres: list[str]) -> None:
         print(f"No hay documentos que indexar en {DATA_DIR}")
         return
 
-    dense_embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large")
-    sparse_embedder = SparseTextEmbedding(model_name="Qdrant/bm25", language="spanish")
+    dense_embedder = crear_embedder_denso(settings)
+    sparse_embedder = crear_embedder_disperso(settings)
     qdrant = QdrantClient(url=settings.qdrant_url)
-
-    opciones_pdf = PdfPipelineOptions(do_ocr=False, do_table_structure=True)
-    converter = DocumentConverter(
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opciones_pdf)}
-    )
-    tokenizer = HuggingFaceTokenizer(
-        tokenizer=AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large"),
-        max_tokens=500,
-    )
-    chunker = HybridChunker(tokenizer=tokenizer)
+    converter = crear_converter()
+    chunker = crear_chunker(settings)
 
     indexados, omitidos, fallidos = 0, 0, []
 

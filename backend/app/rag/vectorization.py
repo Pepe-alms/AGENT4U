@@ -61,7 +61,7 @@ def asegurar_coleccion(qdrant) -> None:
     qdrant.create_collection(
         collection_name=COLLECTION_NAME,
         vectors_config={
-            "dense_vector": VectorParams(size=1024, distance=Distance.COSINE)
+            "dense_vector": VectorParams(size=get_settings().dimension_densa, distance=Distance.COSINE)
         },
         sparse_vectors_config={
             "sparse_vector": SparseVectorParams(modifier=models.Modifier.IDF)

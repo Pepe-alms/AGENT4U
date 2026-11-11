@@ -1,6 +1,6 @@
 # Agent4U
 
-> Sistema RAG (Retrieval-Augmented Generation) en español: ingesta estructurada de documentos, recuperación densa sobre Qdrant y generación de respuestas citadas — con un arnés de evaluación propio para medir la calidad del pipeline en cada cambio.
+> Sistema RAG (Retrieval-Augmented Generation) en español: ingesta estructurada de documentos, recuperación híbrida (densa + BM25) sobre Qdrant con reordenado por cross-encoder, y generación orquestada con un grafo de LangGraph — con las fuentes de cada respuesta a la vista y sets de preguntas propios para evaluar el pipeline.
 
 ![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?logo=fastapi&logoColor=white)
@@ -10,7 +10,7 @@
 
 ## Visión general
 
-Agent4U recibe documentos (PDF/DOCX), los convierte en fragmentos con estructura semántica, los indexa en una base vectorial y responde preguntas en lenguaje natural citando la fuente exacta de cada afirmación. El objetivo del proyecto es doble: servir como un RAG realmente usable sobre documentación propia, y como banco de pruebas para decisiones de diseño de RAG (chunking, embeddings, distancia de similitud, evaluación) documentadas y medidas, no solo intuidas.
+Agent4U recibe documentos (PDF/DOCX), los convierte en fragmentos con estructura semántica, los indexa en una base vectorial y responde preguntas en lenguaje natural mostrando, junto a la respuesta, los fragmentos de los que sale (documento, páginas y encabezados). El objetivo del proyecto es doble: servir como un RAG realmente usable sobre documentación propia, y como banco de pruebas para decisiones de diseño de RAG (chunking, embeddings, distancia de similitud, evaluación) documentadas y medidas, no solo intuidas.
 
 El proyecto tiene tres piezas: un backend FastAPI + Qdrant + Redis/ARQ, un gateway GraphQL que es el único punto de entrada del frontend, y un frontend React + Vite que sirve a la vez un sitio editorial sobre el sistema (`/`) y la aplicación del agente (`/app`). Este README describe honestamente qué está implementado, qué está a medias y qué no está: es la única documentación del proyecto.
 
@@ -35,11 +35,12 @@ El proyecto tiene tres piezas: un backend FastAPI + Qdrant + Redis/ARQ, un gatew
 - **Ingesta estructurada de PDF/DOCX** con [Docling](https://docling-project.github.io/docling/): conserva títulos, secciones y tablas en lugar de extraer texto plano sin orden de lectura.
 - **Chunking semántico** vía `HybridChunker`, atado al mismo tokenizer que el modelo de embeddings — evita fragmentos que rompan el límite de tokens del modelo.
 - **Filtrado de ruido**: descarta chunks que son solo cabecera/pie de página o demasiado cortos para aportar contexto.
-- **Recuperación densa multilingüe** (`multilingual-e5-large`, 1024 dimensiones) sobre Qdrant con distancia coseno.
-- **Payload enriquecido por chunk**: documento de origen, páginas, encabezados y fecha de indexación — necesario para citar fuentes con precisión.
+- **Recuperación híbrida**: vector denso multilingüe (`multilingual-e5-large`, 1024 dimensiones, distancia coseno) y vector disperso BM25 (`Qdrant/bm25`) sobre Qdrant, fusionados con RRF y reordenados con un cross-encoder (`jina-reranker-v2-base-multilingual`). Los nombres de los modelos se configuran en un único sitio, `app/core/config.py`.
+- **Payload enriquecido por chunk**: documento de origen, páginas, encabezados y fecha de indexación — es lo que la interfaz muestra como fuentes de cada respuesta.
 - **Ingesta idempotente**: los IDs son deterministas (`uuid5` sobre el texto del chunk), así que reindexar el mismo documento no duplica datos.
-- **Generación con citas obligatorias** vía [LiteLLM](https://docs.litellm.ai/) (Gemini Flash Lite por defecto, intercambiable por otro proveedor sin tocar código) y un system prompt que fuerza a no alucinar fuera del contexto recuperado.
-- **Arnés de evaluación end-to-end propio**: 25 preguntas fijas de 5 tipos distintos, contra un corpus de prueba de 11 documentos, con informes HTML/CSV por corrida (ver [Evaluación del sistema](#evaluación-del-sistema)).
+- **Grafo de consulta con [LangGraph](https://langchain-ai.github.io/langgraph/)** (`app/rag/grafo/`): reformula la pregunta con el historial, la descompone en subconsultas si trata de varios temas, busca cada una, fusiona los resultados, evalúa si bastan y, si no, reescribe la consulta y vuelve a buscar.
+- **Generación en streaming** vía [LiteLLM](https://docs.litellm.ai/) (Gemini Flash Lite por defecto, intercambiable por otro proveedor sin tocar código) con un system prompt que prohíbe salirse del contexto recuperado y pide **no** citar dentro del texto: las fuentes se envían aparte (evento SSE `fuentes`) y la interfaz las muestra junto a la respuesta.
+- **Sets de preguntas de evaluación**: 25 preguntas fijas de 5 tipos distintos, contra un corpus de prueba de 11 documentos. El arnés que las puntuaba no está hoy en el repositorio (ver [Evaluación del sistema](#evaluación-del-sistema)).
 
 ## Arquitectura
 
@@ -61,9 +62,10 @@ flowchart LR
     end
 
     subgraph CONS["Consulta - POST /preguntar"]
-        API --> RETRIEVAL["Busqueda hibrida (dense+sparse) + reordenado"]
+        API --> GRAFO["Grafo LangGraph: reformular, descomponer, buscar, evaluar"]
+        GRAFO --> RETRIEVAL["Busqueda hibrida (dense+sparse, RRF) + cross-encoder"]
         RETRIEVAL -.-> QDRANT
-        RETRIEVAL --> LLM["LiteLLM -> Gemini Flash Lite"]
+        GRAFO --> LLM["LiteLLM -> Gemini Flash Lite"]
         LLM -->|"SSE, token a token"| API
     end
 
@@ -71,7 +73,7 @@ flowchart LR
     WORKER --> DB
 ```
 
-El endpoint `POST /indexar*` responde `202` en cuanto el trabajo queda en la cola de Redis — no bloquea la petición. El worker (`backend/app/worker/`, proceso aparte) lo recoge, convierte el documento con Docling, genera los embeddings y marca el resultado final en la base de datos; el frontend sondea `GET /trabajos/{job_id}` (vía el gateway) hasta que termina. Backend y worker comparten el mismo embedder (`fastembed`) y la misma colección de Qdrant, cargados una sola vez al arrancar para no pagar el coste de inicialización en cada petición.
+El endpoint `POST /indexar*` responde `202` en cuanto el trabajo queda en la cola de Redis — no bloquea la petición. El worker (`backend/app/worker/`, proceso aparte) lo recoge, convierte el documento con Docling, genera los embeddings y marca el resultado final en la base de datos; el frontend sondea `GET /trabajos/{job_id}` (vía el gateway) hasta que termina. Backend y worker usan los mismos modelos de embeddings (`fastembed`, configurados en `app/core/config.py` y construidos en `app/rag/modelos.py`) y la misma colección de Qdrant, pero son procesos distintos: cada uno carga su propia copia de los modelos, una sola vez al arrancar. Docling solo lo carga el worker; la API carga además el cross-encoder y el grafo.
 
 ## Stack tecnológico
 
@@ -86,7 +88,7 @@ El endpoint `POST /indexar*` responde `202` en cuanto el trabajo queda en la col
 | Chunking | Docling `HybridChunker` + tokenizer de e5-large | Hecho |
 | Embeddings densos | fastembed — `intfloat/multilingual-e5-large` (1024 dim) | Hecho |
 | Embeddings dispersos | fastembed — `Qdrant/bm25` | Hecho, integrados en la búsqueda |
-| Base vectorial | Qdrant (dense, distancia coseno) | Hecho |
+| Base vectorial | Qdrant (vector denso con distancia coseno + vector disperso con IDF) | Hecho |
 | Recuperación | Híbrida (dense + sparse con RRF) + reordenado con cross-encoder | Hecho |
 | Generación | LiteLLM, por defecto `gemini/gemini-flash-lite-latest` | Hecho |
 | Generación | Streaming de respuesta por SSE en `/preguntar` | Hecho |
@@ -96,7 +98,7 @@ El endpoint `POST /indexar*` responde `202` en cuanto el trabajo queda en la col
 | Contenedores | Docker Compose — qdrant, redis, api, worker, gateway; frontend (nginx) en el perfil `frontend` | Hecho |
 | Lint / tipado | `ruff` en verde (backend y gateway); `mypy` configurado y no en verde | Parcial (ver [deuda técnica](#deuda-técnica-conocida)) |
 | Tests | pytest (backend + gateway), vitest + Playwright (frontend) | Hecho — ver [Calidad y desarrollo](#calidad-y-desarrollo) |
-| Evaluación RAG | Arnés propio (25 preguntas, informes HTML/CSV) | Hecho |
+| Evaluación RAG | Sets de preguntas propios (25 preguntas); el arnés que las puntuaba no está en el repo | Parcial |
 | Evaluación RAG | RAGAS | Planificado / opcional |
 | CI/CD | GitHub Actions | Parcial — solo backend (`.github/workflows/backend.yml`) |
 
@@ -107,7 +109,7 @@ Agent4U/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── lifespan.py        # abre Qdrant/Redis una sola vez, al arrancar
+│   │   │   ├── lifespan.py        # carga embedders, cross-encoder y grafo, y abre Qdrant/Redis, una sola vez al arrancar
 │   │   │   ├── main.py            # la app FastAPI: CORS y montaje de los routers
 │   │   │   ├── schemas.py         # modelos Pydantic de entrada y salida
 │   │   │   └── routers/           # un fichero por área: health, query, indexation, jobs, documents, conversations
@@ -120,12 +122,13 @@ Agent4U/
 │   │   │   └── session.py         # motor y SessionLocal
 │   │   ├── rag/
 │   │   │   ├── grafo/             # el grafo de LangGraph: nodos y composición
+│   │   │   ├── modelos.py         # construye embedders, cross-encoder, Docling y chunker desde Settings
 │   │   │   ├── vectorization.py   # troceado con Docling y subida por lotes a Qdrant
 │   │   │   ├── retrieval.py       # búsqueda híbrida (densa + dispersa) y reordenado
-│   │   │   ├── generation.py      # construcción del contexto
-│   │   │   ├── prompt.py          # las plantillas
+│   │   │   ├── generation.py      # reformular, reescribir y descomponer la consulta con el LLM
+│   │   │   ├── prompt.py          # las plantillas y la construcción del contexto
 │   │   │   └── streaming.py       # traducción a eventos SSE y persistencia de la respuesta
-│   │   ├── services/              # orquestación: indexación, consulta y documentos
+│   │   ├── services/              # orquestación: consulta, documentos y cola de indexación (más la indexación síncrona que usan los scripts de evaluación)
 │   │   └── worker/                # proceso ARQ aparte: recoge trabajos de Redis y los indexa
 │   ├── tests/
 │   │   ├── unit/ integration/ api/  # la suite de pytest, espejo de los módulos que cubre
@@ -229,7 +232,7 @@ npm install
 npm run dev
 ```
 
-La primera ejecución del backend descarga los modelos de ML de Docling y fastembed desde Hugging Face Hub (requiere red); a partir de ahí quedan cacheados en local (`~/.cache/huggingface/`) y el pipeline corre offline.
+La primera ejecución de la API y del worker descarga los modelos de ML (fastembed en los dos, Docling solo en el worker) desde Hugging Face Hub (requiere red); a partir de ahí quedan cacheados en local (`~/.cache/huggingface/`) y el pipeline corre offline.
 
 ## Variables de entorno
 
@@ -238,6 +241,9 @@ La primera ejecución del backend descarga los modelos de ML de Docling y fastem
 | `APP_GEMINI_API_KEY` | `APP_` | Sí | — | API key de [Google AI Studio](https://aistudio.google.com/), usada por LiteLLM para llamar a Gemini |
 | `APP_QDRANT_URL` | `APP_` | No | `http://localhost:6333` | URL del servidor Qdrant |
 | `APP_LLM_MODEL` | `APP_` | No | `gemini/gemini-flash-lite-latest` | Identificador de modelo que recibe LiteLLM |
+| `APP_MODELO_DENSO`, `APP_DIMENSION_DENSA`, `APP_MODELO_DISPERSO`, `APP_IDIOMA_DISPERSO`, `APP_MODELO_RERANKER`, `APP_CHUNK_MAX_TOKENS` | `APP_` | No | ver `backend/.env.example` | Modelos de embeddings, reranker y troceado. API y worker deben ver los mismos valores; cambiar el modelo denso o el disperso obliga a reindexar |
+
+La lista completa, con el resto de opciones (Redis, subidas, límites de indexación), está comentada en `backend/.env.example`.
 
 ```bash
 # backend/.env
@@ -248,41 +254,49 @@ APP_LLM_MODEL=gemini/gemini-flash-lite-latest
 
 ## Uso de la API
 
-Con el servidor arrancado, hay dos endpoints. FastAPI expone además documentación interactiva automática en `/docs` (Swagger UI) y `/redoc`.
+Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
 
 ### `POST /indexar`
 
-Parsea un documento, lo trocea, genera embeddings y lo indexa en Qdrant. Espera una ruta de fichero **accesible por el proceso del servidor** — no es un endpoint de subida `multipart`, pensado para uso local por ahora.
+Encola la indexación de un fichero que ya está en disco. Espera una ruta **accesible por el proceso del worker**; para subir el fichero desde el cliente está `POST /indexar-fichero`.
 
 ```bash
 curl -X POST http://localhost:8000/indexar \
   -H "Content-Type: application/json" \
   -d '{
-        "ruta_archivo": "/ruta/absoluta/al/documento.pdf",
-        "nombre": "manual-usuario-v2"
+        "file_path": "/ruta/absoluta/al/documento.pdf",
+        "type": "pdf"
       }'
 ```
 
+Responde `202` en cuanto el trabajo está en la cola (`409` si esa ruta ya está indexada, `429` si la cola está llena):
+
 ```json
-{ "status": "indexado" }
+{ "job_id": "3f2b…", "status": "en-cola" }
 ```
 
 > El nombre del documento no se manda: se deriva de la propia ruta (`os.path.basename`), así que no hay dos fuentes de verdad que puedan discrepar.
 
 ### `POST /preguntar`
 
-Recupera los fragmentos más relevantes para la pregunta y genera una respuesta citando el documento de origen.
+Pasa la pregunta por el grafo (reformulación, búsqueda híbrida, reordenado) y genera la respuesta en streaming.
 
 ```bash
-curl -X POST http://localhost:8000/preguntar \
+curl -N -X POST http://localhost:8000/preguntar \
   -H "Content-Type: application/json" \
   -d '{ "query": "¿Qué tres propiedades no pueden garantizarse a la vez según el teorema CAP?" }'
 ```
 
-```json
-{
-  "respuesta": "Consistencia, disponibilidad y tolerancia a particiones de red [02-bases-datos-nosql.md]."
-}
+La respuesta no es JSON sino un stream SSE. Los eventos llegan en este orden: `inicio` (con el `conversacion_id`), un `paso` por cada nodo del grafo que termina, `fuentes` (los fragmentos usados, con documento, páginas y encabezados), N × `texto` (trozos incrementales de la respuesta) y, para cerrar, `fin` o `error`:
+
+```text
+data: {"tipo": "inicio", "conversacion_id": 12}
+
+data: {"tipo": "fuentes", "fuentes": [{"nombre": "02-bases-datos-nosql.md", ...}]}
+
+data: {"tipo": "texto", "texto": "Consistencia, disponibilidad y tolerancia a particiones de red."}
+
+data: {"tipo": "fin"}
 ```
 
 ## Cómo funciona el pipeline
@@ -307,25 +321,30 @@ for chunk in chunks:
 `embed_texts()` genera los vectores y hace `upsert` en Qdrant con un ID determinista, calculado a partir del propio texto del chunk. Esto hace que reindexar el mismo documento sea idempotente en lugar de duplicar datos:
 
 ```python
-def id_desde_texto(texto: str) -> str:
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS, texto))
+def id_from_text(text: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, text))
 ```
 
 ### Recuperación (`app/rag/retrieval.py`)
 
-`buscar_chunks()` embebe la pregunta con el prefijo `query:` (asimetría dense-retrieval estándar en modelos de la familia e5, que se entrenan distinguiendo `query:` de `passage:`) y llama a `qdrant.query_points()`, el método de búsqueda vigente en `qdrant-client` (sustituye al `search()` clásico, ya en desuso).
+`search_chunks()` embebe la pregunta dos veces: con el modelo denso, con el prefijo `query:` (asimetría estándar en la familia e5, que se entrena distinguiendo `query:` de `passage:`), y con BM25 para el vector disperso. Lanza las dos búsquedas en una sola llamada a `qdrant.query_points()` (20 candidatos cada una), las fusiona con RRF y pasa los candidatos a `cross_encode()`, que los reordena con el cross-encoder y se queda con los `max_fragmentos` mejores.
 
-### Generación (`app/rag/generation.py`)
+### Orquestación (`app/rag/grafo/`)
 
-`build_context()` concatena los chunks recuperados etiquetados por documento; `generate_response()` los envía a LiteLLM junto con un system prompt que obliga a citar la fuente y a admitir cuando no hay respuesta en el contexto:
+La consulta no llama a la recuperación directamente: pasa por un grafo de LangGraph que se construye una vez en el `lifespan`. Sus nodos son `reformular` (reescribe la pregunta con el historial de la conversación), `multiconsulta` (la divide en hasta 3 subconsultas si trata de temas distintos), `buscar` (una por subconsulta, en paralelo), `fusionar`, `evaluar` (decide si lo recuperado basta), `reescribir` (si no basta, cambia la consulta y vuelve a `multiconsulta`) y `construir` (arma los mensajes para el LLM). Cada nodo que termina se emite como evento SSE `paso`.
+
+### Generación (`app/rag/prompt.py`, `app/rag/streaming.py`)
+
+`build_context()` numera los fragmentos y los etiqueta con documento, página y URL; `generate_query()` monta los mensajes con el system prompt, el historial y ese contexto. `responder_stream()` los envía a LiteLLM en streaming, emite primero el evento `fuentes` y después la respuesta trozo a trozo, y la guarda en la conversación al terminar. El system prompt obliga a ceñirse al contexto y pide expresamente **no** citar en el texto, porque las fuentes se muestran aparte en la interfaz:
 
 ```python
-system_prompt = """Eres un asistente que responde preguntas basándote ÚNICAMENTE en el contexto proporcionado.
+SYSTEM_PROMPT_STREAMING = """Eres un asistente que responde preguntas basándote ÚNICAMENTE en el contexto proporcionado y en el historial de la conversación.
 
-Reglas estrictas:
-- Responde solo con información presente en el contexto. No uses conocimiento previo.
-- Si el contexto no contiene la respuesta, di exactamente: "No encuentro esa información en el documento." No inventes ni completes con lo que sepas.
-- Cita el documento del que sacas la informacion con [nombre del documento], con el formato [documento1], [documento2], etc."""
+REGLAS ESTRICTAS:
+- Responde solo con información presente en el contexto. No uses conocimiento previo ni inventes datos.
+- Si, y solo si, el contexto no contiene la respuesta, dilo explícitamente: "No encuentro esa información en los documentos."
+- Responde en prosa clara y natural, sin JSON, sin números de cita entre corchetes ni referencias a documentos: las fuentes se muestran aparte en la interfaz.
+..."""
 ```
 
 ### Decisiones de diseño
