@@ -304,8 +304,9 @@ class LLMFalso:
     error: Exception | None = None
     llamadas: list = field(default_factory=list)
 
-    def __call__(self, *, model, messages, stream=False, **_kwargs):
-        self.llamadas.append({"model": model, "messages": messages, "stream": stream})
+    def __call__(self, *, model, messages, stream=False, api_key=None, **_kwargs):
+        self.llamadas.append({"model": model, "messages": messages, "stream": stream,
+                              "api_key": api_key})
         if self.error is not None:
             raise self.error
         return iter(self.trozos)

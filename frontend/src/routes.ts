@@ -23,6 +23,16 @@ export const LEYENDA_PIE = 'RAG agéntico sobre documentos propios';
 /** Donde vive la aplicacion. Fuera del sitio: es otro arbol. */
 export const RUTA_APP = '/app';
 
+/**
+ * Parametro con el que la portada le pasa una pregunta a la aplicacion. Va en
+ * la URL porque se entra con navegacion dura: el estado de React de la portada
+ * no sobrevive al salto. La aplicacion lo lee, lo quita y la envia.
+ */
+export const PARAM_PREGUNTA = 'q';
+
+export const rutaAppConPregunta = (pregunta: string): string =>
+  `${RUTA_APP}?${new URLSearchParams({ [PARAM_PREGUNTA]: pregunta })}`;
+
 export type Ruta = {
   /** Identificador estable. No cambia aunque cambie el path. */
   id: string;

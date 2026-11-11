@@ -171,3 +171,33 @@ test('el panel de fuentes enseña score, fragmento y subconsulta', async ({ page
   // Con multiconsulta, la consulta que encontró el fragmento no es la del usuario.
   await expect(primera).toContainText('garantías del teorema CAP');
 });
+
+/**
+ * La portada entra en /app con navegacion dura, asi que su estado de React no
+ * sobrevive al salto. Se perdia la pregunta: el chat abria vacio, sin enviarla
+ * y sin dejarla en el campo.
+ */
+test('la pregunta escrita en la portada se envía sola al llegar al chat', async ({
+  page,
+}) => {
+  await page.goto('/home');
+
+  await page
+    .getByLabel('Escribe una pregunta sobre tus documentos')
+    .fill('¿Qué dice el teorema CAP?');
+  await page.getByRole('button', { name: 'Preguntar' }).click();
+
+  // Llega la respuesta en curso, y la pregunta se envía una sola vez.
+  await expect(
+    page
+      .getByLabel('Respuesta del agente')
+      .getByRole('heading', { name: 'El teorema CAP' }),
+  ).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Tu pregunta' })).toHaveCount(1);
+  await expect(page.getByRole('article', { name: 'Tu pregunta' })).toContainText(
+    'teorema CAP',
+  );
+
+  // La pregunta sale de la URL: recargar no debe volver a mandarla.
+  await expect(page).toHaveURL(/\/app$/);
+});

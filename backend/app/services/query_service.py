@@ -1,9 +1,12 @@
+import logging
 import time
 from collections.abc import Iterator
 
 from app.db.crud import conversation as conversation_crud
 from app.core.exceptions import ConversacionNoEncontrada
 from app.rag.streaming import responder_stream, traductor_evento
+
+logger = logging.getLogger(__name__)
 
 
 def obtener_o_crear_conversacion(db, conversacion_id, query):
@@ -53,7 +56,14 @@ def responder(db, query, conversacion_id, dense_embedder, sparse_embedder,
 
     conv = obtener_o_crear_conversacion(db, conversacion_id, query)
     historial = conversation_crud.obtener_ultimos_mensajes(db, conv.id, limit=6)
-    conversation_crud.anadir_mensaje(db, conv.id, rol="user", contenido=query)
+    # Reintentar una pregunta que fallo vuelve a mandar el mismo texto al
+    # mismo hilo. Si el ultimo mensaje es esa pregunta sin respuesta, se
+    # reutiliza: guardarla otra vez dejaria el hilo con la pregunta repetida,
+    # y mandarla en el historial la pondria dos veces delante del modelo.
+    if historial and historial[-1].rol == "user" and historial[-1].contenido == query:
+        historial = historial[:-1]
+    else:
+        conversation_crud.anadir_mensaje(db, conv.id, rol="user", contenido=query)
     # Se guarda el entero, no el objeto: fuera de la sesion queda desligado.
     conv_id = conv.id
 
@@ -71,26 +81,35 @@ def responder(db, query, conversacion_id, dense_embedder, sparse_embedder,
         # y el usuario miraba una pantalla quieta hasta el primer token.
         estado: dict = {}
         marca = time.perf_counter()
-        for tramo in grafo.stream(entrada, stream_mode="updates"):
-            for nodo, actualizacion in tramo.items():
-                ahora = time.perf_counter()
-                actualizacion = actualizacion or {}
-                # El estado completo se rehace a mano porque `updates` solo
-                # trae lo que cambio. Solo hacen falta dos claves, y cada una
-                # la escribe un unico nodo, asi que gana la ultima.
-                for clave in ("chunks", "messages"):
-                    if clave in actualizacion:
-                        estado[clave] = actualizacion[clave]
+        # Cualquier fallo de un nodo (el LLM de reformular o de multiconsulta,
+        # Qdrant caido...) sale como evento 'error', igual que los del modelo
+        # en responder_stream. Sin esto la excepcion cortaba la conexion a
+        # mitad y el cliente solo veia un error de red.
+        try:
+            for tramo in grafo.stream(entrada, stream_mode="updates"):
+                for nodo, actualizacion in tramo.items():
+                    ahora = time.perf_counter()
+                    actualizacion = actualizacion or {}
+                    # El estado completo se rehace a mano porque `updates`
+                    # solo trae lo que cambio. Solo hacen falta dos claves, y
+                    # cada una la escribe un unico nodo, asi que gana la ultima.
+                    for clave in ("chunks", "messages"):
+                        if clave in actualizacion:
+                            estado[clave] = actualizacion[clave]
 
-                yield traductor_evento(
-                    "paso",
-                    {
-                        "nodo": nodo,
-                        "ms": round((ahora - marca) * 1000),
-                        **datos_del_paso(nodo, actualizacion),
-                    },
-                )
-                marca = ahora
+                    yield traductor_evento(
+                        "paso",
+                        {
+                            "nodo": nodo,
+                            "ms": round((ahora - marca) * 1000),
+                            **datos_del_paso(nodo, actualizacion),
+                        },
+                    )
+                    marca = ahora
+        except Exception as e:
+            logger.exception("Fallo el grafo en la conversacion %s", conv_id)
+            yield traductor_evento("error", {"mensaje": str(e)})
+            return
 
         yield from responder_stream(
             messages=estado.get("messages", []),

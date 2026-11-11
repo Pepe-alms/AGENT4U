@@ -14,6 +14,12 @@ import { obtenerConversacion } from '@/shared/api/conversaciones';
 import type { AjustesConsulta } from '@/shared/lib/consulta';
 import { guardarHiloActivo, leerHiloActivo } from '@/shared/lib/hiloActivo';
 import type { Fuente } from '@/shared/api/types';
+import { PARAM_PREGUNTA } from '@/routes';
+
+/** La pregunta que la portada dejo en la URL, si la hay. */
+function leerPreguntaPendiente(): string | null {
+  return new URLSearchParams(window.location.search).get(PARAM_PREGUNTA)?.trim() || null;
+}
 
 export type Conversacion = {
   /** Id del hilo abierto, o null si todavia no existe en el backend. */
@@ -202,9 +208,13 @@ export function useConversacion(ajustes: AjustesConsulta): Conversacion {
   // Al arrancar se reabre el ultimo hilo, si lo habia. Si ya no existe (se
   // borro desde otra pestana) el fallo se traga: empezar en blanco es mejor
   // que recibir un error nada mas abrir la aplicacion.
+  //
+  // Si se llega desde la portada con una pregunta, no se restaura nada: la
+  // pregunta abre un hilo nuevo, y un `cargar` que llegase despues borraria
+  // la respuesta a medias.
   const yaRestaurado = useRef(false);
   useEffect(() => {
-    if (yaRestaurado.current) return;
+    if (yaRestaurado.current || leerPreguntaPendiente()) return;
     yaRestaurado.current = true;
 
     const ultimo = leerHiloActivo();
@@ -221,6 +231,29 @@ export function useConversacion(ajustes: AjustesConsulta): Conversacion {
       })
       .catch(() => guardarHiloActivo(null));
   }, []);
+
+  // La pregunta que trae la portada en la URL se envia sola al llegar.
+  //
+  // Va en un temporizador que el cleanup cancela, y la URL se limpia dentro
+  // de el y no antes: en StrictMode el efecto se monta, se desmonta y se
+  // vuelve a montar, y ese desmontaje aborta el stream (efecto de arriba).
+  // Enviando en el primer montaje, la pregunta se cortaria nada mas salir, y
+  // limpiando la URL antes, el segundo montaje ya no la encontraria.
+  useEffect(() => {
+    const pregunta = leerPreguntaPendiente();
+    if (!pregunta) return;
+
+    const temporizador = window.setTimeout(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete(PARAM_PREGUNTA);
+      // `replace`: recargar o volver atras no debe repetir la pregunta.
+      window.history.replaceState(window.history.state, '', url);
+      yaRestaurado.current = true;
+      guardarHiloActivo(null);
+      enviar(pregunta);
+    }, 0);
+    return () => window.clearTimeout(temporizador);
+  }, [enviar]);
 
   const nueva = useCallback(() => {
     control.current?.abort();

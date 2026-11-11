@@ -68,6 +68,26 @@ function conUltimoAgente(
 }
 
 /**
+ * Quita el ultimo turno si es esta misma pregunta y su respuesta fallo.
+ *
+ * Es la misma regla que aplica el backend: una pregunta que se quedo sin
+ * respuesta no se guarda dos veces, se reutiliza. Si aqui se añadiera otro par,
+ * Reintentar dejaria la pregunta repetida en pantalla y una sola vez en el hilo
+ * guardado. Solo cuenta la fase 'error': una respuesta detenida tiene texto que
+ * el usuario ya ha leido, y no se tira.
+ */
+function sinTurnoFallido(mensajes: MensajeChat[], pregunta: string): MensajeChat[] {
+  const agente = mensajes.at(-1);
+  const usuario = mensajes.at(-2);
+  const fallido =
+    agente?.rol === 'agente' &&
+    agente.fase === 'error' &&
+    usuario?.rol === 'usuario' &&
+    usuario.contenido === pregunta;
+  return fallido ? mensajes.slice(0, -2) : mensajes;
+}
+
+/**
  * Reducer puro: ninguna llamada a red, ningun temporizador, ningun acceso al
  * DOM. Toda la logica del chat vive aqui para poder probarla sin React, que es
  * donde esta el riesgo real: el orden de los eventos del stream.
@@ -81,7 +101,7 @@ export function reducirChat(estado: EstadoChat, accion: AccionChat): EstadoChat 
         error: null,
         ultimaPregunta: accion.pregunta,
         mensajes: [
-          ...estado.mensajes,
+          ...sinTurnoFallido(estado.mensajes, accion.pregunta),
           {
             id: accion.idUsuario,
             rol: 'usuario',
