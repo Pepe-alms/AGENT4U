@@ -15,7 +15,7 @@ from app.services.cola_port import ColaEnMemoria
 
 
 @pytest.fixture
-def client(session_factory, qdrant, converter, chunker,
+def client(session_factory, qdrant,
            dense_embedder, sparse_embedder, grafo, llm):
     def _get_db():
         with session_factory() as sesion:
@@ -23,8 +23,6 @@ def client(session_factory, qdrant, converter, chunker,
 
     app.dependency_overrides[get_db] = _get_db
     app.state.qdrant = qdrant
-    app.state.converter = converter
-    app.state.chunker = chunker
     app.state.dense_embedder = dense_embedder
     app.state.sparse_embedder = sparse_embedder
     app.state.cross_encoder = None
@@ -37,7 +35,7 @@ def client(session_factory, qdrant, converter, chunker,
 
 
 @pytest.fixture
-async def cliente_async(session_factory, qdrant, converter, chunker,
+async def cliente_async(session_factory, qdrant,
                         dense_embedder, sparse_embedder, grafo, llm):
     """El mismo montaje que `client`, pero sobre un event loop de verdad.
 
@@ -53,8 +51,6 @@ async def cliente_async(session_factory, qdrant, converter, chunker,
 
     app.dependency_overrides[get_db] = _get_db
     app.state.qdrant = qdrant
-    app.state.converter = converter
-    app.state.chunker = chunker
     app.state.dense_embedder = dense_embedder
     app.state.sparse_embedder = sparse_embedder
     app.state.cross_encoder = None
