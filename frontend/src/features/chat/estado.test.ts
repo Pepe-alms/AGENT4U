@@ -65,6 +65,32 @@ describe('reducirChat', () => {
     expect(e.ultimaPregunta).toBe('¿Qué es CAP?');
   });
 
+  it('reintentar una pregunta fallida sustituye el turno en vez de repetirlo', () => {
+    const otraVez: AccionChat = { ...enviar, idUsuario: 'u2', idAgente: 'a2' };
+    const e = aplicar([
+      enviar,
+      { tipo: 'inicio', conversacionId: 7 },
+      { tipo: 'errorTransporte', mensaje: 'network error' },
+      otraVez,
+      { tipo: 'errorModelo', mensaje: 'Missing Gemini API key' },
+      { ...enviar, idUsuario: 'u3', idAgente: 'a3' },
+    ]);
+
+    // Un solo par, el del último intento: así lo guarda también el backend.
+    expect(e.mensajes.map((m) => m.id)).toEqual(['u3', 'a3']);
+    expect(e.mensajes[1]!.fase).toBe('escribiendo');
+  });
+
+  it('repetir una pregunta que sí se respondió añade un turno nuevo', () => {
+    const e = aplicar([
+      enviar,
+      { tipo: 'fin' },
+      { ...enviar, idUsuario: 'u2', idAgente: 'a2' },
+    ]);
+
+    expect(e.mensajes.map((m) => m.id)).toEqual(['u1', 'a1', 'u2', 'a2']);
+  });
+
   it('marca como detenida la respuesta con texto y explica la que no lo tiene', () => {
     const conTexto = aplicar([
       enviar,

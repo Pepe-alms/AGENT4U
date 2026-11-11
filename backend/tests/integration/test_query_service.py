@@ -154,3 +154,63 @@ def test_cada_nodo_emite_un_paso_con_sus_cifras(db, grafo_con_pasos, llm, parsea
     assert pasos[3] == {**pasos[3], "score": 4.5, "pobre": False}
     # 'construir' no aporta cifras: solo el nodo y el tiempo.
     assert set(pasos[4]) == {"tipo", "nodo", "ms"}
+
+
+class GrafoQueFalla:
+    """Grafo que termina un nodo y revienta en el siguiente, como cuando el LLM
+    de `reformular` o `multiconsulta` no responde."""
+
+    def stream(self, estado: dict, stream_mode: str = "values"):
+        yield {"reformular": {"query": estado["query"]}}
+        raise RuntimeError("Missing Gemini API key")
+
+
+def test_si_falla_un_nodo_del_grafo_se_emite_error_y_el_stream_se_cierra(db, llm, parsear_sse):
+    """Antes la excepcion cortaba la conexion a mitad y el cliente solo veia
+    un error de red. Ahora llega como evento, igual que los fallos del modelo."""
+    eventos = parsear_sse(list(preguntar(db, GrafoQueFalla())))
+
+    assert [e["tipo"] for e in eventos] == ["inicio", "paso", "error"]
+    assert "Missing Gemini API key" in eventos[-1]["mensaje"]
+    # Sin estado del grafo no se llega a llamar al modelo final.
+    assert llm.llamadas == []
+
+    conv = conversation_crud.listar_conversaciones(db, usuario="local")[0]
+    mensajes = conversation_crud.obtener_ultimos_mensajes(db, conv.id)
+    assert [m.rol for m in mensajes] == ["user"]
+
+
+def test_reintentar_una_pregunta_fallida_no_la_guarda_dos_veces(db, grafo, llm, parsear_sse):
+    eventos = parsear_sse(list(preguntar(db, GrafoQueFalla())))
+    conv_id = eventos[0]["conversacion_id"]
+
+    list(preguntar(db, grafo, conversacion_id=conv_id))
+
+    mensajes = conversation_crud.obtener_ultimos_mensajes(db, conv_id)
+    assert [m.rol for m in mensajes] == ["user", "assistant"]
+    # La pregunta pendiente no viaja en el historial: ya va como pregunta.
+    assert grafo.estados_recibidos[0]["historial"] == []
+
+
+def test_repetir_una_pregunta_ya_respondida_si_se_guarda(db, grafo, llm):
+    """Solo se reutiliza la pregunta que se quedo sin respuesta. Volver a
+    preguntar lo mismo despues de una respuesta es un turno nuevo."""
+    conv = conversation_crud.crear_conversacion(db, titulo="Hilo", usuario="local")
+    conversation_crud.anadir_mensaje(db, conv.id, rol="user", contenido="¿Que es el teorema CAP?")
+    conversation_crud.anadir_mensaje(db, conv.id, rol="assistant", contenido="Un teorema.")
+
+    list(preguntar(db, grafo, conversacion_id=conv.id))
+
+    mensajes = conversation_crud.obtener_ultimos_mensajes(db, conv.id)
+    assert [m.rol for m in mensajes] == ["user", "assistant", "user", "assistant"]
+
+
+def test_al_llm_se_le_pasa_la_clave_de_la_configuracion(db, grafo, llm, monkeypatch):
+    """LiteLLM solo mira GEMINI_API_KEY en el entorno; la clave de Settings
+    (APP_GEMINI_API_KEY) no le llegaba y en Docker no habia otra."""
+    from app.core.config import get_settings
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "clave-de-prueba")
+
+    list(preguntar(db, grafo))
+
+    assert llm.llamadas[0]["api_key"] == "clave-de-prueba"

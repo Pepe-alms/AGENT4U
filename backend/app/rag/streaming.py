@@ -1,6 +1,7 @@
 import json
 from collections.abc import Iterator
 import litellm
+from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.db.crud import conversation as conversation_crud
 
@@ -50,6 +51,7 @@ def responder_stream(messages: list[dict],
         try:
             stream = litellm.completion(
                 model=model,
+                api_key=get_settings().gemini_api_key,
                 messages=messages,
                 stream=True,
             )

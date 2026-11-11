@@ -3,6 +3,7 @@ import json
 
 import litellm
 
+from app.core.config import get_settings
 from app.rag.prompt import prompt_multiconsulta, prompt_reescribir, prompt_reformular
 
 
@@ -12,6 +13,7 @@ def reformular_consulta(query: str, historial: list, model: str) -> str:
 
     raw_response = litellm.completion(
         model=model,
+        api_key=get_settings().gemini_api_key,
         messages=[{"role": "user", "content": prompt_reformular(query, historial)}]
     )
 
@@ -21,6 +23,7 @@ def reformular_consulta(query: str, historial: list, model: str) -> str:
 def reescribir_consulta(consulta: str, model: str) -> str:
     respuesta = litellm.completion(
         model=model,
+        api_key=get_settings().gemini_api_key,
         messages=prompt_reescribir(consulta),
     )
     return respuesta.choices[0].message.content.strip()
@@ -29,6 +32,7 @@ def reescribir_consulta(consulta: str, model: str) -> str:
 def descomponer_consulta(consulta: str, model: str) -> list[str]:
     respuesta = litellm.completion(
         model=model,
+        api_key=get_settings().gemini_api_key,
         messages=prompt_multiconsulta(consulta),
     )
     try:
