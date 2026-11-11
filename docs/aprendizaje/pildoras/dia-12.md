@@ -20,7 +20,7 @@ Vite tiene dos caras, y confundirlas es el origen de la mitad de los "en mi máq
 
 | | `npm run dev` (`vite`) | `npm run build` (`tsc -b && vite build`) |
 |---|---|---|
-| Qué produce | Nada en disco. Un servidor en `:5173`. | La carpeta `dist/`: `index.html` + `assets/*.js|css|woff2` con hash. |
+| Qué produce | Nada en disco. Un servidor en `:5173`. | La carpeta `dist/`: `index.html` + `assets/*.{js,css,woff2}` con hash. |
 | Cómo sirve el código | **Un módulo por fichero**, tal cual lo pide el navegador con `import`. Vite transforma cada `.tsx` a JS al vuelo (quita tipos y JSX) y reescribe los `import` (`@/x` → `/src/x.ts`). | **Empaqueta**: junta los módulos en *chunks*, minifica, parte por `import()` dinámicos y añade hash al nombre. |
 | Tipos | **No los comprueba.** Solo los borra. Un error de tipos no impide que la página cargue. | `tsc -b` **sí** los comprueba antes, y si falla no hay build. |
 | `import.meta.env` | Inyecta un objeto al principio de cada módulo que lo usa. | **Sustituye el texto** por el valor literal. Queda "cocinado" dentro del JS. |
