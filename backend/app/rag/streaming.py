@@ -23,7 +23,7 @@ def fuente_desde_chunk(c: dict) -> dict:
     """
     return {
         "nombre": c["nombre"],
-        "origen": c.get("origen", "") or c.get("url", "") or "",
+        "origen": c.get("origen") or "",
         "headings": c.get("headings", []),
         "paginas": c.get("paginas", []),
         "texto": c.get("chunk", ""),

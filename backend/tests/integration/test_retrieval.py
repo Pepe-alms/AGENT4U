@@ -33,6 +33,8 @@ def test_cada_fragmento_trae_su_origen_y_su_documento_id(dense_embedder, sparse_
         ("b.pdf", "/docs/b.pdf", 2),
         ("a.pdf", "/docs/a.pdf", 1),
     ]
+    # Ninguna indexacion escribe `url`: el origen ya es la ruta o la URL.
+    assert all("url" not in c for c in resultado)
 
 
 def test_un_punto_indexado_antes_de_documento_id_no_rompe_la_busqueda(

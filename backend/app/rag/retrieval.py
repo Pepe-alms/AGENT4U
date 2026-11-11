@@ -3,7 +3,7 @@ from qdrant_client import models
 from app.rag.vectorization import COLLECTION_NAME
 
 
-def cross_encode(query: str, documents: list[str], cross_encoder, files: list[str], pages: list[list[str]], urls: list[str], headings: list[list[str]] | None = None, max_fragmentos: int = 10, origenes: list[str] | None = None, documento_ids: list[int | None] | None = None) -> list[dict]:
+def cross_encode(query: str, documents: list[str], cross_encoder, files: list[str], pages: list[list[str]], headings: list[list[str]] | None = None, max_fragmentos: int = 10, origenes: list[str] | None = None, documento_ids: list[int | None] | None = None) -> list[dict]:
     scores = list(cross_encoder.rerank(query=query, documents=documents))
     # Si el llamante no pasa titulos de seccion, se rellena con listas vacias
     # para que el zip no acorte el resto de columnas.
@@ -11,7 +11,7 @@ def cross_encode(query: str, documents: list[str], cross_encoder, files: list[st
     origenes = origenes if origenes is not None else ["" for _ in documents]
     documento_ids = documento_ids if documento_ids is not None else [None for _ in documents]
     ranked = sorted(
-        zip(documents, scores, files, pages, urls, headings, origenes, documento_ids),
+        zip(documents, scores, files, pages, headings, origenes, documento_ids),
         key=lambda x: x[1],
         reverse=True,
     )
@@ -19,7 +19,7 @@ def cross_encode(query: str, documents: list[str], cross_encoder, files: list[st
 
     # Cuantos fragmentos llegan al modelo. Lo decide quien llama, que a su
     # vez lo recibe de POST /preguntar.
-    for doc, score, file, page, url, heading, origen, documento_id in ranked[:max_fragmentos]:
+    for doc, score, file, page, heading, origen, documento_id in ranked[:max_fragmentos]:
         ranked_results.append(
             {
             "chunk": doc,
@@ -27,7 +27,6 @@ def cross_encode(query: str, documents: list[str], cross_encoder, files: list[st
             "origen": origen,
             "documento_id": documento_id,
             "paginas": page,
-            "url": url,
             "headings": heading,
             "score": float(score),
             }
@@ -67,7 +66,6 @@ def search_chunks (query: str, dense_embedder, sparse_embedder, qdrant, cross_en
                                  documents=[result.payload["texto"] for result in query_result],
                                  files=[result.payload["nombre"] for result in query_result],
                                  pages=[result.payload.get("paginas", []) for result in query_result],
-                                 urls=[result.payload.get("url") for result in query_result],
                                  # Se indexa en vectorization.py pero hasta ahora
                                  # no se recuperaba, asi que la seccion que
                                  # enseña el frontend salia siempre vacia.
