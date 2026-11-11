@@ -11,7 +11,7 @@ tests/
     test_prompt.py         -> app/rag/prompt.py
     test_grafo_nodes.py    -> app/rag/grafo/grafo_nodes.py
   integration/       servicios contra SQLite en memoria y dobles
-    test_indexation_service.py -> app/services/indexation_service.py
+    test_indexacion.py         -> app/services/indexacion.py
     test_query_service.py      -> app/services/query_service.py
     test_document_service.py   -> app/services/document_service.py
   api/               endpoints con el TestClient de FastAPI

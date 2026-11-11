@@ -1,5 +1,6 @@
-import uuid
 import datetime
+import hashlib
+import uuid
 from qdrant_client.models import PointStruct, VectorParams, Distance, SparseVectorParams, models
 
 from app.core.config import get_settings
@@ -7,10 +8,23 @@ from app.core.config import get_settings
 COLLECTION_NAME = get_settings().qdrant_collection
 
 
-def id_from_text(text: str) -> str:
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS, text))
+def id_punto(documento_id: int, orden: int) -> str:
+    """Id determinista del fragmento `orden` del documento `documento_id`.
 
-def normalize_text(file_path: str, converter, chunker, name: str, type: str):
+    Antes era uuid5 sobre el texto, y dos documentos con un fragmento identico
+    compartian punto: el segundo pisaba al primero. Sobre (documento, posicion)
+    cada documento tiene sus puntos, y reindexar el mismo documento los
+    sobrescribe en vez de duplicarlos.
+    """
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{documento_id}:{orden}"))
+
+
+def hash_texto(texto: str) -> str:
+    return hashlib.sha256(texto.encode("utf-8")).hexdigest()
+
+
+def normalize_text(file_path: str, converter, chunker, name: str, type: str,
+                   documento_id: int):
     converted_document = converter.convert(file_path)
     chunks = chunker.chunk(dl_doc=converted_document.document)
 
@@ -35,6 +49,11 @@ def normalize_text(file_path: str, converter, chunker, name: str, type: str):
         ))
 
         records.append({
+            "documento_id": documento_id,
+            # Posicion entre los fragmentos que se guardan, no entre los que
+            # devuelve el chunker: asi va de 0 a N-1 sin huecos.
+            "orden": len(records),
+            "hash_texto": hash_texto(chunk.text),
             "texto": text,
             "nombre": name,
             "origen": file_path,
@@ -67,11 +86,23 @@ def asegurar_coleccion(qdrant) -> None:
             "sparse_vector": SparseVectorParams(modifier=models.Modifier.IDF)
         },
     )
+    # Sin indice, filtrar por documento_id (borrar un documento) recorre la
+    # coleccion entera. hash_texto es para encontrar fragmentos repetidos.
+    qdrant.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="documento_id",
+        field_schema=models.PayloadSchemaType.INTEGER,
+    )
+    qdrant.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="hash_texto",
+        field_schema=models.PayloadSchemaType.KEYWORD,
+    )
 
 
 def _punto(record: dict, denso, disperso) -> PointStruct:
     return PointStruct(
-        id=id_from_text(record["texto"]),
+        id=id_punto(record["documento_id"], record["orden"]),
         vector={
             "dense_vector": denso.tolist(),
             "sparse_vector": models.SparseVector(
@@ -120,9 +151,13 @@ def embed_texts(chunks: list, dense_embedder, sparse_embedder, qdrant, records: 
         qdrant.upsert(collection_name=COLLECTION_NAME, points=lote)
 
 
-def borrar_por_origen(qdrant, origen: str) -> bool:
-    """Borra los puntos cuyo campo 'origen' o 'nombre' coincida. Devuelve False
-    si la coleccion no existe o si el borrado falla, True en caso contrario."""
+def borrar_por_documento(qdrant, documento_id: int) -> bool:
+    """Borra los puntos de un documento. Devuelve False si la coleccion no
+    existe o si el borrado falla, True en caso contrario.
+
+    Filtra por documento_id y no por nombre ni por origen: dos ficheros con el
+    mismo nombre en rutas distintas son documentos distintos.
+    """
     try:
         if not qdrant.collection_exists(collection_name=COLLECTION_NAME):
             return False
@@ -130,14 +165,10 @@ def borrar_por_origen(qdrant, origen: str) -> bool:
             collection_name=COLLECTION_NAME,
             points_selector=models.FilterSelector(
                 filter=models.Filter(
-                    should=[
+                    must=[
                         models.FieldCondition(
-                            key="origen",
-                            match=models.MatchValue(value=origen),
-                        ),
-                        models.FieldCondition(
-                            key="nombre",
-                            match=models.MatchValue(value=origen),
+                            key="documento_id",
+                            match=models.MatchValue(value=documento_id),
                         ),
                     ],
                 )
@@ -145,5 +176,5 @@ def borrar_por_origen(qdrant, origen: str) -> bool:
         )
         return True
     except Exception as e:
-        print(f"Error al borrar por origen: {e}")
+        print(f"Error al borrar el documento {documento_id}: {e}")
         return False

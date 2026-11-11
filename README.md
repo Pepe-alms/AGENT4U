@@ -37,7 +37,7 @@ El proyecto tiene tres piezas: un backend FastAPI + Qdrant + Redis/ARQ, un gatew
 - **Filtrado de ruido**: descarta chunks que son solo cabecera/pie de página o demasiado cortos para aportar contexto.
 - **Recuperación híbrida**: vector denso multilingüe (`multilingual-e5-large`, 1024 dimensiones, distancia coseno) y vector disperso BM25 (`Qdrant/bm25`) sobre Qdrant, fusionados con RRF y reordenados con un cross-encoder (`jina-reranker-v2-base-multilingual`). Los nombres de los modelos se configuran en un único sitio, `app/core/config.py`.
 - **Payload enriquecido por chunk**: documento de origen, páginas, encabezados y fecha de indexación — es lo que la interfaz muestra como fuentes de cada respuesta.
-- **Ingesta idempotente**: los IDs son deterministas (`uuid5` sobre el texto del chunk), así que reindexar el mismo documento no duplica datos.
+- **Ingesta idempotente**: los IDs son deterministas (`uuid5` sobre el id del documento y la posición del fragmento), así que reindexar el mismo documento no duplica datos, y dos documentos con un fragmento idéntico no comparten punto.
 - **Grafo de consulta con [LangGraph](https://langchain-ai.github.io/langgraph/)** (`app/rag/grafo/`): reformula la pregunta con el historial, la descompone en subconsultas si trata de varios temas, busca cada una, fusiona los resultados, evalúa si bastan y, si no, reescribe la consulta y vuelve a buscar.
 - **Generación en streaming** vía [LiteLLM](https://docs.litellm.ai/) (Gemini Flash Lite por defecto, intercambiable por otro proveedor sin tocar código) con un system prompt que prohíbe salirse del contexto recuperado y pide **no** citar dentro del texto: las fuentes se envían aparte (evento SSE `fuentes`) y la interfaz las muestra junto a la respuesta.
 - **Sets de preguntas de evaluación**: 25 preguntas fijas de 5 tipos distintos, contra un corpus de prueba de 11 documentos. El arnés que las puntuaba no está hoy en el repositorio (ver [Evaluación del sistema](#evaluación-del-sistema)).
@@ -128,7 +128,7 @@ Agent4U/
 │   │   │   ├── generation.py      # reformular, reescribir y descomponer la consulta con el LLM
 │   │   │   ├── prompt.py          # las plantillas y la construcción del contexto
 │   │   │   └── streaming.py       # traducción a eventos SSE y persistencia de la respuesta
-│   │   ├── services/              # orquestación: consulta, documentos y cola de indexación (más la indexación síncrona que usan los scripts de evaluación)
+│   │   ├── services/              # orquestación: consulta, documentos, cola de indexación y la función única de indexación (worker y scripts)
 │   │   └── worker/                # proceso ARQ aparte: recoge trabajos de Redis y los indexa
 │   ├── tests/
 │   │   ├── unit/ integration/ api/  # la suite de pytest, espejo de los módulos que cubre
@@ -318,11 +318,11 @@ for chunk in chunks:
         continue  # demasiado corto para aportar contexto util
 ```
 
-`embed_texts()` genera los vectores y hace `upsert` en Qdrant con un ID determinista, calculado a partir del propio texto del chunk. Esto hace que reindexar el mismo documento sea idempotente en lugar de duplicar datos:
+`embed_texts()` genera los vectores y hace `upsert` en Qdrant con un ID determinista, calculado a partir del documento (`documento_id`, el id de su fila en SQLite) y de la posición del fragmento dentro de él (`orden`). Reindexar el mismo documento sobrescribe sus puntos en vez de duplicarlos, y dos documentos con un fragmento idéntico conservan cada uno el suyo. El payload lleva además `hash_texto` (SHA-256 del texto crudo), y los puntos de un documento se borran filtrando por `documento_id`, no por nombre:
 
 ```python
-def id_from_text(text: str) -> str:
-    return str(uuid.uuid5(uuid.NAMESPACE_DNS, text))
+def id_punto(documento_id: int, orden: int) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{documento_id}:{orden}"))
 ```
 
 ### Recuperación (`app/rag/retrieval.py`)

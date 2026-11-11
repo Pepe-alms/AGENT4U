@@ -20,12 +20,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
-from app.core.exceptions import DocumentoYaExiste, FalloIngesta
+from app.core.exceptions import DocumentoYaExiste
 from app.db.session import SessionLocal, crear_esquema
 from app.rag.modelos import (
     crear_chunker, crear_converter, crear_embedder_denso, crear_embedder_disperso,
 )
-from app.services.indexation_service import indexar_documento
+from app.services.indexacion import indexar_documento, registrar_documento
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 EXTENSIONES = {".md", ".pdf", ".docx", ".html", ".txt"}
@@ -68,23 +68,27 @@ def main(nombres: list[str]) -> None:
                 fallidos.append(ruta.name)
                 continue
             try:
-                resultado = indexar_documento(
-                    db=db,
+                doc_id = registrar_documento(
+                    db, str(ruta), ruta.name,
+                    ruta.suffix.lstrip(".").lower(), ruta.stat().st_size,
+                )
+            except DocumentoYaExiste:
+                print("    ya estaba indexado, se omite")
+                omitidos += 1
+                continue
+            try:
+                num_chunks = indexar_documento(
+                    doc_id,
                     file_path=str(ruta),
                     converter=converter,
                     chunker=chunker,
                     dense_embedder=dense_embedder,
                     sparse_embedder=sparse_embedder,
                     qdrant=qdrant,
-                    size=ruta.stat().st_size,
-                    type=ruta.suffix.lstrip(".").lower(),
                 )
-                print(f"    OK: {resultado}")
+                print(f"    OK: {num_chunks} fragmentos")
                 indexados += 1
-            except DocumentoYaExiste:
-                print("    ya estaba indexado, se omite")
-                omitidos += 1
-            except FalloIngesta as e:
+            except Exception as e:
                 print(f"    ERROR: {e}")
                 fallidos.append(ruta.name)
 

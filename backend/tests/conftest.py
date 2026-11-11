@@ -91,7 +91,7 @@ def nunca_la_base_de_datos_real(monkeypatch, session_factory):
     Autouse a proposito: que no dependa de que cada test se acuerde de pedirlo.
     """
     import app.rag.streaming as streaming
-    import app.services.indexation_service as indexacion
+    import app.services.indexacion as indexacion
     import app.services.cola_arq as cola_arq
     import app.worker.jobs as worker_jobs
 
@@ -140,6 +140,7 @@ class FakeQdrant:
         self.colecciones_creadas: list[str] = []
         self.borrados: list[str] = []
         self.filtros_borrado: list = []
+        self.indices_payload: list[str] = []
 
     def collection_exists(self, collection_name: str) -> bool:
         return self.coleccion_existe
@@ -147,6 +148,9 @@ class FakeQdrant:
     def create_collection(self, collection_name: str, **_kwargs) -> None:
         self.coleccion_existe = True
         self.colecciones_creadas.append(collection_name)
+
+    def create_payload_index(self, collection_name: str, field_name: str, **_kwargs) -> None:
+        self.indices_payload.append(field_name)
 
     def upsert(self, collection_name: str, points: list) -> None:
         if self.fallar_upsert:

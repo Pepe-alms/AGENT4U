@@ -3,6 +3,7 @@ from typing import Annotated
 from sqlalchemy.orm import Session
 
 from app.api.schemas import DocumentoEliminadoOut, ErrorOut, ListaDocumentosOut
+from app.core.exceptions import NombreAmbiguo
 from app.db.session import get_db
 from app.services import document_service
 
@@ -36,9 +37,11 @@ def listar(db: Annotated[Session, Depends(get_db)]):
     summary="Eliminar un documento",
     description="Borra los vectores del documento en Qdrant y despues su fila. "
                 "El parametro es el NOMBRE del documento (campo 'name'), no su "
-                "id. Atencion: un 200 no garantiza el borrado; hay que mirar el "
-                "campo 'status' de la respuesta.",
+                "id. Si hay varios documentos con ese nombre responde 409 y no "
+                "borra ninguno. Atencion: un 200 no garantiza el borrado; hay "
+                "que mirar el campo 'status' de la respuesta.",
     responses={404: {"model": ErrorOut, "description": "Documento no encontrado."},
+               409: {"model": ErrorOut, "description": "Varios documentos con ese nombre."},
                500: {"model": ErrorOut, "description": "Error interno del servidor."}}
 )
 def eliminar(
@@ -48,6 +51,8 @@ def eliminar(
 ):
     try:
         resultado = document_service.eliminar_documento(db, qdrant=request.app.state.qdrant, nombre=documento)
+    except NombreAmbiguo as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
