@@ -68,7 +68,7 @@ async def test_job_limpia_vectores_antes_de_empezar(
     db, doc_encolado, job_id,
     converter, chunker, dense_embedder, sparse_embedder, qdrant,
 ):
-    """Idempotencia: borrar_por_origen se llama ANTES de vectorizar."""
+    """Idempotencia: los puntos del documento se borran ANTES de vectorizar."""
     ctx = _ctx(converter, chunker, dense_embedder, sparse_embedder, qdrant)
 
     await indexar_job(ctx, job_id, "/docs/manual.pdf", "pdf", 100)
@@ -82,7 +82,7 @@ async def test_job_con_documento_borrado_sale_limpio(
     converter, chunker, dense_embedder, sparse_embedder, qdrant,
 ):
     """Si el usuario borro el documento mientras estaba en cola, el job no revienta."""
-    document_crud.eliminar_documento(db, "manual.pdf")
+    document_crud.eliminar_documento(db, doc_encolado)
 
     ctx = _ctx(converter, chunker, dense_embedder, sparse_embedder, qdrant)
     await indexar_job(ctx, job_id, "/docs/manual.pdf", "pdf", 100)

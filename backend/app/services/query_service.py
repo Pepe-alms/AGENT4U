@@ -43,6 +43,41 @@ def datos_del_paso(nodo: str, actualizacion: dict) -> dict:
     return {}
 
 
+def pasos_del_grafo(grafo, entrada: dict, estado: dict) -> Iterator[str]:
+    """Ejecuta el grafo y emite un evento 'paso' por cada nodo que termina.
+
+    Rellena `estado` con lo que necesita `responder_stream` (los fragmentos y
+    los mensajes). Las excepciones de los nodos se propagan: decidir que hacer
+    con ellas es cosa de quien llama.
+
+    `updates` entrega el nombre del nodo que acaba de terminar junto con lo
+    que escribio en el estado. Es lo unico que permite contar el tiempo de
+    cada paso: con `invoke` el grafo entero era una caja negra y el usuario
+    miraba una pantalla quieta hasta el primer token.
+    """
+    marca = time.perf_counter()
+    for tramo in grafo.stream(entrada, stream_mode="updates"):
+        for nodo, actualizacion in tramo.items():
+            ahora = time.perf_counter()
+            actualizacion = actualizacion or {}
+            # El estado completo se rehace a mano porque `updates` solo trae lo
+            # que cambio. Solo hacen falta dos claves, y cada una la escribe un
+            # unico nodo, asi que gana la ultima.
+            for clave in ("chunks", "messages"):
+                if clave in actualizacion:
+                    estado[clave] = actualizacion[clave]
+
+            yield traductor_evento(
+                "paso",
+                {
+                    "nodo": nodo,
+                    "ms": round((ahora - marca) * 1000),
+                    **datos_del_paso(nodo, actualizacion),
+                },
+            )
+            marca = ahora
+
+
 def responder(db, query, conversacion_id, dense_embedder, sparse_embedder,
               cross_encoder, qdrant, model, grafo,
               max_fragmentos: int | None = None) -> Iterator[str]:
@@ -75,37 +110,13 @@ def responder(db, query, conversacion_id, dense_embedder, sparse_embedder,
     def generar() -> Iterator[str]:
         yield traductor_evento("inicio", {"conversacion_id": conv_id})
 
-        # `updates` entrega el nombre del nodo que acaba de terminar junto con
-        # lo que escribio en el estado. Es lo unico que permite contar el
-        # tiempo de cada paso: con `invoke` el grafo entero era una caja negra
-        # y el usuario miraba una pantalla quieta hasta el primer token.
         estado: dict = {}
-        marca = time.perf_counter()
         # Cualquier fallo de un nodo (el LLM de reformular o de multiconsulta,
         # Qdrant caido...) sale como evento 'error', igual que los del modelo
         # en responder_stream. Sin esto la excepcion cortaba la conexion a
         # mitad y el cliente solo veia un error de red.
         try:
-            for tramo in grafo.stream(entrada, stream_mode="updates"):
-                for nodo, actualizacion in tramo.items():
-                    ahora = time.perf_counter()
-                    actualizacion = actualizacion or {}
-                    # El estado completo se rehace a mano porque `updates`
-                    # solo trae lo que cambio. Solo hacen falta dos claves, y
-                    # cada una la escribe un unico nodo, asi que gana la ultima.
-                    for clave in ("chunks", "messages"):
-                        if clave in actualizacion:
-                            estado[clave] = actualizacion[clave]
-
-                    yield traductor_evento(
-                        "paso",
-                        {
-                            "nodo": nodo,
-                            "ms": round((ahora - marca) * 1000),
-                            **datos_del_paso(nodo, actualizacion),
-                        },
-                    )
-                    marca = ahora
+            yield from pasos_del_grafo(grafo, entrada, estado)
         except Exception as e:
             logger.exception("Fallo el grafo en la conversacion %s", conv_id)
             yield traductor_evento("error", {"mensaje": str(e)})

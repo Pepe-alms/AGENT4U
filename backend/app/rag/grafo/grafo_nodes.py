@@ -1,5 +1,6 @@
 from typing import Annotated, TypedDict
 from langgraph.types import Send
+from app.core.config import get_settings
 from app.rag.generation import reformular_consulta, reescribir_consulta, descomponer_consulta
 from app.rag.retrieval import search_chunks
 from app.rag.prompt import generate_query
@@ -35,9 +36,14 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
         }
 
     def repartir(estado:EstadoRAG):
+        # Cada Send arranca la rama solo con lo que se le pasa, no con el
+        # estado entero: si max_fragmentos no va aqui, buscar no lo ve.
+        extra = {}
+        if estado.get("max_fragmentos") is not None:
+            extra["max_fragmentos"] = estado["max_fragmentos"]
         return [Send(
-            "buscar", 
-            {"consulta_busqueda": subconsulta}) 
+            "buscar",
+            {"consulta_busqueda": subconsulta, **extra})
             for subconsulta in estado["subconsultas"]]
 
     def nodo_reformular(estado: EstadoRAG):
@@ -59,7 +65,7 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
             sparse_embedder,
             qdrant,
             cross_encoder,
-            max_fragmentos=estado.get("max_fragmentos", 10),
+            max_fragmentos=estado.get("max_fragmentos") or get_settings().max_fragmentos_defecto,
         )
         for c in chunks:
             c["subconsulta"] = consulta
@@ -113,7 +119,9 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
         for c in chunks:
             por_rama.setdefault(c.get("subconsulta", ""), []).append(c)
 
-        presupuesto = 9
+        # Lo que pidio el cliente en POST /preguntar o, si no pidio nada, el
+        # valor por defecto del servidor.
+        presupuesto = estado.get("max_fragmentos") or get_settings().max_fragmentos_defecto
         cuota = max(1, presupuesto // len(por_rama))
 
         seleccionados: list[dict] = []
@@ -130,7 +138,9 @@ def crear_nodos(dense_embedder, sparse_embedder, qdrant, cross_encoder, model):
             vistos.add(clave)
             finales.append(c)
 
-        return {"chunks": finales}
+        # Con mas ramas que presupuesto, la cuota minima de uno por rama se
+        # pasaria del total: se recorta a los mejores.
+        return {"chunks": finales[:presupuesto]}
 
     return {
         "repartir": repartir,

@@ -4,6 +4,9 @@ El borrado toca dos sistemas (Qdrant y la base de datos) y el orden importa:
 primero los vectores, y solo si eso sale bien la fila. Estos tests fijan esa
 invariante, que es la que evita quedarse con vectores huerfanos.
 """
+import pytest
+
+from app.core.exceptions import NombreAmbiguo
 from app.db.crud import document as document_crud
 from app.rag.vectorization import COLLECTION_NAME
 from app.services import document_service
@@ -60,13 +63,21 @@ def test_si_la_coleccion_no_existe_tampoco_se_borra_la_fila(db, qdrant_sin_colec
     assert len(document_service.listar_documentos(db)) == 1
 
 
-def test_el_borrado_busca_por_nombre_y_por_origen(db, qdrant):
-    crear_doc(db)
+def test_el_borrado_filtra_por_documento_id(db, qdrant):
+    doc = crear_doc(db)
 
     document_service.eliminar_documento(db, qdrant=qdrant, nombre="manual.pdf")
 
-    condiciones = qdrant.filtros_borrado[0].filter.should
-    claves = {c.key for c in condiciones}
-    valores = {c.match.value for c in condiciones}
-    assert claves == {"origen", "nombre"}
-    assert valores == {"manual.pdf"}
+    condiciones = qdrant.filtros_borrado[0].filter.must
+    assert [(c.key, c.match.value) for c in condiciones] == [("documento_id", doc.id)]
+
+
+def test_un_nombre_repetido_lanza_nombre_ambiguo_y_no_borra_nada(db, qdrant):
+    crear_doc(db, "/docs/a/manual.pdf", "manual.pdf")
+    crear_doc(db, "/docs/b/manual.pdf", "manual.pdf")
+
+    with pytest.raises(NombreAmbiguo):
+        document_service.eliminar_documento(db, qdrant=qdrant, nombre="manual.pdf")
+
+    assert qdrant.borrados == []
+    assert len(document_service.listar_documentos(db)) == 2

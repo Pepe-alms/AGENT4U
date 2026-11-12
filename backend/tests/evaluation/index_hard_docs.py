@@ -24,7 +24,7 @@ from app.db.session import SessionLocal, crear_esquema
 from app.rag.modelos import (
     crear_chunker, crear_converter, crear_embedder_denso, crear_embedder_disperso,
 )
-from app.services.indexation_service import indexar_documento
+from app.services.indexacion import indexar_documento, registrar_documento
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DOCUMENTOS = ["18-replicacion-particionado.md", "19-resiliencia-microservicios.md"]
@@ -45,21 +45,22 @@ def main() -> None:
             file_path = str(DATA_DIR / nombre)
             print(f"Indexando {nombre}...")
             try:
-                resultado = indexar_documento(
-                    db=db,
-                    file_path=file_path,
-                    converter=converter,
-                    chunker=chunker,
-                    dense_embedder=dense_embedder,
-                    sparse_embedder=sparse_embedder,
-                    qdrant=qdrant,
-                    size=Path(file_path).stat().st_size,
-                    type="md",
+                doc_id = registrar_documento(
+                    db, file_path, nombre, "md", Path(file_path).stat().st_size,
                 )
-                print(f"    OK: {resultado}")
             except DocumentoYaExiste:
                 print("    ya estaba indexado, se omite")
-
+                continue
+            num_chunks = indexar_documento(
+                doc_id,
+                file_path=file_path,
+                converter=converter,
+                chunker=chunker,
+                dense_embedder=dense_embedder,
+                sparse_embedder=sparse_embedder,
+                qdrant=qdrant,
+            )
+            print(f"    OK: {num_chunks} fragmentos")
 
 if __name__ == "__main__":
     main()

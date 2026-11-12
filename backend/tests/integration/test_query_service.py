@@ -101,6 +101,7 @@ def test_al_consumir_el_stream_se_emiten_los_eventos_y_se_persiste_la_respuesta(
         "texto": "CAP dice que...",
         "score": 0.9,
         "subconsulta": "",
+        "documento_id": 3,
     }]
 
     conv = conversation_crud.listar_conversaciones(db, usuario="local")[0]

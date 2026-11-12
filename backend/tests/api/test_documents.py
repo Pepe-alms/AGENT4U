@@ -40,3 +40,13 @@ def test_si_falla_qdrant_responde_200_avisando_del_fallo(client, db, qdrant):
 
     assert respuesta.status_code == 200
     assert respuesta.json()["status"] == "fallo en el borrado"
+
+
+def test_un_nombre_repetido_responde_409_y_no_borra_ninguno(client, db):
+    document_crud.crear_documento(db, "/docs/x/a.pdf", "a.pdf", "pdf", 10)
+    document_crud.crear_documento(db, "/docs/y/a.pdf", "a.pdf", "pdf", 10)
+
+    respuesta = client.delete("/documentos/a.pdf")
+
+    assert respuesta.status_code == 409
+    assert len(document_crud.listar_documentos(db)) == 2
