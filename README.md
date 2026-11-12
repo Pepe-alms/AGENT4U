@@ -152,7 +152,7 @@ Agent4U/
 │   │   ├── routes.ts              # el mapa de rutas: de aquí salen nav, pie, migas y las pruebas
 │   │   ├── app/                   # la aplicación del agente (/app)
 │   │   ├── sitio/                 # el sitio editorial (/), con sus páginas y datos
-│   │   ├── features/              # chat, documentos, conversaciones, ajustes, comandos, salud
+│   │   ├── features/              # chat, documentos, visor de documentos, conversaciones, ajustes, comandos, salud
 │   │   └── shared/                # api (incluye el cliente GraphQL), hooks, lib, ui y tokens de estilo
 │   ├── pruebas-e2e/               # Playwright: Chromium y WebKit, con un backend+gateway falso
 │   ├── herramientas/              # comprobaciones propias del bundle de producción
@@ -254,7 +254,7 @@ APP_LLM_MODEL=gemini/gemini-flash-lite-latest
 
 ## Uso de la API
 
-Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
+Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `GET /documentos/{id}/contenido` (el texto completo que extrajo Docling), `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
 
 ### `POST /indexar`
 

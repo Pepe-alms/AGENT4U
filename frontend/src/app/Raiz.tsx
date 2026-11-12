@@ -3,7 +3,7 @@ import { lazy, Suspense, type LazyExoticComponent, type ReactElement } from 'rea
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router';
 
 import { App } from '@/app/App';
-import { RUTA_APP, rutaPorId } from '@/routes';
+import { RUTA_APP, RUTA_DOCUMENTO, rutaPorId } from '@/routes';
 import { Sitio, type HandleRuta } from '@/sitio/Sitio';
 
 /*
@@ -15,6 +15,8 @@ const Inicio = lazy(() => import('@/sitio/paginas/Inicio'));
 const Arquitectura = lazy(() => import('@/sitio/paginas/Arquitectura'));
 const Tecnologias = lazy(() => import('@/sitio/paginas/Tecnologias'));
 const NoEncontrada = lazy(() => import('@/sitio/paginas/NoEncontrada'));
+// El visor solo lo descarga quien abre un documento.
+const VisorDocumento = lazy(() => import('@/features/visor/VisorDocumento'));
 
 /**
  * El hueco mientras llega una pagina diferida.
@@ -60,7 +62,22 @@ const handle = (id: string): HandleRuta => ({ id });
  * la revista.
  */
 const router = createBrowserRouter([
-  { path: RUTA_APP, element: <App /> },
+  {
+    path: RUTA_APP,
+    element: <App />,
+    // El visor es una ruta HIJA de /app y no una aparte: asi App sigue montada
+    // por debajo, y una respuesta a medio escribir no se corta al abrirlo.
+    children: [
+      {
+        path: RUTA_DOCUMENTO,
+        element: (
+          <Suspense fallback={null}>
+            <VisorDocumento />
+          </Suspense>
+        ),
+      },
+    ],
+  },
 
   {
     element: <Sitio />,

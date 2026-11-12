@@ -21,6 +21,12 @@ export type Fuente = {
   /** La consulta derivada que encontro el fragmento, que con multiconsulta no
    *  es la que escribio el usuario. */
   subconsulta?: string;
+  /**
+   * El documento del que sale, para abrirlo en el visor. null (o ausente) en
+   * los fragmentos indexados antes de que existiera y en los mensajes
+   * guardados antes de que el backend lo enviara.
+   */
+  documento_id?: number | null;
 };
 
 export type Rol = 'user' | 'assistant';
@@ -64,6 +70,19 @@ export type Documento = {
   state: EstadoDocumento;
   num_chunks: number;
   error_message: string | null;
+};
+
+/** query { contenido_documento }: lo que extrajo Docling al indexarlo. */
+export type ContenidoDocumento = {
+  documento: Documento;
+  /**
+   * Markdown de un documento de terceros: solo puede pintarse saneado. Cada
+   * pagina empieza con `<!-- pagina N -->`; si no se pudieron numerar, no
+   * aparece ninguna marca.
+   */
+  markdown: string;
+  /** Paginas marcadas. 0 si no hay marcas. */
+  paginas: number;
 };
 
 export type DocumentoEliminado = {

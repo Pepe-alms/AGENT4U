@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { useNavigate, useOutlet } from 'react-router';
+
 import { Moon, Settings, Sun } from 'lucide-react';
 
 import { AppShell, type ControlesShell } from '@/app/AppShell';
@@ -22,6 +24,8 @@ import { useAnuncio } from '@/shared/hooks/useAnuncio';
 import { useAtajo } from '@/shared/hooks/useAtajo';
 import { useRecurso } from '@/shared/hooks/useRecurso';
 import { formatearFecha } from '@/shared/lib/fechas';
+import { rutaDocumento } from '@/routes';
+import type { Documento, Fuente } from '@/shared/api/types';
 import { NOMBRE_TEMA, SIGUIENTE_TEMA } from '@/shared/lib/tema';
 import { Anuncios } from '@/shared/ui/Anuncios';
 import { useAvisos } from '@/shared/hooks/useAvisos';
@@ -36,6 +40,10 @@ const ATAJO_PALETA =
     : 'Ctrl K';
 
 export function App() {
+  // El visor de un documento, si la ruta es /app/documentos/:id. Se pinta
+  // por encima y el resto queda montado pero inerte.
+  const visor = useOutlet();
+  const navegar = useNavigate();
   const preferencias = usePreferencias();
   const conversacion = useConversacion(preferencias.consulta);
 
@@ -98,7 +106,35 @@ export function App() {
   const verDocumentos = useCallback(() => shell.current?.abrirDocumentos(), []);
   const cerrarAjustes = useCallback(() => setAjustesAbiertos(false), []);
   const cerrarPaleta = useCallback(() => setPaletaAbierta(false), []);
-  const abrirPaleta = useCallback(() => setPaletaAbierta(true), []);
+  // Con el visor abierto la paleta no se abre: sus acciones son del chat, que
+  // esta debajo e inerte.
+  const abrirPaleta = useCallback(() => {
+    if (!visor) setPaletaAbierta(true);
+  }, [visor]);
+
+  const leerDocumento = useCallback(
+    (documento: Documento) => {
+      shell.current?.cerrarPaneles();
+      void navegar(rutaDocumento(documento.id));
+    },
+    [navegar],
+  );
+
+  /** Desde una fuente: el visor se abre en la seccion y la pagina del fragmento. */
+  const verFuenteEnDocumento = useCallback(
+    (fuente: Fuente) => {
+      if (fuente.documento_id == null) return;
+      shell.current?.cerrarPaneles();
+      void navegar(
+        rutaDocumento(fuente.documento_id, {
+          pagina: fuente.paginas[0],
+          // El titulo mas cercano al fragmento es el ultimo de la jerarquia.
+          seccion: fuente.headings.at(-1),
+        }),
+      );
+    },
+    [navegar],
+  );
 
   // Cmd/Ctrl+K funciona también mientras se escribe: no se teclea por accidente.
   useAtajo({ tecla: 'k', conModificador: true }, abrirPaleta);
@@ -194,32 +230,35 @@ export function App() {
 
   return (
     <>
-      <AppShell
-        ref={shell}
-        acciones={
-          <>
-            <IconButton
-              etiqueta={`Cambiar a tema ${NOMBRE_TEMA[SIGUIENTE_TEMA[preferencias.tema]].toLowerCase()}`}
-              icono={esOscuro ? <Sun size={18} /> : <Moon size={18} />}
-              onClick={() => preferencias.elegirTema(SIGUIENTE_TEMA[preferencias.tema])}
-            />
-            <IconButton
-              etiqueta="Abrir los ajustes"
-              icono={<Settings size={18} />}
-              onClick={() => setAjustesAbiertos(true)}
-            />
-          </>
-        }
-        titulo={tituloBarra}
-        indicador={<IndicadorSalud salud={salud} comprobando={comprobando} />}
-        lateral={
-          <div className="flex flex-col gap-3 p-2">
-            {/* Lo primero de la columna y lo unico con relleno: empezar de
+      {/* `inert` y no solo taparlo: con el visor delante, ni el tabulador ni un
+          lector de pantalla tienen que poder entrar en el chat de debajo. */}
+      <div inert={visor ? true : undefined}>
+        <AppShell
+          ref={shell}
+          acciones={
+            <>
+              <IconButton
+                etiqueta={`Cambiar a tema ${NOMBRE_TEMA[SIGUIENTE_TEMA[preferencias.tema]].toLowerCase()}`}
+                icono={esOscuro ? <Sun size={18} /> : <Moon size={18} />}
+                onClick={() => preferencias.elegirTema(SIGUIENTE_TEMA[preferencias.tema])}
+              />
+              <IconButton
+                etiqueta="Abrir los ajustes"
+                icono={<Settings size={18} />}
+                onClick={() => setAjustesAbiertos(true)}
+              />
+            </>
+          }
+          titulo={tituloBarra}
+          indicador={<IndicadorSalud salud={salud} comprobando={comprobando} />}
+          lateral={
+            <div className="flex flex-col gap-3 p-2">
+              {/* Lo primero de la columna y lo unico con relleno: empezar de
                 cero es la accion que mas se repite. */}
-            {/* Siempre activa, aunque el chat ya este vacio: empezar de cero
+              {/* Siempre activa, aunque el chat ya este vacio: empezar de cero
                 es idempotente, y deshabilitar la accion mas visible de la
                 columna hace que al entrar parezca que algo esta roto. */}
-            {/*
+              {/*
               Sin icono dentro: la guia es explicita en que el sistema es
               text-first y los iconos se quedan en la barra.
 
@@ -227,60 +266,69 @@ export function App() {
               del sistema y solo puede haber UNO por pantalla. Se reserva a la
               accion del lienzo principal; aqui basta el hairline.
             */}
-            <Button variante="secundario" onClick={conversacion.nueva} className="w-full">
-              Nueva conversación
-            </Button>
+              <Button
+                variante="secundario"
+                onClick={conversacion.nueva}
+                className="w-full"
+              >
+                Nueva conversación
+              </Button>
 
-            <button
-              type="button"
-              onClick={abrirPaleta}
-              className="flex w-full items-center justify-between rounded-full border border-borde px-4 py-2 text-start text-[0.875rem] text-suave transition-colors hover:bg-superficie-suave"
-            >
-              Buscar…
-              <kbd className="font-mono text-[0.6875rem]">{ATAJO_PALETA}</kbd>
-            </button>
+              <button
+                type="button"
+                onClick={abrirPaleta}
+                className="flex w-full items-center justify-between rounded-full border border-borde px-4 py-2 text-start text-[0.875rem] text-suave transition-colors hover:bg-superficie-suave"
+              >
+                Buscar…
+                <kbd className="font-mono text-[0.6875rem]">{ATAJO_PALETA}</kbd>
+              </button>
 
-            <ListaConversaciones
-              estado={conversaciones.estado}
-              recargar={conversaciones.reintentar}
-              activa={conversacion.id}
-              onAbrir={abrirHilo}
-              onBorrarActiva={conversacion.nueva}
-              onAvisar={notificar}
+              <ListaConversaciones
+                estado={conversaciones.estado}
+                recargar={conversaciones.reintentar}
+                activa={conversacion.id}
+                onAbrir={abrirHilo}
+                onBorrarActiva={conversacion.nueva}
+                onAvisar={notificar}
+              />
+            </div>
+          }
+          documentos={
+            <div className="flex flex-col gap-4 p-4">
+              <FormularioIngesta ingesta={ingesta} />
+              <ListaDocumentos
+                estado={documentos.estado}
+                reintentar={documentos.reintentar}
+                alCambiar={documentos.reintentar}
+                onAvisar={notificar}
+                onLeer={leerDocumento}
+              />
+            </div>
+          }
+          fuentes={
+            <PanelFuentes
+              fuentes={conversacion.fuentes}
+              citaActiva={citaActiva}
+              citaApuntada={citaApuntada}
+              onApuntarCita={setCitaApuntada}
+              onVerEnDocumento={verFuenteEnDocumento}
             />
-          </div>
-        }
-        documentos={
-          <div className="flex flex-col gap-4 p-4">
-            <FormularioIngesta ingesta={ingesta} />
-            <ListaDocumentos
-              estado={documentos.estado}
-              reintentar={documentos.reintentar}
-              alCambiar={documentos.reintentar}
-              onAvisar={notificar}
-            />
-          </div>
-        }
-        fuentes={
-          <PanelFuentes
-            fuentes={conversacion.fuentes}
+          }
+        >
+          <PanelChat
+            conversacion={conversacion}
             citaActiva={citaActiva}
-            citaApuntada={citaApuntada}
+            onElegirCita={elegirCita}
             onApuntarCita={setCitaApuntada}
+            backendCaido={salud.backend === 'caido'}
+            hayDocumentos={hayDocumentos}
+            onVerDocumentos={verDocumentos}
+            onAnunciar={anunciar}
           />
-        }
-      >
-        <PanelChat
-          conversacion={conversacion}
-          citaActiva={citaActiva}
-          onElegirCita={elegirCita}
-          onApuntarCita={setCitaApuntada}
-          backendCaido={salud.backend === 'caido'}
-          hayDocumentos={hayDocumentos}
-          onVerDocumentos={verDocumentos}
-          onAnunciar={anunciar}
-        />
-      </AppShell>
+        </AppShell>
+      </div>
+
+      {visor}
 
       <PanelAjustes
         abierto={ajustesAbiertos}

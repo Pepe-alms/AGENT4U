@@ -33,6 +33,24 @@ export const PARAM_PREGUNTA = 'q';
 export const rutaAppConPregunta = (pregunta: string): string =>
   `${RUTA_APP}?${new URLSearchParams({ [PARAM_PREGUNTA]: pregunta })}`;
 
+/** El visor de un documento: dentro de /app, por encima del chat. */
+export const RUTA_DOCUMENTO = 'documentos/:id';
+
+/** Desde una fuente: la pagina y la seccion en las que situarse al abrir. */
+export const PARAM_PAGINA = 'pagina';
+export const PARAM_SECCION = 'seccion';
+
+export function rutaDocumento(
+  id: number,
+  destino: { pagina?: number; seccion?: string } = {},
+): string {
+  const parametros = new URLSearchParams();
+  if (destino.pagina !== undefined) parametros.set(PARAM_PAGINA, String(destino.pagina));
+  if (destino.seccion) parametros.set(PARAM_SECCION, destino.seccion);
+  const consulta = parametros.toString();
+  return `${RUTA_APP}/documentos/${id}${consulta ? `?${consulta}` : ''}`;
+}
+
 export type Ruta = {
   /** Identificador estable. No cambia aunque cambie el path. */
   id: string;

@@ -43,6 +43,12 @@ export type ControlesShell = {
   abrirLateral: () => void;
   /** Abre la gestion de documentos, que siempre es un panel. */
   abrirDocumentos: () => void;
+  /**
+   * Cierra los paneles modales. Antes de abrir el visor: un `<dialog>` modal
+   * vive en la capa superior del navegador y lo taparia, se ponga el z-index
+   * que se ponga.
+   */
+  cerrarPaneles: () => void;
 };
 
 /** La columna lateral se anima por ancho, asi que necesita un numero. */
@@ -94,6 +100,11 @@ export function AppShell({
         else setLateralAbierto(true);
       },
       abrirDocumentos: () => setDocumentosAbiertos(true),
+      cerrarPaneles: () => {
+        setLateralAbierto(false);
+        setFuentesAbiertas(false);
+        setDocumentosAbiertos(false);
+      },
     }),
     [esEscritorio],
   );
