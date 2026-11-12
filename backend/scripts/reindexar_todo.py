@@ -22,8 +22,15 @@ Con Docker Compose, desde la raiz del repo:
 
 Sin Docker, desde backend/ (con Qdrant arriba y el .env apuntando a el):
     uv run python scripts/reindexar_todo.py
+
+Con --desde-json, cada documento que tenga su DoclingDocument guardado se
+trocea desde ese JSON sin volver a convertir el fichero original, que es la
+parte cara (minutos por documento). Los que no lo tengan se convierten como
+siempre. Sirve para reindexar tras cambiar el troceado o el modelo de
+embeddings; no si lo que cambia es la conversion de Docling.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -42,7 +49,13 @@ from app.rag.vectorization import COLLECTION_NAME
 from app.services.indexacion import indexar_documento
 
 
-def main() -> int:
+def main(argumentos: list[str] | None = None) -> int:
+    opciones = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    opciones.add_argument(
+        "--desde-json", action="store_true",
+        help="Trocear desde el DoclingDocument guardado cuando exista, sin convertir.",
+    )
+    desde_json = opciones.parse_args(argumentos).desde_json
     settings = get_settings()
     migrar()
 
@@ -83,6 +96,7 @@ def main() -> int:
                 dense_embedder=dense_embedder,
                 sparse_embedder=sparse_embedder,
                 qdrant=qdrant,
+                desde_json=desde_json,
             )
         except Exception as e:
             # indexar_documento ya lo ha marcado como 'error' en la BD.

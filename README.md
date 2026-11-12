@@ -460,7 +460,7 @@ git push -u origin feature/nombre-corto
 
 ### Ideas anotadas para la ingesta
 
-- **Cachear el documento parseado con `save_as_json`**: parsear es la parte cara del pipeline (el modelo de layout, ~90s por documento); trocear es barato. Guardar el `DoclingDocument` ya parseado permitiría probar otro tamaño de chunk o reindexar tras cambiar de modelo de embeddings sin repetir el parseo — de minutos a segundos por iteración.
+- **Cachear el documento parseado con `save_as_json`** — hecho: cada indexación guarda el `DoclingDocument` en JSON junto a su Markdown (`APP_CONTENIDOS_DIR`), y `scripts/reindexar_todo.py --desde-json` trocea desde ahí sin repetir el parseo, que es la parte cara (el modelo de layout, ~90 s por documento). Sirve para probar otro tamaño de chunk o cambiar de modelo de embeddings.
 - **Ajustar la configuración de `DocumentConverter`**: hoy solo se desactiva el OCR; hay más superficie de configuración disponible, por ejemplo:
 
 ```python

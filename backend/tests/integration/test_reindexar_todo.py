@@ -1,6 +1,8 @@
 """scripts/reindexar_todo.py, contra la base de datos en memoria y Qdrant en
 memoria. Nunca toca los datos reales: el cliente de Qdrant y los modelos se
 sustituyen antes de llamar a main()."""
+from types import SimpleNamespace
+
 import pytest
 from qdrant_client import QdrantClient, models
 
@@ -49,7 +51,7 @@ def test_reindexa_todo_y_sigue_aunque_uno_falle(db, entorno, documentos_frescos)
     document_crud.crear_documento(db, "/docs/roto.pdf", "roto.pdf", "pdf", 1)
     document_crud.crear_documento(db, "/docs/b.pdf", "b.pdf", "pdf", 1)
 
-    assert reindexar.main() == 1
+    assert reindexar.main([]) == 1
 
     estados = {d.name: d.state for d in documentos_frescos()}
     assert estados == {"a.pdf": "indexado", "roto.pdf": "error", "b.pdf": "indexado"}
@@ -70,8 +72,34 @@ def test_borra_la_coleccion_antes_de_empezar(db, entorno):
     )])
     document_crud.crear_documento(db, "/docs/a.pdf", "a.pdf", "pdf", 1)
 
-    reindexar.main()
+    reindexar.main([])
 
     puntos, _ = entorno.scroll(collection_name=COLLECTION_NAME, limit=100, with_payload=True)
     assert len(puntos) == 2
     assert all("documento_id" in p.payload for p in puntos)
+
+
+def test_desde_json_no_convierte_los_documentos_que_lo_tienen_guardado(db, entorno, monkeypatch):
+    from app.services import contenidos
+
+    from tests.conftest import FakeDocumento
+
+    con_json = document_crud.crear_documento(db, "/docs/a.pdf", "a.pdf", "pdf", 1).id
+    document_crud.crear_documento(db, "/docs/b.pdf", "b.pdf", "pdf", 1)
+    convertidos: list[str] = []
+
+    class ConverterQueAnota:
+        def convert(self, file_path):
+            convertidos.append(file_path)
+            return SimpleNamespace(document=FakeDocumento(file_path))
+
+    monkeypatch.setattr(reindexar, "crear_converter", lambda: ConverterQueAnota())
+    real = contenidos.cargar_documento
+    monkeypatch.setattr(
+        contenidos, "cargar_documento",
+        lambda doc_id: FakeDocumento("guardado") if doc_id == con_json else real(doc_id),
+    )
+
+    assert reindexar.main(["--desde-json"]) == 0
+
+    assert convertidos == ["/docs/b.pdf"]
