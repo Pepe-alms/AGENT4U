@@ -21,6 +21,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY app ./app
 
 ENV PATH="/app/.venv/bin:$PATH"
+# Carpeta de modelos (Settings.modelos_dir). docker-compose.yml monta aqui la
+# misma carpeta del host que usa el backend fuera de Docker. HF_HOME manda a la
+# misma carpeta lo que cualquier otra libreria descargue de Hugging Face.
+ENV APP_MODELOS_DIR=/models
 ENV HF_HOME=/models/hf
 
 CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

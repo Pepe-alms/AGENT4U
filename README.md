@@ -232,7 +232,7 @@ npm install
 npm run dev
 ```
 
-La primera ejecución de la API y del worker descarga los modelos de ML (fastembed en los dos, Docling solo en el worker) desde Hugging Face Hub (requiere red); a partir de ahí quedan cacheados en local (`~/.cache/huggingface/`) y el pipeline corre offline.
+La primera ejecución de la API y del worker descarga los modelos de ML (fastembed en los dos, Docling solo en el worker) desde Hugging Face Hub (requiere red); a partir de ahí quedan en `~/.cache/agent4u/modelos/` (ajuste `APP_MODELOS_DIR`). Docker Compose monta esa misma carpeta en los contenedores, así que hay una sola copia para el Mac y para Docker.
 
 ## Variables de entorno
 
