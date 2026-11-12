@@ -1,0 +1,15 @@
+# La imagen solo copia pyproject.toml, uv.lock y app/. Sin esto el contexto del
+# build arrastraba el .venv local (1,5 GB), los PDF de tests/data, las subidas y
+# la base de datos SQLite, que ademas no deben acabar en ninguna imagen.
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.env
+*.db
+*.db-*
+*.db.*
+uploads
+tests
+scripts
