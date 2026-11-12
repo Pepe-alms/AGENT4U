@@ -21,6 +21,9 @@ dependencies = [
     # su origen en [tool.uv.sources], que solo aplica a dependencias directas.
     "torch>=2.13.0,<2.14",
     "torchvision>=0.28.0,<0.29",
+    # cv2 sin GUI: la variante normal (la pide rapidocr) carga libxcb y libGL,
+    # que la imagen no tiene, y Docling falla al importarla para las tablas.
+    "opencv-python-headless>=5.0.0.93",
     "transformers>=5.8.1",
     "uvicorn[standard]>=0.51.0",
 ]
@@ -34,6 +37,11 @@ dependencies = [
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[tool.uv]
+# Anula el opencv-python que pide rapidocr: el mismo cv2 lo da la variante
+# headless de arriba. El marcador nunca se cumple, asi que no se instala.
+override-dependencies = ["opencv-python; sys_platform == 'never'"]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
