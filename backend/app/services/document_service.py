@@ -1,13 +1,29 @@
 from sqlalchemy.orm import Session
 
 from app.db.crud import document as document_crud
-from app.core.exceptions import NombreAmbiguo
+from app.core.exceptions import DocumentoNoEncontrado, NombreAmbiguo, SinContenidoGuardado
+from app.db.models.document import Document
 from app.rag.vectorization import borrar_por_documento
 from app.services import contenidos
 
 
 def listar_documentos(db: Session):
     return document_crud.listar_documentos(db)
+
+
+def obtener_contenido(db: Session, documento_id: int) -> tuple[Document, str]:
+    """El documento y su Markdown completo.
+
+    Lanza DocumentoNoEncontrado si no existe y SinContenidoGuardado si existe
+    pero no tiene contenido (indexado antes de guardarlo, en cola, en error).
+    """
+    doc = db.get(Document, documento_id)
+    if doc is None:
+        raise DocumentoNoEncontrado(documento_id)
+    markdown = contenidos.leer_markdown(documento_id)
+    if markdown is None:
+        raise SinContenidoGuardado(documento_id, doc.state)
+    return doc, markdown
 
 
 def eliminar_documento(db: Session, qdrant, nombre: str) -> bool | None:

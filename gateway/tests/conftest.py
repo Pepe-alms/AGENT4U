@@ -39,6 +39,9 @@ class FakeBackendClient:
             },
         }
         self.cupo_lleno = False
+        # Ids de documentos que existen pero no tienen contenido guardado.
+        self.sin_contenido: set[int] = set()
+        self.mensajes: list[dict] = []
 
     # ── ajustes ──────────────────────────────────────────────────────
 
@@ -62,7 +65,15 @@ class FakeBackendClient:
                 return {"status": "eliminado", "documento": nombre}
         raise BackendHttpError(404, "Documento no encontrado.")
 
-    # ── trabajos ─────────────────────────────────────────────────────
+    async def obtener_contenido_documento(self, id: int) -> dict | None:
+        for d in self.documentos:
+            if d["id"] == id:
+                if id in self.sin_contenido:
+                    raise BackendHttpError(409, f"El documento {id} no tiene contenido guardado.")
+                return {"documento": d, "markdown": "<!-- pagina 1 -->\n\n# CAP", "paginas": 1}
+        return None
+
+    # ── trabajos ─────────────────────────────────────────────────
 
     async def obtener_trabajo(self, job_id: str) -> dict | None:
         return self.trabajos.get(job_id)
@@ -91,7 +102,7 @@ class FakeBackendClient:
     async def obtener_conversacion(self, id: int) -> dict | None:
         for c in self.conversaciones:
             if c["id"] == id:
-                return {**c, "mensajes": []}
+                return {**c, "mensajes": list(self.mensajes)}
         return None
 
     async def eliminar_conversacion(self, id: int) -> dict:

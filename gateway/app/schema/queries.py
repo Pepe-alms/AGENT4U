@@ -1,8 +1,11 @@
 import strawberry
 from strawberry.types import Info
 
+from app.clients.port import BackendHttpError
+from app.schema.errores import error_backend
 from app.schema.types import (
     Ajustes,
+    ContenidoDocumento,
     ConversacionDetalle,
     ConversacionResumen,
     Documento,
@@ -38,6 +41,23 @@ class Query:
         client = info.context["client"]
         data = await client.obtener_documentos()
         return [Documento(**d) for d in data]
+
+    @strawberry.field
+    async def contenido_documento(self, info: Info, id: int) -> ContenidoDocumento | None:
+        """Null si el documento no existe; error con status 409 si existe pero
+        no tiene contenido guardado."""
+        client = info.context["client"]
+        try:
+            data = await client.obtener_contenido_documento(id)
+        except BackendHttpError as e:
+            raise error_backend(e)
+        if data is None:
+            return None
+        return ContenidoDocumento(
+            documento=Documento(**data["documento"]),
+            markdown=data["markdown"],
+            paginas=data["paginas"],
+        )
 
     @strawberry.field
     async def trabajo(self, info: Info, job_id: str) -> Trabajo | None:

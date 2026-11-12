@@ -145,3 +145,70 @@ async def test_salud_combina_backend_y_qdrant(fake_client):
     assert salud["backend"] == "ok"
     assert salud["qdrant"]["status"] == "ok"
     assert salud["qdrant"]["coleccion"] == "Agent4U"
+
+
+# ── contenido_documento ──────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_contenido_documento_devuelve_markdown_y_documento(fake_client):
+    result = await schema.execute(
+        "{ contenido_documento(id: 1) { markdown paginas documento { id name } } }",
+        context_value={"client": fake_client},
+    )
+
+    assert result.errors is None
+    datos = result.data["contenido_documento"]
+    assert datos["documento"] == {"id": 1, "name": "cap.pdf"}
+    assert datos["markdown"].endswith("# CAP")
+    assert datos["paginas"] == 1
+
+
+@pytest.mark.asyncio
+async def test_contenido_de_un_documento_inexistente_devuelve_null(fake_client):
+    result = await schema.execute(
+        "{ contenido_documento(id: 99) { markdown } }",
+        context_value={"client": fake_client},
+    )
+
+    assert result.errors is None
+    assert result.data["contenido_documento"] is None
+
+
+@pytest.mark.asyncio
+async def test_contenido_sin_guardar_es_un_error_409_distinto_de_no_existir(fake_client):
+    fake_client.sin_contenido.add(1)
+
+    result = await schema.execute(
+        "{ contenido_documento(id: 1) { markdown } }",
+        context_value={"client": fake_client},
+    )
+
+    assert result.errors[0].extensions["status"] == 409
+    assert "no tiene contenido" in result.errors[0].message
+
+
+# ── fuentes con documento_id ─────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_las_fuentes_de_un_mensaje_traen_documento_id_si_lo_hay(fake_client):
+    """Los mensajes guardados desde que el backend envia documento_id lo
+    traen, y los anteriores no: los dos tienen que poder leerse."""
+    fuente = {"nombre": "cap.pdf", "origen": "/docs/cap.pdf", "headings": [], "paginas": [7],
+              "texto": "CAP dice", "score": 1.0, "subconsulta": ""}
+    fake_client.mensajes = [
+        {"id": 1, "rol": "assistant", "contenido": "a", "creado_en": "2026-01-01T00:00:00",
+         "fuentes": [{**fuente, "documento_id": 3}]},
+        {"id": 2, "rol": "assistant", "contenido": "b", "creado_en": "2026-01-01T00:00:00",
+         "fuentes": [fuente]},
+    ]
+
+    result = await schema.execute(
+        "{ conversacion(id: 54321) { mensajes { fuentes { documento_id } } } }",
+        context_value={"client": fake_client},
+    )
+
+    assert result.errors is None
+    mensajes = result.data["conversacion"]["mensajes"]
+    assert [m["fuentes"][0]["documento_id"] for m in mensajes] == [3, None]

@@ -20,6 +20,36 @@ class NombreAmbiguo(Exception):
         )
 
 
+class DocumentoNoEncontrado(Exception):
+    def __init__(self, documento_id: int):
+        self.documento_id = documento_id
+        super().__init__(f"No existe ningun documento con id {documento_id}.")
+
+
+class SinContenidoGuardado(Exception):
+    """El documento existe pero no hay contenido que leer.
+
+    No es lo mismo que no exista: el cliente puede explicarlo (indexado antes
+    de que se guardara el contenido, aun en cola, fallo al indexar) en vez de
+    dar un error generico.
+    """
+
+    MOTIVOS = {
+        "en-cola": "todavia esta en cola para indexarse",
+        "indexando": "se esta indexando ahora mismo",
+        "error": "su indexacion fallo",
+    }
+
+    def __init__(self, documento_id: int, estado: str):
+        self.documento_id = documento_id
+        self.estado = estado
+        motivo = self.MOTIVOS.get(
+            estado, "se indexo antes de que se guardara el contenido; "
+                    "generalo con scripts/generar_contenido.py",
+        )
+        super().__init__(f"El documento {documento_id} no tiene contenido guardado: {motivo}.")
+
+
 class ConversacionNoEncontrada(Exception):
     def __init__(self, conversacion_id: str):
         self.conversacion_id = conversacion_id

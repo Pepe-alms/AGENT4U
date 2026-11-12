@@ -36,6 +36,14 @@ class HttpBackendClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def obtener_contenido_documento(self, id: int) -> dict | None:
+        resp = await self._client.get(f"/documentos/{id}/contenido")
+        if resp.status_code == 404:
+            return None
+        _error_si_conflicto(resp)
+        resp.raise_for_status()
+        return resp.json()
+
     # ── trabajos ─────────────────────────────────────────────────────
 
     async def obtener_trabajo(self, job_id: str) -> dict | None:
