@@ -33,7 +33,7 @@ def entorno(monkeypatch, session_factory, converter, chunker,
 
     monkeypatch.setattr(reindexar, "QdrantClient", lambda url: qdrant)
     monkeypatch.setattr(reindexar, "SessionLocal", session_factory)
-    monkeypatch.setattr(reindexar, "crear_esquema", lambda: None)
+    monkeypatch.setattr(reindexar, "migrar", lambda: None)
     monkeypatch.setattr(reindexar, "crear_embedder_denso", lambda _s: dense_embedder)
     monkeypatch.setattr(reindexar, "crear_embedder_disperso", lambda _s: sparse_embedder)
     monkeypatch.setattr(reindexar, "crear_chunker", lambda _s: chunker)

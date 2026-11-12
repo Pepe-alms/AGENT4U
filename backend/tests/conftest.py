@@ -75,7 +75,7 @@ def documentos_frescos(session_factory):
 
 
 @pytest.fixture(autouse=True)
-def nunca_la_base_de_datos_real(monkeypatch, session_factory):
+def nunca_la_base_de_datos_real(monkeypatch, engine, session_factory):
     """Ningun test puede escribir en el sqlite del proyecto.
 
     `SessionLocal` es un global, y lo usan los servicios que siguen trabajando
@@ -99,6 +99,10 @@ def nunca_la_base_de_datos_real(monkeypatch, session_factory):
     monkeypatch.setattr(indexacion, "SessionLocal", session_factory)
     monkeypatch.setattr(cola_arq, "SessionLocal", session_factory)
     monkeypatch.setattr(worker_jobs, "SessionLocal", session_factory)
+    # migrar() sin motor usa este: que un arranque llamado por error desde un
+    # test migre la base en memoria y no agent4u.db.
+    import app.db.session as sesion_db
+    monkeypatch.setattr(sesion_db, "engine", engine)
 
 
 # ---------------------------------------------------------------------------

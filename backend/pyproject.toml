@@ -5,6 +5,7 @@ description = "API RAG de Agent4U: ingesta de documentos, cola de indexacion y r
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.16",
     "arq>=0.26",
     "docling>=2.118.1",
     "fastapi>=0.139.2",

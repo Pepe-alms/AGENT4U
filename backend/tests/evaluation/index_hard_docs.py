@@ -20,7 +20,8 @@ from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
 from app.core.exceptions import DocumentoYaExiste
-from app.db.session import SessionLocal, crear_esquema
+from app.db.migrar import migrar
+from app.db.session import SessionLocal
 from app.rag.modelos import (
     crear_chunker, crear_converter, crear_embedder_denso, crear_embedder_disperso,
 )
@@ -32,7 +33,7 @@ DOCUMENTOS = ["18-replicacion-particionado.md", "19-resiliencia-microservicios.m
 
 def main() -> None:
     settings = get_settings()
-    crear_esquema()
+    migrar()
 
     dense_embedder = crear_embedder_denso(settings)
     sparse_embedder = crear_embedder_disperso(settings)
