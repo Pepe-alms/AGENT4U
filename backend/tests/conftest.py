@@ -7,6 +7,7 @@ aqui. Todo debe poder ejecutarse sin red y sin contenedores levantados.
 from __future__ import annotations
 
 import json
+import pathlib
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 
@@ -75,7 +76,7 @@ def documentos_frescos(session_factory):
 
 
 @pytest.fixture(autouse=True)
-def nunca_la_base_de_datos_real(monkeypatch, engine, session_factory):
+def nunca_la_base_de_datos_real(monkeypatch, engine, session_factory, tmp_path):
     """Ningun test puede escribir en el sqlite del proyecto.
 
     `SessionLocal` es un global, y lo usan los servicios que siguen trabajando
@@ -103,6 +104,9 @@ def nunca_la_base_de_datos_real(monkeypatch, engine, session_factory):
     # test migre la base en memoria y no agent4u.db.
     import app.db.session as sesion_db
     monkeypatch.setattr(sesion_db, "engine", engine)
+    # Ni la carpeta de contenidos del proyecto (backend/contenidos).
+    from app.core.config import get_settings
+    monkeypatch.setattr(get_settings(), "contenidos_dir", str(tmp_path / "contenidos"))
 
 
 # ---------------------------------------------------------------------------
@@ -232,9 +236,34 @@ def hacer_chunk(texto: str, *, paginas=(1,), etiqueta: str = "text",
     return FakeChunk(text=texto, meta=FakeMeta(doc_items=items, headings=headings))
 
 
+class FakeDocumento:
+    """Lo que app/services/contenidos.py le pide a un DoclingDocument."""
+
+    def __init__(self, origen: str, paginas: int = 2):
+        self.origen = origen
+        self.paginas = paginas
+
+    def export_to_markdown(self, page_break_placeholder: str = "") -> str:
+        return page_break_placeholder.join(
+            f"# Pagina {n}\n\nTexto de {self.origen}, pagina {n}."
+            for n in range(1, self.paginas + 1)
+        )
+
+    def iterate_items(self):
+        for n in range(1, self.paginas + 1):
+            yield SimpleNamespace(prov=[FakeProv(n)]), 0
+
+    def save_as_json(self, ruta) -> None:
+        pathlib.Path(ruta).write_text(json.dumps({"origen": self.origen}))
+
+
 class FakeConverter:
+    def __init__(self):
+        self.convertidos: list[str] = []
+
     def convert(self, file_path: str):
-        return SimpleNamespace(document=SimpleNamespace(origen=file_path))
+        self.convertidos.append(file_path)
+        return SimpleNamespace(document=FakeDocumento(file_path))
 
 
 class FakeChunker:

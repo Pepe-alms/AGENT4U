@@ -43,9 +43,19 @@ class Settings(BaseSettings):
     # es /models, montada desde esta misma carpeta del host.
     modelos_dir: str = "~/.cache/agent4u/modelos"
 
+    # Donde se guarda el contenido completo de cada documento (Markdown y
+    # DoclingDocument en JSON), ver app/services/contenidos.py. Por defecto
+    # backend/contenidos, ignorada por git; en Docker, un volumen que
+    # comparten api (que lo sirve) y worker (que lo escribe).
+    contenidos_dir: str = str(Path(__file__).resolve().parents[2] / "contenidos")
+
     @property
     def ruta_modelos(self) -> Path:
         return Path(self.modelos_dir).expanduser()
+
+    @property
+    def ruta_contenidos(self) -> Path:
+        return Path(self.contenidos_dir).expanduser()
 
     # --- Redis ---
     redis_url: str = "redis://localhost:6379"

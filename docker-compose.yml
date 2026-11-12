@@ -9,6 +9,7 @@ x-backend-env: &backend-env
   APP_REDIS_URL: redis://redis:6379
   APP_UPLOAD_DIR: /uploads
   APP_MODELOS_DIR: /models
+  APP_CONTENIDOS_DIR: /contenidos
   APP_GEMINI_API_KEY: ${APP_GEMINI_API_KEY}
 
 services:
@@ -44,6 +45,9 @@ services:
       # sola copia en disco. AGENT4U_MODELOS en el .env de la raiz la cambia.
       - ${AGENT4U_MODELOS:-~/.cache/agent4u/modelos}:/models
       - uploads_data:/uploads
+      # El worker escribe el contenido de cada documento al indexarlo y la API
+      # lo sirve: los dos tienen que ver el mismo volumen.
+      - contenidos_data:/contenidos
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -72,6 +76,9 @@ services:
       # sola copia en disco. AGENT4U_MODELOS en el .env de la raiz la cambia.
       - ${AGENT4U_MODELOS:-~/.cache/agent4u/modelos}:/models
       - uploads_data:/uploads
+      # El worker escribe el contenido de cada documento al indexarlo y la API
+      # lo sirve: los dos tienen que ver el mismo volumen.
+      - contenidos_data:/contenidos
     depends_on:
       qdrant:
         condition: service_started
@@ -116,3 +123,4 @@ volumes:
   api_data:
   redis_data:
   uploads_data:
+  contenidos_data:

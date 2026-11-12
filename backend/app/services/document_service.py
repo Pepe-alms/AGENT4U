@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.crud import document as document_crud
 from app.core.exceptions import NombreAmbiguo
 from app.rag.vectorization import borrar_por_documento
+from app.services import contenidos
 
 
 def listar_documentos(db: Session):
@@ -24,7 +25,9 @@ def eliminar_documento(db: Session, qdrant, nombre: str) -> bool | None:
         raise NombreAmbiguo(nombre, len(docs))
 
     doc = docs[0]
-    if not borrar_por_documento(qdrant, doc.id):
+    doc_id = doc.id
+    if not borrar_por_documento(qdrant, doc_id):
         return None
     document_crud.eliminar_documento(db, doc)
+    contenidos.borrar(doc_id)
     return True
