@@ -21,7 +21,8 @@ from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
 from app.core.exceptions import DocumentoYaExiste
-from app.db.session import SessionLocal, crear_esquema
+from app.db.migrar import migrar
+from app.db.session import SessionLocal
 from app.rag.modelos import (
     crear_chunker, crear_converter, crear_embedder_denso, crear_embedder_disperso,
 )
@@ -45,7 +46,7 @@ def documentos(nombres: list[str]) -> list[Path]:
 
 def main(nombres: list[str]) -> None:
     settings = get_settings()
-    crear_esquema()
+    migrar()
 
     rutas = documentos(nombres)
     if not rutas:

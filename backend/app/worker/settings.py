@@ -19,7 +19,12 @@ async def startup(ctx: dict) -> None:
         crear_chunker, crear_converter, crear_embedder_denso, crear_embedder_disperso,
     )
 
+    from app.db.migrar import migrar
+
     settings = get_settings()
+
+    # El worker escribe en la base aunque la API no haya arrancado todavia.
+    migrar()
 
     ctx["dense_embedder"] = crear_embedder_denso(settings)
     ctx["sparse_embedder"] = crear_embedder_disperso(settings)

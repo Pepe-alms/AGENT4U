@@ -5,6 +5,7 @@ description = "API RAG de Agent4U: ingesta de documentos, cola de indexacion y r
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.16",
     "arq>=0.26",
     "docling>=2.118.1",
     "fastapi>=0.139.2",
@@ -16,12 +17,37 @@ dependencies = [
     "python-multipart>=0.0.32",
     "qdrant-client>=1.18.0",
     "sqlalchemy>=2.0.52",
+    # No se usan directamente: los trae docling. Estan aqui para poder fijar
+    # su origen en [tool.uv.sources], que solo aplica a dependencias directas.
+    "torch>=2.13.0,<2.14",
+    "torchvision>=0.28.0,<0.29",
+    # cv2 sin GUI: la variante normal (la pide rapidocr) carga libxcb y libGL,
+    # que la imagen no tiene, y Docling falla al importarla para las tablas.
+    "opencv-python-headless>=5.0.0.93",
     "transformers>=5.8.1",
     "uvicorn[standard]>=0.51.0",
 ]
 
 # Definimos la cabecera de pytest para cuando se lance uv. 
 # Con la funcion auto, el plug in lo que va a hacer es ejecutar todas las funciones asyncornas
+
+# En Linux (la imagen de Docker) PyTorch sale del indice solo-CPU: el de PyPI
+# arrastra ~3,5 GB de librerias de NVIDIA que aqui no se usan, porque todo corre
+# en CPU. En macOS no aplica el marcador y se queda el de PyPI, que ya es CPU/MPS.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[tool.uv]
+# Anula el opencv-python que pide rapidocr: el mismo cv2 lo da la variante
+# headless de arriba. El marcador nunca se cumple, asi que no se instala.
+override-dependencies = ["opencv-python; sys_platform == 'never'"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+# Solo para los paquetes que lo piden en [tool.uv.sources]; el resto, de PyPI.
+explicit = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

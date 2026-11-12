@@ -1,5 +1,6 @@
 
 from functools import lru_cache
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +36,16 @@ class Settings(BaseSettings):
     modelo_reranker: str = "jinaai/jina-reranker-v2-base-multilingual"
     # Techo de tokens por fragmento, medido con el tokenizer de `modelo_denso`.
     chunk_max_tokens: int = 500
+    # Donde se descargan los modelos: fastembed (embedders y reranker), el
+    # tokenizer de transformers y Docling. Una sola carpeta para todo, fuera
+    # de la temporal: fastembed usaba por defecto la del sistema, que macOS
+    # vacia, y en Docker su /tmp se pierde al recrear el contenedor. En Docker
+    # es /models, montada desde esta misma carpeta del host.
+    modelos_dir: str = "~/.cache/agent4u/modelos"
+
+    @property
+    def ruta_modelos(self) -> Path:
+        return Path(self.modelos_dir).expanduser()
 
     # --- Redis ---
     redis_url: str = "redis://localhost:6379"

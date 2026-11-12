@@ -9,7 +9,7 @@ from app.rag.modelos import crear_cross_encoder, crear_embedder_denso, crear_emb
 
 ## SQL
 
-from app.db.session import crear_esquema
+from app.db.migrar import migrar
 
 ## Cola de indexacion
 
@@ -33,7 +33,8 @@ async def lifespan(app: FastAPI):
     # Docling (converter y chunker) no se carga aqui: la ingesta la hace el
     # worker, y ningun endpoint de la API los usa.
 
-    crear_esquema()
+    # Antes que nada que toque la base: deja el esquema al dia.
+    migrar()
 
     app.state.cola = ColaArq(settings.redis_url)
 

@@ -33,7 +33,8 @@ from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
 from app.db.models.document import Document
-from app.db.session import SessionLocal, crear_esquema
+from app.db.migrar import migrar
+from app.db.session import SessionLocal
 from app.rag.modelos import (
     crear_chunker, crear_converter, crear_embedder_denso, crear_embedder_disperso,
 )
@@ -43,7 +44,7 @@ from app.services.indexacion import indexar_documento
 
 def main() -> int:
     settings = get_settings()
-    crear_esquema()
+    migrar()
 
     # Ids, origenes y nombres de una vez: indexar_documento abre sus propias
     # sesiones, y no conviene tener esta abierta durante horas.

@@ -181,8 +181,8 @@ Levanta los 5 servicios de `docker-compose.yml` — qdrant, redis, api, worker, 
 ```bash
 git clone https://github.com/Pepe-alms/AGENT4U.git
 cd AGENT4U
-cp backend/.env.example backend/.env   # y rellena APP_GEMINI_API_KEY
-APP_GEMINI_API_KEY=tu-clave docker compose up --build
+cp .env.example .env   # en la raíz, y rellena APP_GEMINI_API_KEY: Compose no lee backend/.env
+docker compose up --build
 ```
 
 - Backend: `http://localhost:8000/docs` (Swagger UI)
@@ -232,7 +232,7 @@ npm install
 npm run dev
 ```
 
-La primera ejecución de la API y del worker descarga los modelos de ML (fastembed en los dos, Docling solo en el worker) desde Hugging Face Hub (requiere red); a partir de ahí quedan cacheados en local (`~/.cache/huggingface/`) y el pipeline corre offline.
+La primera ejecución de la API y del worker descarga los modelos de ML (fastembed en los dos, Docling solo en el worker) desde Hugging Face Hub (requiere red); a partir de ahí quedan en `~/.cache/agent4u/modelos/` (ajuste `APP_MODELOS_DIR`). Docker Compose monta esa misma carpeta en los contenedores, así que hay una sola copia para el Mac y para Docker.
 
 ## Variables de entorno
 
