@@ -17,7 +17,39 @@ def marcar_indexado(db: Session, doc: Document, num_chunks: int) -> None:
     doc.state = "indexado"
     doc.num_chunks = num_chunks
     doc.duplicado_de = None
+    doc.parecido_a = None
+    doc.pct_nuevo_en_antiguo = None
+    doc.pct_antiguo_en_nuevo = None
     db.commit()
+
+
+def marcar_pendiente_decision(db: Session, doc: Document, parecido_a: int,
+                              pct_nuevo_en_antiguo: float,
+                              pct_antiguo_en_nuevo: float) -> None:
+    """Nivel 3: se parece demasiado a `parecido_a`. Espera a que el usuario
+    decida; no se indexa hasta entonces."""
+    doc.state = "pendiente-decision"
+    doc.parecido_a = parecido_a
+    doc.pct_nuevo_en_antiguo = pct_nuevo_en_antiguo
+    doc.pct_antiguo_en_nuevo = pct_antiguo_en_nuevo
+    doc.num_chunks = 0
+    db.commit()
+
+
+def volver_a_encolar(db: Session, doc: Document, job_id: str) -> None:
+    """Tras resolver un pendiente de decision: a la cola con un trabajo nuevo."""
+    doc.state = "en-cola"
+    doc.job_id = job_id
+    db.commit()
+
+
+def ids_indexados(db: Session, ids: list[int]) -> set[int]:
+    """De esos ids, los que son documentos indexados de verdad."""
+    if not ids:
+        return set()
+    return set(db.scalars(
+        select(Document.id).where(Document.id.in_(ids)).where(Document.state == "indexado")
+    ))
 
 
 def marcar_duplicado(db: Session, doc: Document, original_id: int) -> None:

@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import String, Integer, DateTime, Text
+from sqlalchemy import String, Integer, DateTime, Float, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
@@ -28,3 +28,8 @@ class Document(Base):
     hash_texto_normalizado: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     # Si el estado es 'duplicado': el documento que ya tenia ese contenido.
     duplicado_de: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Nivel 3: si el estado es 'pendiente-decision', el documento indexado con
+    # el que mas fragmentos comparte, y en que proporcion en cada sentido.
+    parecido_a: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pct_nuevo_en_antiguo: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pct_antiguo_en_nuevo: Mapped[float | None] = mapped_column(Float, nullable=True)

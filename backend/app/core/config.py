@@ -57,6 +57,17 @@ class Settings(BaseSettings):
     def ruta_contenidos(self) -> Path:
         return Path(self.contenidos_dir).expanduser()
 
+    # --- Deduplicacion ---
+    # Nivel 3: a partir de que proporcion de fragmentos compartidos con un
+    # documento ya indexado se para la indexacion y se pregunta al usuario
+    # (reemplazar, conservar ambos o descartar). Se compara el MAYOR de los
+    # dos sentidos: cuanto del nuevo esta en el antiguo y cuanto del antiguo
+    # en el nuevo. Medido con BOE reales: entre documentos distintos de la
+    # misma plantilla, 0 %; entre versiones del mismo (una pagina de menos, de
+    # mas, la mitad), del 88,9 % en adelante. Nunca se decide solo: un falso
+    # positivo cuesta una decision, uno negativo, un duplicado en el indice.
+    umbral_casi_duplicado: float = 0.5
+
     # --- Redis ---
     redis_url: str = "redis://localhost:6379"
 

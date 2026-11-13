@@ -14,6 +14,9 @@ EstadoDocumento = Literal[
     # Nivel 2: mismo contenido que otro documento (ver 'duplicado_de'). No se
     # indexa: ni puntos en Qdrant ni contenido guardado.
     "duplicado",
+    # Nivel 3: casi igual que otro (ver 'parecido_a' y los porcentajes). No se
+    # indexa hasta que el usuario decide con POST /documentos/{id}/resolver.
+    "pendiente-decision",
 ]
 
 
@@ -207,6 +210,21 @@ class DocumentoOut(BaseModel):
         description="Si state == 'duplicado': id del documento que ya tenia "
                     "este mismo contenido.",
     )
+    parecido_a: int | None = Field(
+        default=None,
+        description="Si state == 'pendiente-decision': id del documento "
+                    "indexado con el que mas fragmentos comparte.",
+    )
+    pct_nuevo_en_antiguo: float | None = Field(
+        default=None, ge=0, le=1,
+        description="Proporcion (0 a 1) de los fragmentos de este documento "
+                    "que ya estan en 'parecido_a'.",
+    )
+    pct_antiguo_en_nuevo: float | None = Field(
+        default=None, ge=0, le=1,
+        description="Proporcion (0 a 1) de los fragmentos de 'parecido_a' que "
+                    "estan en este documento.",
+    )
 
 
 class ListaDocumentosOut(BaseModel):
@@ -236,6 +254,34 @@ class ContenidoDocumentoOut(BaseModel):
     paginas: int = Field(
         ge=0,
         description="Paginas marcadas en el Markdown. 0 si no hay marcas.",
+    )
+
+
+class ResolverRequest(BaseModel):
+    """Cuerpo de ``POST /documentos/{documento_id}/resolver``."""
+
+    accion: Literal["reemplazar", "conservar", "descartar"] = Field(
+        description=(
+            "'reemplazar': se borra el documento antiguo ('parecido_a') y se "
+            "indexa este. 'conservar': se indexa este y se quedan los dos. "
+            "'descartar': se elimina este. Ninguna vuelve a convertir con "
+            "Docling: se usa el documento que se guardo al dejarlo pendiente."
+        ),
+    )
+
+
+class ResolucionOut(BaseModel):
+    """Respuesta de ``POST /documentos/{documento_id}/resolver``."""
+
+    id: int = Field(description="El documento que estaba pendiente.")
+    accion: Literal["reemplazar", "conservar", "descartar"]
+    status: Literal["en-cola", "descartado"] = Field(
+        description="'en-cola' si se va a indexar (sondear GET /trabajos/{job_id}), "
+                    "'descartado' si se ha eliminado."
+    )
+    job_id: str | None = Field(default=None, description="Solo si status == 'en-cola'.")
+    reemplazado: int | None = Field(
+        default=None, description="Con 'reemplazar': id del documento antiguo, ya borrado."
     )
 
 

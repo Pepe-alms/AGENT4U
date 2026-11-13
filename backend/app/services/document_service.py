@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session
 
 from app.db.crud import document as document_crud
-from app.core.exceptions import DocumentoNoEncontrado, SinContenidoGuardado
+import uuid
+
+from app.core.exceptions import DocumentoNoEncontrado, SinContenidoGuardado, SinDecisionPendiente
 from app.db.models.document import Document
 from app.rag.vectorization import borrar_por_documento
 from app.services import contenidos
@@ -43,3 +45,45 @@ def eliminar_documento(db: Session, qdrant, documento_id: int) -> Document | Non
     document_crud.eliminar_documento(db, doc)
     contenidos.borrar(doc_id)
     return doc
+
+
+class FalloAlReemplazar(Exception):
+    """Qdrant no pudo borrar el documento antiguo: no se toca nada."""
+
+
+async def resolver_pendiente(db: Session, qdrant, cola, documento_id: int, accion: str) -> dict:
+    """La decision del usuario sobre un documento pendiente de decision.
+
+    Nunca se llama sola: es lo que hace POST /documentos/{id}/resolver cuando
+    el usuario elige. 'conservar' y 'reemplazar' lo encolan para indexarlo
+    desde el DoclingDocument guardado (sin Docling y sin volver a comprobar
+    duplicados); 'descartar' lo elimina.
+    """
+    doc = db.get(Document, documento_id)
+    if doc is None:
+        raise DocumentoNoEncontrado(documento_id)
+    if doc.state != "pendiente-decision":
+        raise SinDecisionPendiente(documento_id, doc.state)
+
+    if accion == "descartar":
+        # No tiene puntos en Qdrant: solo la fila y el JSON guardado.
+        document_crud.eliminar_documento(db, doc)
+        contenidos.borrar(documento_id)
+        return {"id": documento_id, "accion": accion, "status": "descartado"}
+
+    reemplazado = None
+    if accion == "reemplazar" and doc.parecido_a is not None:
+        antiguo = doc.parecido_a
+        # Si el antiguo ya no esta, no hay nada que reemplazar: se indexa sin mas.
+        if db.get(Document, antiguo) is not None:
+            if eliminar_documento(db, qdrant, antiguo) is None:
+                raise FalloAlReemplazar(
+                    f"Qdrant no pudo borrar el documento {antiguo}; no se ha tocado nada."
+                )
+            reemplazado = antiguo
+
+    job_id = str(uuid.uuid4())
+    document_crud.volver_a_encolar(db, doc, job_id)
+    await cola.encolar(job_id, file_path=doc.origin, type=doc.type, size=doc.size, resolucion=True)
+    return {"id": documento_id, "accion": accion, "status": "en-cola",
+            "job_id": job_id, "reemplazado": reemplazado}

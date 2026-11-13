@@ -2,8 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Annotated
 from sqlalchemy.orm import Session
 
-from app.api.schemas import ContenidoDocumentoOut, DocumentoEliminadoOut, ErrorOut, ListaDocumentosOut
-from app.core.exceptions import DocumentoNoEncontrado, SinContenidoGuardado
+from app.api.routers.indexation import _comprobar_cupo
+from app.api.schemas import (
+    ContenidoDocumentoOut,
+    DocumentoEliminadoOut,
+    ErrorOut,
+    ListaDocumentosOut,
+    ResolucionOut,
+    ResolverRequest,
+)
+from app.core.exceptions import DocumentoNoEncontrado, SinContenidoGuardado, SinDecisionPendiente
 from app.db.models.document import Document
 from app.services import contenidos
 from app.db.session import get_db
@@ -53,6 +61,39 @@ def contenido(documento_id: int, db: Annotated[Session, Depends(get_db)]):
     except SinContenidoGuardado as e:
         raise HTTPException(status_code=409, detail=str(e))
     return {"documento": doc, "markdown": markdown, "paginas": contenidos.contar_paginas(markdown)}
+
+
+@router.post(
+    "/documentos/{documento_id}/resolver",
+    response_model=ResolucionOut,
+    summary="Decidir que hacer con un documento casi igual a otro",
+    description="Solo para documentos en estado 'pendiente-decision' (nivel 3 "
+                "de deduplicacion). 'reemplazar' borra el antiguo y encola este; "
+                "'conservar' encola este y se quedan los dos; 'descartar' "
+                "elimina este. Ninguna convierte otra vez con Docling.",
+    responses={404: {"model": ErrorOut, "description": "El documento no existe."},
+               409: {"model": ErrorOut, "description": "No esta pendiente de decision."},
+               429: {"model": ErrorOut, "description": "La cola esta llena."},
+               502: {"model": ErrorOut, "description": "Qdrant no pudo borrar el antiguo; no se ha tocado nada."}}
+)
+async def resolver(
+    documento_id: int,
+    body: ResolverRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+):
+    if body.accion != "descartar":
+        await _comprobar_cupo(request.app.state.cola)
+    try:
+        return await document_service.resolver_pendiente(
+            db, request.app.state.qdrant, request.app.state.cola, documento_id, body.accion,
+        )
+    except DocumentoNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except SinDecisionPendiente as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except document_service.FalloAlReemplazar as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.delete(

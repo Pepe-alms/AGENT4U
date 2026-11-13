@@ -113,3 +113,70 @@ def test_la_lista_dice_de_que_documento_es_duplicado(client, db):
     assert documentos[copia.id]["state"] == "duplicado"
     assert documentos[copia.id]["duplicado_de"] == original.id
     assert documentos[original.id]["duplicado_de"] is None
+
+
+# ---------------------------------------------------------------------------
+# POST /documentos/{id}/resolver
+# ---------------------------------------------------------------------------
+
+def _pendiente(db):
+    antiguo = document_crud.crear_documento(db, "/docs/v1.pdf", "v1.pdf", "pdf", 10)
+    document_crud.marcar_indexado(db, antiguo, 3)
+    nuevo = document_crud.crear_documento(db, "/docs/v2.pdf", "v2.pdf", "pdf", 10)
+    document_crud.marcar_pendiente_decision(db, nuevo, antiguo.id, 0.8, 0.95)
+    return antiguo, nuevo
+
+
+def test_la_lista_trae_el_parecido_y_los_dos_porcentajes(client, db):
+    antiguo, nuevo = _pendiente(db)
+
+    fila = {d["id"]: d for d in client.get("/documentos").json()["documentos"]}[nuevo.id]
+
+    assert fila["state"] == "pendiente-decision"
+    assert (fila["parecido_a"], fila["pct_nuevo_en_antiguo"], fila["pct_antiguo_en_nuevo"]) == (antiguo.id, 0.8, 0.95)
+
+
+def test_resolver_conservando_encola_el_nuevo_marcado_como_resolucion(client, db):
+    from app.api.main import app
+
+    _, nuevo = _pendiente(db)
+
+    respuesta = client.post(f"/documentos/{nuevo.id}/resolver", json={"accion": "conservar"})
+
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["status"] == "en-cola"
+    [trabajo] = app.state.cola.trabajos
+    assert trabajo["job_id"] == cuerpo["job_id"]
+    assert trabajo["resolucion"] is True
+
+
+def test_resolver_descartando_elimina_el_nuevo(client, db):
+    antiguo, nuevo = _pendiente(db)
+
+    respuesta = client.post(f"/documentos/{nuevo.id}/resolver", json={"accion": "descartar"})
+
+    assert respuesta.json()["status"] == "descartado"
+    assert [d.id for d in document_crud.listar_documentos(db)] == [antiguo.id]
+
+
+def test_resolver_un_documento_que_no_esta_pendiente_responde_409(client, db):
+    antiguo, _ = _pendiente(db)
+
+    respuesta = client.post(f"/documentos/{antiguo.id}/resolver", json={"accion": "conservar"})
+
+    assert respuesta.status_code == 409
+
+
+def test_resolver_un_documento_que_no_existe_responde_404(client):
+    respuesta = client.post("/documentos/9999/resolver", json={"accion": "descartar"})
+
+    assert respuesta.status_code == 404
+
+
+def test_resolver_con_una_accion_desconocida_responde_422(client, db):
+    _, nuevo = _pendiente(db)
+
+    respuesta = client.post(f"/documentos/{nuevo.id}/resolver", json={"accion": "fusionar"})
+
+    assert respuesta.status_code == 422

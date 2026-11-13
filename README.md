@@ -254,7 +254,7 @@ APP_LLM_MODEL=gemini/gemini-flash-lite-latest
 
 ## Uso de la API
 
-Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `GET /documentos/{id}/contenido` (el texto completo que extrajo Docling), `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
+Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `GET /documentos/{id}/contenido` (el texto completo que extrajo Docling), `POST /documentos/{id}/resolver` (qué hacer con un documento casi igual a otro), `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
 
 ### `POST /indexar`
 

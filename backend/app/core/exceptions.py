@@ -10,6 +10,17 @@ class DocumentoNoEncontrado(Exception):
         super().__init__(f"No existe ningun documento con id {documento_id}.")
 
 
+class SinDecisionPendiente(Exception):
+    """Se pidio resolver un documento que no esta pendiente de decision."""
+
+    def __init__(self, documento_id: int, estado: str):
+        self.documento_id = documento_id
+        self.estado = estado
+        super().__init__(
+            f"El documento {documento_id} no esta pendiente de decision (esta '{estado}')."
+        )
+
+
 class SinContenidoGuardado(Exception):
     """El documento existe pero no hay contenido que leer.
 
@@ -22,6 +33,8 @@ class SinContenidoGuardado(Exception):
         "en-cola": "todavia esta en cola para indexarse",
         "indexando": "se esta indexando ahora mismo",
         "error": "su indexacion fallo",
+        "duplicado": "tiene el mismo contenido que otro documento y no se indexo",
+        "pendiente-decision": "se parece mucho a otro documento y espera a que decidas que hacer",
     }
 
     def __init__(self, documento_id: int, estado: str):

@@ -23,10 +23,13 @@ async def indexar_job(
     file_path: str,
     type: str,
     size: int | None,
+    resolucion: bool = False,
 ) -> None:
     # `type` y `size` ya no se usan (el tipo sale de la fila, que el endpoint
     # creo con el mismo valor), pero siguen en la firma: ARQ llama al job con
     # los argumentos con que se encolo, y puede haber trabajos en cola.
+    # `resolucion` tiene valor por defecto por lo mismo: los encolados antes
+    # de que existiera no lo traen.
     with SessionLocal() as sesion:
         doc = document_crud.obtener_por_job_id(sesion, job_id)
         if doc is None:
@@ -42,4 +45,8 @@ async def indexar_job(
         dense_embedder=ctx["dense_embedder"],
         sparse_embedder=ctx["sparse_embedder"],
         qdrant=ctx["qdrant"],
+        # El usuario ya decidio indexarlo: desde el DoclingDocument que se
+        # guardo al dejarlo pendiente, y sin volver a preguntar.
+        desde_json=resolucion,
+        comprobar_duplicados=not resolucion,
     )
