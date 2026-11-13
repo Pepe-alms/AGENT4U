@@ -222,3 +222,70 @@ def test_indexar_una_ruta_que_no_existe_responde_400_sin_encolar(client, db):
 
     assert respuesta.status_code == 400
     assert document_crud.listar_documentos(db) == []
+
+
+# ---------------------------------------------------------------------------
+# Nivel 1 con un documento en error: se reintenta, no se rechaza
+# ---------------------------------------------------------------------------
+
+def _en_error(db, origen, contenido: bytes, nombre="roto.pdf"):
+    import hashlib
+
+    doc = document_crud.crear_documento(db, origen, nombre, "pdf", len(contenido))
+    doc.hash_content = hashlib.sha256(contenido).hexdigest()
+    document_crud.marcar_error(db, doc, "Docling no pudo con el")
+    return doc
+
+
+def test_volver_a_subir_el_fichero_de_un_documento_en_error_lo_reintenta(client, db, carpeta_subidas):
+    from app.api.main import app
+
+    roto = _en_error(db, "/uploads/abc/roto.pdf", b"fichero que fallo")
+
+    respuesta = _subir(client, "roto.pdf", b"fichero que fallo")
+
+    assert respuesta.status_code == 202
+    [doc] = document_crud.listar_documentos(db)
+    db.refresh(doc)
+    assert doc.id == roto.id
+    assert (doc.state, doc.error_message) == ("en-cola", None)
+    assert doc.job_id == respuesta.json()["job_id"]
+    # Apunta al fichero recien subido, que si existe.
+    assert doc.origin == respuesta.json()["ruta"]
+    assert [t["job_id"] for t in app.state.cola.trabajos] == [doc.job_id]
+
+
+def test_reintentar_con_otro_nombre_actualiza_el_nombre_del_documento(client, db, carpeta_subidas):
+    roto = _en_error(db, "/uploads/abc/roto.pdf", b"mismos bytes")
+
+    respuesta = _subir(client, "corregido.pdf", b"mismos bytes")
+
+    assert respuesta.status_code == 202
+    db.refresh(roto)
+    assert roto.name == "corregido.pdf"
+    assert roto.origin.endswith("/corregido.pdf")
+
+
+def test_indexar_por_ruta_el_fichero_de_un_documento_en_error_lo_reintenta(client, db, fichero_local):
+    roto = _en_error(db, str(fichero_local), fichero_local.read_bytes(), nombre="manual.pdf")
+
+    respuesta = client.post("/indexar", json={"file_path": str(fichero_local), "type": "pdf"})
+
+    assert respuesta.status_code == 202
+    db.refresh(roto)
+    assert roto.state == "en-cola"
+    assert len(document_crud.listar_documentos(db)) == 1
+
+
+def test_si_ademas_hay_uno_sano_con_ese_fichero_se_rechaza_contra_el_sano(client, db, carpeta_subidas):
+    _en_error(db, "/uploads/abc/roto.pdf", b"mismo fichero")
+    _subir(client, "sano.pdf", b"otro")  # para que el id del sano no sea el primero
+    sano = document_crud.crear_documento(db, "/uploads/def/sano.pdf", "sano.pdf", "pdf", 1)
+    import hashlib
+    sano.hash_content = hashlib.sha256(b"mismo fichero").hexdigest()
+    db.commit()
+
+    respuesta = _subir(client, "otra-vez.pdf", b"mismo fichero")
+
+    assert respuesta.status_code == 409
+    assert respuesta.json()["duplicado_de"]["id"] == sano.id

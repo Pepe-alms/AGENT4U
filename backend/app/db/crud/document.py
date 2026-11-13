@@ -95,8 +95,32 @@ def crear_documento_encolado(db: Session, origen: str, nombre: str,
 
 
 def por_hash_content(db: Session, hash_content: str) -> Document | None:
-    """El documento con esos mismos bytes, si lo hay."""
-    return db.scalar(select(Document).where(Document.hash_content == hash_content).limit(1))
+    """El documento con esos mismos bytes, si lo hay. Si hay varios (bases
+    antiguas, o uno en error y otro no), primero los que no estan en error."""
+    return db.scalar(
+        select(Document)
+        .where(Document.hash_content == hash_content)
+        .order_by(Document.state == "error", Document.id)
+        .limit(1)
+    )
+
+
+def reintentar(db: Session, doc: Document, *, origen: str, nombre: str,
+               job_id: str, hash_content: str) -> None:
+    """Vuelve a encolar un documento en error con el mismo fichero.
+
+    Si llega por otra ruta (otro nombre, u otra ruta en POST /indexar), pasa
+    a apuntar a esa: es el fichero que se acaba de recibir y se sabe que
+    existe. Lanza IntegrityError si esa ruta ya es de otro documento.
+    """
+    doc.origin = origen
+    doc.name = nombre
+    doc.state = "en-cola"
+    doc.job_id = job_id
+    doc.error_message = None
+    doc.num_chunks = 0
+    doc.hash_content = hash_content
+    db.commit()
 
 
 def obtener_por_job_id(db: Session, job_id: str) -> Document | None:

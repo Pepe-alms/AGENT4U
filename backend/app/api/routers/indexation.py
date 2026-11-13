@@ -21,6 +21,7 @@ from app.api.schemas import (
 from app.core.config import get_settings
 from app.core.exceptions import DocumentoYaExiste
 from app.db.crud import document as document_crud
+from app.db.models.document import Document
 from app.db.session import get_db
 from app.services.cola_port import ColaIndexacion
 from app.services.huellas import hash_fichero
@@ -39,7 +40,9 @@ RESPUESTAS_FICHERO = {
         "description": (
             "Ya hay un documento con esa ruta, o con exactamente el mismo "
             "fichero (mismo SHA-256, se llame como se llame). En el segundo "
-            "caso 'motivo' es 'mismo-fichero' y 'duplicado_de' dice cual."
+            "caso 'motivo' es 'mismo-fichero' y 'duplicado_de' dice cual. Si "
+            "el unico documento con ese fichero esta en error, no se rechaza: "
+            "se reintenta sobre ese mismo documento (202)."
         ),
     },
     429: {
@@ -65,11 +68,18 @@ async def _comprobar_cupo(cola: ColaIndexacion) -> None:
         )
 
 
-def _mismo_fichero(db: Session, huella: str) -> JSONResponse | None:
-    """El 409 del nivel 1 si ya hay un documento con esos mismos bytes."""
+def _mismo_fichero(db: Session, huella: str) -> tuple[JSONResponse | None, Document | None]:
+    """El nivel 1 al recibir un fichero.
+
+    Devuelve (409, None) si ya hay un documento con esos mismos bytes, y
+    (None, documento) si el unico que los tiene esta en error: entonces no se
+    rechaza, se reintenta sobre ese mismo documento. (None, None) si es nuevo.
+    """
     original = document_crud.por_hash_content(db, huella)
     if original is None:
-        return None
+        return None, None
+    if original.state == "error":
+        return None, original
     cuerpo = ErrorMismoFicheroOut(
         detail=(
             f"Es exactamente el mismo fichero que '{original.name}' "
@@ -77,7 +87,25 @@ def _mismo_fichero(db: Session, huella: str) -> JSONResponse | None:
         ),
         duplicado_de={"id": original.id, "name": original.name, "state": original.state},
     )
-    return JSONResponse(status_code=409, content=cuerpo.model_dump())
+    return JSONResponse(status_code=409, content=cuerpo.model_dump()), None
+
+
+async def _reintentar_trabajo(
+    cola: ColaIndexacion, db: Session, doc: Document, *,
+    file_path: str, size: int | None, hash_content: str,
+) -> dict:
+    """Vuelve a indexar un documento que acabo en error con este mismo fichero."""
+    job_id = str(uuid.uuid4())
+    try:
+        document_crud.reintentar(
+            db, doc, origen=file_path, nombre=os.path.basename(file_path),
+            job_id=job_id, hash_content=hash_content,
+        )
+    except Exception:
+        db.rollback()
+        raise DocumentoYaExiste(file_path)
+    await cola.encolar(job_id, file_path=file_path, type=doc.type, size=size)
+    return {"job_id": job_id, "status": "en-cola"}
 
 
 async def _encolar_trabajo(
@@ -139,15 +167,21 @@ async def indexar(
         huella = await run_in_threadpool(hash_fichero, body.file_path)
     except OSError as e:
         raise HTTPException(status_code=400, detail=f"No se puede leer '{body.file_path}': {e.strerror or e}")
-    if (rechazo := _mismo_fichero(db, huella)) is not None:
+    rechazo, en_error = _mismo_fichero(db, huella)
+    if rechazo is not None:
         return rechazo
 
     try:
-        resultado = await _encolar_trabajo(
-            cola, db,
-            file_path=body.file_path, tipo=body.type, size=body.size,
-            hash_content=huella,
-        )
+        if en_error is not None:
+            resultado = await _reintentar_trabajo(
+                cola, db, en_error, file_path=body.file_path, size=body.size, hash_content=huella,
+            )
+        else:
+            resultado = await _encolar_trabajo(
+                cola, db,
+                file_path=body.file_path, tipo=body.type, size=body.size,
+                hash_content=huella,
+            )
     except DocumentoYaExiste as e:
         raise HTTPException(status_code=409, detail=str(e))
 
@@ -242,7 +276,8 @@ async def indexar_fichero(
         raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
 
     hash_content = huella.hexdigest()
-    if (rechazo := _mismo_fichero(db, hash_content)) is not None:
+    rechazo, en_error = _mismo_fichero(db, hash_content)
+    if rechazo is not None:
         parcial.unlink(missing_ok=True)
         return rechazo
 
@@ -264,11 +299,16 @@ async def indexar_fichero(
     extension = destino.suffix.lstrip(".").lower() or "txt"
 
     try:
-        resultado = await _encolar_trabajo(
-            cola, db,
-            file_path=str(destino), tipo=extension, size=escritos,
-            hash_content=hash_content,
-        )
+        if en_error is not None:
+            resultado = await _reintentar_trabajo(
+                cola, db, en_error, file_path=str(destino), size=escritos, hash_content=hash_content,
+            )
+        else:
+            resultado = await _encolar_trabajo(
+                cola, db,
+                file_path=str(destino), tipo=extension, size=escritos,
+                hash_content=hash_content,
+            )
     except DocumentoYaExiste as e:
         raise HTTPException(status_code=409, detail=str(e))
 
