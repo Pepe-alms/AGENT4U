@@ -5,8 +5,10 @@ from app.clients.port import BackendHttpError
 
 def _error_si_conflicto(resp: httpx.Response) -> None:
     if resp.status_code in (409, 429):
-        detail = resp.json().get("detail", "")
-        raise BackendHttpError(resp.status_code, detail)
+        cuerpo = resp.json()
+        detail = cuerpo.get("detail", "")
+        extra = {k: v for k, v in cuerpo.items() if k != "detail"}
+        raise BackendHttpError(resp.status_code, detail, extra)
 
 
 class HttpBackendClient:
@@ -40,6 +42,14 @@ class HttpBackendClient:
         resp = await self._client.get(f"/documentos/{id}/contenido")
         if resp.status_code == 404:
             return None
+        _error_si_conflicto(resp)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def resolver_documento(self, id: int, accion: str) -> dict:
+        resp = await self._client.post(f"/documentos/{id}/resolver", json={"accion": accion})
+        if resp.status_code in (404, 502):
+            raise BackendHttpError(resp.status_code, resp.json().get("detail", ""))
         _error_si_conflicto(resp)
         resp.raise_for_status()
         return resp.json()

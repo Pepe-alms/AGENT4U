@@ -65,6 +65,18 @@ class FakeBackendClient:
                 return {"status": "eliminado", "id": id, "documento": d["name"]}
         raise BackendHttpError(404, "Documento no encontrado.")
 
+    async def resolver_documento(self, id: int, accion: str) -> dict:
+        documento = next((d for d in self.documentos if d["id"] == id), None)
+        if documento is None:
+            raise BackendHttpError(404, f"No existe ningun documento con id {id}.")
+        if documento["state"] != "pendiente-decision":
+            raise BackendHttpError(409, f"El documento {id} no esta pendiente de decision.")
+        if accion == "descartar":
+            self.documentos.remove(documento)
+            return {"id": id, "accion": accion, "status": "descartado", "job_id": None, "reemplazado": None}
+        reemplazado = documento["parecido_a"] if accion == "reemplazar" else None
+        return {"id": id, "accion": accion, "status": "en-cola", "job_id": "fake-job-3", "reemplazado": reemplazado}
+
     async def obtener_contenido_documento(self, id: int) -> dict | None:
         for d in self.documentos:
             if d["id"] == id:
@@ -85,6 +97,11 @@ class FakeBackendClient:
             raise BackendHttpError(429, "Hay demasiados trabajos en cola o ejecutandose.")
         if any(d["origin"] == file_path for d in self.documentos):
             raise BackendHttpError(409, "Ya existe")
+        if file_path == "/docs/copia-de-cap.pdf":
+            raise BackendHttpError(
+                409, "Es exactamente el mismo fichero que 'cap.pdf' (id 1, indexado).",
+                {"motivo": "mismo-fichero", "duplicado_de": {"id": 1, "name": "cap.pdf", "state": "indexado"}},
+            )
         return {"job_id": "fake-job-1", "status": "en-cola"}
 
     async def indexar_url(self, url: str, size: int | None) -> dict:

@@ -308,3 +308,40 @@ async def test_obtener_contenido_documento_409_lanza_error():
     with pytest.raises(BackendHttpError) as excinfo:
         await _hacer_cliente(handler).obtener_contenido_documento(1)
     assert excinfo.value.status == 409
+
+
+# ── resolver_documento ──────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_resolver_documento_200():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/documentos/2/resolver"
+        assert request.content == b'{"accion":"conservar"}'
+        return httpx.Response(200, json={"id": 2, "accion": "conservar", "status": "en-cola", "job_id": "j"})
+
+    assert (await _hacer_cliente(handler).resolver_documento(2, "conservar"))["status"] == "en-cola"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("codigo", [404, 409, 429, 502])
+async def test_resolver_documento_errores_lanzan_con_su_codigo(codigo):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(codigo, json={"detail": "no"})
+
+    with pytest.raises(BackendHttpError) as excinfo:
+        await _hacer_cliente(handler).resolver_documento(2, "conservar")
+    assert excinfo.value.status == codigo
+
+
+@pytest.mark.asyncio
+async def test_el_409_de_mismo_fichero_conserva_el_documento_coincidente():
+    cuerpo = {"detail": "Mismo fichero", "motivo": "mismo-fichero",
+              "duplicado_de": {"id": 1, "name": "cap.pdf", "state": "indexado"}}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(409, json=cuerpo)
+
+    with pytest.raises(BackendHttpError) as excinfo:
+        await _hacer_cliente(handler).indexar("/docs/x.pdf", "pdf", None)
+    assert excinfo.value.extra == {"motivo": "mismo-fichero", "duplicado_de": cuerpo["duplicado_de"]}
