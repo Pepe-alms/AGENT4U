@@ -114,7 +114,7 @@ def test_borrar_el_documento_borra_su_contenido(
     doc = crear_doc(db)
     indexar(doc, qdrant, converter, chunker, dense_embedder, sparse_embedder)
 
-    assert document_service.eliminar_documento(db, qdrant=qdrant, nombre="manual.pdf") is True
+    assert document_service.eliminar_documento(db, qdrant=qdrant, documento_id=doc).id == doc
 
     assert ficheros(doc) == set()
 
@@ -127,7 +127,7 @@ def test_si_qdrant_no_puede_borrar_el_contenido_se_conserva(
     indexar(doc, qdrant, converter, chunker, dense_embedder, sparse_embedder)
     qdrant.fallar_delete = True
 
-    assert document_service.eliminar_documento(db, qdrant=qdrant, nombre="manual.pdf") is None
+    assert document_service.eliminar_documento(db, qdrant=qdrant, documento_id=doc) is None
 
     assert ficheros(doc) == {f"{doc}.md", f"{doc}.json"}
 

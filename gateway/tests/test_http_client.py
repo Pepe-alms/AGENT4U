@@ -71,11 +71,12 @@ async def test_obtener_documentos_404_devuelve_lista_vacia():
 @pytest.mark.asyncio
 async def test_eliminar_documento_200():
     def handler(request):
+        assert request.url.path == "/documentos/1"
         return httpx.Response(
-            200, json={"status": "eliminado", "documento": "cap.pdf"}
+            200, json={"status": "eliminado", "id": 1, "documento": "cap.pdf"}
         )
 
-    res = await _hacer_cliente(handler).eliminar_documento("cap.pdf")
+    res = await _hacer_cliente(handler).eliminar_documento(1)
     assert res["status"] == "eliminado"
 
 
@@ -85,7 +86,7 @@ async def test_eliminar_documento_404_lanza_error():
         return httpx.Response(404, json={"detail": "Documento no encontrado."})
 
     with pytest.raises(BackendHttpError) as exc:
-        await _hacer_cliente(handler).eliminar_documento("fantasma.pdf")
+        await _hacer_cliente(handler).eliminar_documento(99)
     assert exc.value.status == 404
 
 

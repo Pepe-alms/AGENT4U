@@ -303,15 +303,19 @@ async function manejarGraphQL(req, res, sesion) {
     }
 
     case 'eliminar_documento': {
-      const indice = documentos.findIndex((d) => d.name === variables.nombre);
+      const indice = documentos.findIndex((d) => d.id === variables.id);
       if (indice === -1) {
         return responderGraphQL(res, null, [
           { message: 'Documento no encontrado.', extensions: { status: 404 } },
         ]);
       }
-      documentos.splice(indice, 1);
+      const [borrado] = documentos.splice(indice, 1);
       return responderGraphQL(res, {
-        eliminar_documento: { status: 'eliminado', documento: variables.nombre },
+        eliminar_documento: {
+          status: 'eliminado',
+          id: variables.id,
+          documento: borrado.name,
+        },
       });
     }
 

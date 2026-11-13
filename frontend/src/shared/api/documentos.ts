@@ -61,23 +61,23 @@ export async function obtenerContenidoDocumento(
 }
 
 const MUTATION_ELIMINAR_DOCUMENTO = `
-  mutation($nombre: String!) {
-    eliminar_documento(nombre: $nombre) { status documento }
+  mutation($id: Int!) {
+    eliminar_documento(id: $id) { status id documento }
   }
 `;
 
 /**
- * mutation { eliminar_documento }. El parametro es el **nombre** del
- * documento, no su id. Hay dos desenlaces con status 200: hay que mirar
- * `status`, no si la mutation lanzo error.
+ * mutation { eliminar_documento }. Por **id**: el nombre no es unico, y dos
+ * ficheros distintos pueden llamarse igual. Hay dos desenlaces con status
+ * 200: hay que mirar `status`, no si la mutation lanzo error.
  */
 export async function eliminarDocumento(
-  nombre: string,
+  id: number,
   opciones: { signal?: AbortSignal } = {},
 ): Promise<DocumentoEliminado> {
   const { eliminar_documento: resultado } = await graphql<{
     eliminar_documento: DocumentoEliminado;
-  }>(MUTATION_ELIMINAR_DOCUMENTO, { nombre }, opciones);
+  }>(MUTATION_ELIMINAR_DOCUMENTO, { id }, opciones);
   return resultado;
 }
 

@@ -18,38 +18,38 @@ def test_con_documentos_devuelve_200_y_la_lista(client, db):
 
 
 def test_eliminar_documento_inexistente_devuelve_404(client):
-    respuesta = client.delete("/documentos/no-existe.pdf")
+    respuesta = client.delete("/documentos/9999")
 
     assert respuesta.status_code == 404
 
 
 def test_eliminar_documento_existente_devuelve_200(client, db):
-    document_crud.crear_documento(db, "/docs/a.pdf", "a.pdf", "pdf", 10)
+    doc = document_crud.crear_documento(db, "/docs/a.pdf", "a.pdf", "pdf", 10)
 
-    respuesta = client.delete("/documentos/a.pdf")
+    respuesta = client.delete(f"/documentos/{doc.id}")
 
     assert respuesta.status_code == 200
-    assert respuesta.json() == {"status": "eliminado", "documento": "a.pdf"}
+    assert respuesta.json() == {"status": "eliminado", "id": doc.id, "documento": "a.pdf"}
 
 
 def test_si_falla_qdrant_responde_200_avisando_del_fallo(client, db, qdrant):
-    document_crud.crear_documento(db, "/docs/a.pdf", "a.pdf", "pdf", 10)
+    doc = document_crud.crear_documento(db, "/docs/a.pdf", "a.pdf", "pdf", 10)
     qdrant.fallar_delete = True
 
-    respuesta = client.delete("/documentos/a.pdf")
+    respuesta = client.delete(f"/documentos/{doc.id}")
 
     assert respuesta.status_code == 200
     assert respuesta.json()["status"] == "fallo en el borrado"
 
 
-def test_un_nombre_repetido_responde_409_y_no_borra_ninguno(client, db):
-    document_crud.crear_documento(db, "/docs/x/a.pdf", "a.pdf", "pdf", 10)
-    document_crud.crear_documento(db, "/docs/y/a.pdf", "a.pdf", "pdf", 10)
+def test_con_dos_documentos_del_mismo_nombre_se_borra_solo_el_del_id(client, db):
+    a = document_crud.crear_documento(db, "/docs/x/a.pdf", "a.pdf", "pdf", 10)
+    b = document_crud.crear_documento(db, "/docs/y/a.pdf", "a.pdf", "pdf", 10)
 
-    respuesta = client.delete("/documentos/a.pdf")
+    respuesta = client.delete(f"/documentos/{a.id}")
 
-    assert respuesta.status_code == 409
-    assert len(document_crud.listar_documentos(db)) == 2
+    assert respuesta.status_code == 200
+    assert [d.id for d in document_crud.listar_documentos(db)] == [b.id]
 
 
 # ---------------------------------------------------------------------------

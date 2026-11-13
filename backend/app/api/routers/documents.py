@@ -3,7 +3,8 @@ from typing import Annotated
 from sqlalchemy.orm import Session
 
 from app.api.schemas import ContenidoDocumentoOut, DocumentoEliminadoOut, ErrorOut, ListaDocumentosOut
-from app.core.exceptions import DocumentoNoEncontrado, NombreAmbiguo, SinContenidoGuardado
+from app.core.exceptions import DocumentoNoEncontrado, SinContenidoGuardado
+from app.db.models.document import Document
 from app.services import contenidos
 from app.db.session import get_db
 from app.services import document_service
@@ -55,34 +56,35 @@ def contenido(documento_id: int, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.delete(
-    "/documentos/{documento}",
+    "/documentos/{documento_id}",
     response_model=DocumentoEliminadoOut,
     summary="Eliminar un documento",
-    description="Borra los vectores del documento en Qdrant y despues su fila. "
-                "El parametro es el NOMBRE del documento (campo 'name'), no su "
-                "id. Si hay varios documentos con ese nombre responde 409 y no "
-                "borra ninguno. Atencion: un 200 no garantiza el borrado; hay "
-                "que mirar el campo 'status' de la respuesta.",
+    description="Borra los vectores del documento en Qdrant y despues su fila y "
+                "su contenido guardado. El parametro es el ID: el nombre no es "
+                "unico. Atencion: un 200 no garantiza el borrado; hay que mirar "
+                "el campo 'status' de la respuesta.",
     responses={404: {"model": ErrorOut, "description": "Documento no encontrado."},
-               409: {"model": ErrorOut, "description": "Varios documentos con ese nombre."},
                500: {"model": ErrorOut, "description": "Error interno del servidor."}}
 )
 def eliminar(
-    documento: str,
+    documento_id: int,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
 ):
+    doc = db.get(Document, documento_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Documento no encontrado.")
+    nombre = doc.name
+
     try:
-        resultado = document_service.eliminar_documento(db, qdrant=request.app.state.qdrant, nombre=documento)
-    except NombreAmbiguo as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        resultado = document_service.eliminar_documento(db, qdrant=request.app.state.qdrant, documento_id=documento_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     if resultado is None:
-        return {"status": "fallo en el borrado", "documento": documento}
+        return {"status": "fallo en el borrado", "id": documento_id, "documento": nombre}
 
     if not resultado:
         raise HTTPException(status_code=404, detail="Documento no encontrado.")
 
-    return {"status": "eliminado", "documento": documento}
+    return {"status": "eliminado", "id": documento_id, "documento": nombre}

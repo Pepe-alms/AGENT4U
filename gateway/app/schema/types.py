@@ -102,6 +102,7 @@ class TrabajoEncolado:
 @strawberry.type
 class DocumentoEliminado:
     status: str
+    id: int
     documento: str
 
 

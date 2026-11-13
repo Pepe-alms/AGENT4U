@@ -58,11 +58,11 @@ class FakeBackendClient:
     async def obtener_documentos(self) -> list[dict]:
         return list(self.documentos)
 
-    async def eliminar_documento(self, nombre: str) -> dict:
+    async def eliminar_documento(self, id: int) -> dict:
         for i, d in enumerate(self.documentos):
-            if d["name"] == nombre:
+            if d["id"] == id:
                 self.documentos.pop(i)
-                return {"status": "eliminado", "documento": nombre}
+                return {"status": "eliminado", "id": id, "documento": d["name"]}
         raise BackendHttpError(404, "Documento no encontrado.")
 
     async def obtener_contenido_documento(self, id: int) -> dict | None:

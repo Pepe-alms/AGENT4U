@@ -62,7 +62,7 @@ export type EstadoDocumento =
 export type Documento = {
   id: number;
   origin: string;
-  /** Es la clave que usa DELETE /documentos/{documento}, no el id. */
+  /** No es unico: dos ficheros distintos pueden llamarse igual. */
   name: string;
   type: string;
   size: number | null;
@@ -88,6 +88,8 @@ export type ContenidoDocumento = {
 export type DocumentoEliminado = {
   /** Dos desenlaces con HTTP 200: hay que mirar este campo, no el codigo. */
   status: 'eliminado' | 'fallo en el borrado';
+  id: number;
+  /** El nombre del documento borrado, para el aviso. */
   documento: string;
 };
 

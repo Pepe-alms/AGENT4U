@@ -36,10 +36,11 @@ class Mutation:
         return TrabajoEncolado(**data)
 
     @strawberry.mutation
-    async def eliminar_documento(self, info: Info, nombre: str) -> DocumentoEliminado:
+    async def eliminar_documento(self, info: Info, id: int) -> DocumentoEliminado:
+        """Por id: el nombre no es unico, y borrar por nombre era ambiguo."""
         client = info.context["client"]
         try:
-            data = await client.eliminar_documento(nombre)
+            data = await client.eliminar_documento(id)
         except BackendHttpError as e:
             raise error_backend(e)
         return DocumentoEliminado(**data)

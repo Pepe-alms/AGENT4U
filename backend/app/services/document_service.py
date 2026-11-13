@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.db.crud import document as document_crud
-from app.core.exceptions import DocumentoNoEncontrado, NombreAmbiguo, SinContenidoGuardado
+from app.core.exceptions import DocumentoNoEncontrado, SinContenidoGuardado
 from app.db.models.document import Document
 from app.rag.vectorization import borrar_por_documento
 from app.services import contenidos
@@ -26,24 +26,20 @@ def obtener_contenido(db: Session, documento_id: int) -> tuple[Document, str]:
     return doc, markdown
 
 
-def eliminar_documento(db: Session, qdrant, nombre: str) -> bool | None:
-    """Borra los vectores del documento y despues su fila.
+def eliminar_documento(db: Session, qdrant, documento_id: int) -> Document | None | bool:
+    """Borra los vectores del documento y despues su fila y su contenido.
 
-    Devuelve False si no hay documento con ese nombre y None si Qdrant no pudo
-    borrar (la fila se conserva para no dejar vectores huerfanos). Lanza
-    NombreAmbiguo si hay mas de uno: se borra por documento_id, y el nombre
-    tiene que señalar uno solo.
+    Por id y no por nombre: el nombre no es unico (dos ficheros distintos
+    pueden llamarse igual). Devuelve False si no existe, None si Qdrant no pudo
+    borrar (la fila se conserva para no dejar vectores huerfanos) y el
+    documento borrado si todo fue bien.
     """
-    docs = document_crud.documentos_por_nombre(db, nombre)
-    if not docs:
+    doc = db.get(Document, documento_id)
+    if doc is None:
         return False
-    if len(docs) > 1:
-        raise NombreAmbiguo(nombre, len(docs))
-
-    doc = docs[0]
     doc_id = doc.id
     if not borrar_por_documento(qdrant, doc_id):
         return None
     document_crud.eliminar_documento(db, doc)
     contenidos.borrar(doc_id)
-    return True
+    return doc

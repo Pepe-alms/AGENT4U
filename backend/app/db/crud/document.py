@@ -53,10 +53,6 @@ def contar_en_vuelo(db: Session) -> int:
 def listar_documentos(db: Session) -> list[Document]:
     return list(db.scalars(select(Document).order_by(Document.created_at.desc())))
 
-def documentos_por_nombre(db: Session, name: str) -> list[Document]:
-    return list(db.scalars(select(Document).where(Document.name == name)))
-
-
 def eliminar_documento(db: Session, doc: Document) -> None:
     db.delete(doc)
     db.commit()

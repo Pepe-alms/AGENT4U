@@ -29,8 +29,8 @@ class HttpBackendClient:
         resp.raise_for_status()
         return resp.json()["documentos"]
 
-    async def eliminar_documento(self, nombre: str) -> dict:
-        resp = await self._client.delete(f"/documentos/{nombre}")
+    async def eliminar_documento(self, id: int) -> dict:
+        resp = await self._client.delete(f"/documentos/{id}")
         if resp.status_code == 404:
             raise BackendHttpError(404, resp.json().get("detail", ""))
         resp.raise_for_status()

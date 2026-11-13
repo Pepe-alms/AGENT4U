@@ -73,18 +73,20 @@ async def test_indexar_url_conflicto_409(fake_client):
 @pytest.mark.asyncio
 async def test_eliminar_documento_exito(fake_client):
     result = await schema.execute(
-        'mutation { eliminar_documento(nombre: "cap.pdf") { status documento } }',
+        "mutation { eliminar_documento(id: 1) { status id documento } }",
         context_value={"client": fake_client},
     )
 
     assert result.errors is None
-    assert result.data["eliminar_documento"]["status"] == "eliminado"
+    assert result.data["eliminar_documento"] == {
+        "status": "eliminado", "id": 1, "documento": "cap.pdf",
+    }
 
 
 @pytest.mark.asyncio
 async def test_eliminar_documento_no_encontrado_404(fake_client):
     result = await schema.execute(
-        'mutation { eliminar_documento(nombre: "fantasma.pdf") { status } }',
+        "mutation { eliminar_documento(id: 99) { status } }",
         context_value={"client": fake_client},
     )
 

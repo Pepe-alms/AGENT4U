@@ -163,8 +163,8 @@ class DocumentoOut(BaseModel):
         examples=["/docs/manual.pdf"],
     )
     name: str = Field(
-        description="Nombre del fichero, derivado de 'origin'. Es la clave que "
-                    "usa DELETE /documentos/{documento}.",
+        description="Nombre del fichero, derivado de 'origin'. No es unico: "
+                    "dos ficheros distintos pueden llamarse igual.",
         examples=["manual.pdf"],
     )
     type: str = Field(description="Etiqueta de formato.", examples=["pdf"])
@@ -213,7 +213,7 @@ class ContenidoDocumentoOut(BaseModel):
 
 
 class DocumentoEliminadoOut(BaseModel):
-    """Respuesta de ``DELETE /documentos/{documento}``.
+    """Respuesta de ``DELETE /documentos/{documento_id}``.
 
     Hay dos desenlaces con codigo 200 y hay que distinguirlos por 'status':
     'eliminado' (borrado de Qdrant y de la base de datos) y 'fallo en el
@@ -223,6 +223,7 @@ class DocumentoEliminadoOut(BaseModel):
     status: Literal["eliminado", "fallo en el borrado"] = Field(
         description="Desenlace del borrado."
     )
+    id: int = Field(description="Id del documento sobre el que se actuo.", examples=[3])
     documento: str = Field(
         description="Nombre del documento sobre el que se actuo.",
         examples=["manual.pdf"],
@@ -317,7 +318,7 @@ class SaludQdrantOut(BaseModel):
 
     OJO: siempre responde 200, incluso cuando Qdrant esta caido. Hay que mirar
     el campo 'status', no el codigo HTTP, igual que en
-    ``DELETE /documentos/{documento}``. El motivo es que un fallo de Qdrant no
+    ``DELETE /documentos/{documento_id}``. El motivo es que un fallo de Qdrant no
     es un fallo de este endpoint: el backend ha respondido correctamente que su
     dependencia no esta disponible, y asi el cliente puede distinguir
     "backend caido" de "backend vivo con Qdrant caido".

@@ -35,16 +35,15 @@ export function ListaDocumentos({
   onAvisar,
   onLeer,
 }: Props) {
-  const [borrando, setBorrando] = useState<string | null>(null);
+  const [borrando, setBorrando] = useState<number | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
 
   async function borrar(documento: Documento) {
-    setBorrando(documento.name);
+    setBorrando(documento.id);
     setFallo(null);
     try {
       // Dos desenlaces con código 200: hay que mirar `status`, no el código.
-      // Contrato: backend/app/api/schemas.py:153
-      const resultado = await eliminarDocumento(documento.name);
+      const resultado = await eliminarDocumento(documento.id);
       if (resultado.status === 'fallo en el borrado') {
         setFallo(`«${documento.name}» sigue ahí: Qdrant no pudo borrar sus vectores.`);
         onAvisar('No se pudo borrar el documento.', 'error');
@@ -133,7 +132,7 @@ export function ListaDocumentos({
                 onClick={() => onLeer(documento)}
               />
             ) : null}
-            {borrando === documento.name ? (
+            {borrando === documento.id ? (
               <Spinner tamano="sm" etiqueta={`Borrando ${documento.name}`} />
             ) : (
               <IconButton
