@@ -107,6 +107,9 @@ def nunca_la_base_de_datos_real(monkeypatch, engine, session_factory, tmp_path):
     # Ni la carpeta de contenidos del proyecto (backend/contenidos).
     from app.core.config import get_settings
     monkeypatch.setattr(get_settings(), "contenidos_dir", str(tmp_path / "contenidos"))
+    # Ni la de subidas (backend/uploads): desde que borrar un documento borra
+    # su fichero subido, un test con la carpeta real podria borrar uno de verdad.
+    monkeypatch.setattr(get_settings(), "upload_dir", str(tmp_path / "uploads"))
 
 
 # ---------------------------------------------------------------------------

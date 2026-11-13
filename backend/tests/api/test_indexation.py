@@ -289,3 +289,17 @@ def test_si_ademas_hay_uno_sano_con_ese_fichero_se_rechaza_contra_el_sano(client
 
     assert respuesta.status_code == 409
     assert respuesta.json()["duplicado_de"]["id"] == sano.id
+
+
+def test_al_reintentar_con_otro_nombre_se_borra_la_subida_anterior(client, db, carpeta_subidas):
+    viejo = carpeta_subidas / "abcdef0123456789" / "roto.pdf"
+    viejo.parent.mkdir(parents=True)
+    viejo.write_bytes(b"mismos bytes")
+    roto = _en_error(db, str(viejo), b"mismos bytes")
+
+    respuesta = _subir(client, "corregido.pdf", b"mismos bytes")
+
+    assert respuesta.status_code == 202
+    assert not viejo.exists()
+    db.refresh(roto)
+    assert Path(roto.origin).read_bytes() == b"mismos bytes"

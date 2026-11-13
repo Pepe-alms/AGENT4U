@@ -25,6 +25,7 @@ from app.db.models.document import Document
 from app.db.session import get_db
 from app.services.cola_port import ColaIndexacion
 from app.services.huellas import hash_fichero
+from app.services.subidas import borrar_fichero_subido
 
 router = APIRouter(tags=["indexacion"])
 
@@ -96,6 +97,7 @@ async def _reintentar_trabajo(
 ) -> dict:
     """Vuelve a indexar un documento que acabo en error con este mismo fichero."""
     job_id = str(uuid.uuid4())
+    origen_anterior = doc.origin
     try:
         document_crud.reintentar(
             db, doc, origen=file_path, nombre=os.path.basename(file_path),
@@ -104,6 +106,10 @@ async def _reintentar_trabajo(
     except Exception:
         db.rollback()
         raise DocumentoYaExiste(file_path)
+    # Si ahora apunta a otro fichero, el anterior se queda sin dueño: se
+    # borra si es una subida (los de POST /indexar por ruta no se tocan).
+    if origen_anterior != file_path:
+        borrar_fichero_subido(db, origen_anterior)
     await cola.encolar(job_id, file_path=file_path, type=doc.type, size=size)
     return {"job_id": job_id, "status": "en-cola"}
 

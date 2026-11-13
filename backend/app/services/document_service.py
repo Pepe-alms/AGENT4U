@@ -7,6 +7,7 @@ from app.core.exceptions import DocumentoNoEncontrado, SinContenidoGuardado, Sin
 from app.db.models.document import Document
 from app.rag.vectorization import borrar_por_documento
 from app.services import contenidos
+from app.services.subidas import borrar_fichero_subido
 
 
 def listar_documentos(db: Session):
@@ -40,10 +41,13 @@ def eliminar_documento(db: Session, qdrant, documento_id: int) -> Document | Non
     if doc is None:
         return False
     doc_id = doc.id
+    origen = doc.origin
     if not borrar_por_documento(qdrant, doc_id):
         return None
     document_crud.eliminar_documento(db, doc)
     contenidos.borrar(doc_id)
+    # Lo ultimo: solo con la fila ya borrada, y solo si es una subida.
+    borrar_fichero_subido(db, origen, salvo=doc_id)
     return doc
 
 
@@ -62,9 +66,12 @@ async def resolver_pendiente(db: Session, qdrant, cola, documento_id: int, accio
         raise SinDecisionPendiente(documento_id, doc.state)
 
     if accion == "descartar":
-        # No tiene puntos en Qdrant: solo la fila y el JSON guardado.
+        # No tiene puntos en Qdrant: la fila, el JSON guardado y, si es una
+        # subida, su fichero.
+        origen = doc.origin
         document_crud.eliminar_documento(db, doc)
         contenidos.borrar(documento_id)
+        borrar_fichero_subido(db, origen, salvo=documento_id)
         return {"id": documento_id, "accion": accion, "status": "descartado"}
 
     # Con 'reemplazar' el antiguo NO se borra aqui: lo borra el worker cuando
