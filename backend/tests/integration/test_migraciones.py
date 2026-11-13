@@ -9,7 +9,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect, text
 
-from app.db.migrar import migrar
+from app.db.migrar import CARPETA_MIGRACIONES, migrar
 from app.db.models.document import Base
 
 # Las tablas de documents tal como quedaron en una base creada con create_all
@@ -43,6 +43,18 @@ def motor(tmp_path):
     m.dispose()
 
 
+def _cabeza() -> str:
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    config = Config()
+    config.set_main_option("script_location", str(CARPETA_MIGRACIONES))
+    return ScriptDirectory.from_config(config).get_current_head()
+
+
+HEAD = _cabeza()
+
+
 def version(motor) -> str | None:
     with motor.connect() as c:
         return c.execute(text("SELECT version_num FROM alembic_version")).scalar()
@@ -62,7 +74,7 @@ def copias(tmp_path) -> list:
 def test_base_vacia_se_crea_entera(motor, tmp_path):
     migrar(motor)
 
-    assert version(motor) == "0001"
+    assert version(motor) == HEAD
     assert diferencias_que_faltan(motor) == []
     # No habia nada que salvar.
     assert copias(tmp_path) == []
@@ -75,7 +87,7 @@ def test_base_con_el_esquema_actual_sin_alembic_se_marca_y_conserva_los_datos(mo
 
     migrar(motor)
 
-    assert version(motor) == "0001"
+    assert version(motor) == HEAD
     assert diferencias_que_faltan(motor) == []
     with motor.connect() as c:
         assert c.execute(text("SELECT name, job_id FROM documents")).all() == [("a.pdf", "j1")]
@@ -133,7 +145,7 @@ def test_migrar_dos_veces_no_hace_nada_la_segunda(motor, tmp_path):
     migrar(motor)
     migrar(motor)
 
-    assert version(motor) == "0001"
+    assert version(motor) == HEAD
     # La copia es solo para la primera vez que se toca una base sin Alembic.
     assert len(copias(tmp_path)) == 1
 

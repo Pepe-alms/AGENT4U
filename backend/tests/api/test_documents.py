@@ -101,3 +101,15 @@ def test_contenido_de_un_documento_en_cola_explica_el_motivo(client, db):
 
     assert respuesta.status_code == 409
     assert "en cola" in respuesta.json()["detail"]
+
+
+def test_la_lista_dice_de_que_documento_es_duplicado(client, db):
+    original = document_crud.crear_documento(db, "/docs/a.pdf", "a.pdf", "pdf", 10)
+    copia = document_crud.crear_documento(db, "/docs/a.docx", "a.docx", "docx", 10)
+    document_crud.marcar_duplicado(db, copia, original.id)
+
+    documentos = {d["id"]: d for d in client.get("/documentos").json()["documentos"]}
+
+    assert documentos[copia.id]["state"] == "duplicado"
+    assert documentos[copia.id]["duplicado_de"] == original.id
+    assert documentos[original.id]["duplicado_de"] is None

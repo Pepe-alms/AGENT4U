@@ -16,7 +16,33 @@ def crear_documento(db: Session, origen: str, nombre: str, type: str,
 def marcar_indexado(db: Session, doc: Document, num_chunks: int) -> None:
     doc.state = "indexado"
     doc.num_chunks = num_chunks
+    doc.duplicado_de = None
     db.commit()
+
+
+def marcar_duplicado(db: Session, doc: Document, original_id: int) -> None:
+    """Nivel 2: mismo contenido que `original_id`. No se indexa."""
+    doc.state = "duplicado"
+    doc.duplicado_de = original_id
+    doc.num_chunks = 0
+    db.commit()
+
+
+# Los que cuentan como "ya existe ese contenido". Un documento en error no
+# tiene nada en Qdrant, y uno duplicado apunta a su original.
+ESTADOS_CON_CONTENIDO = ("en-cola", "indexando", "pendiente", "indexado", "pendiente-decision")
+
+
+def con_mismo_texto(db: Session, hash_texto: str, salvo: int) -> Document | None:
+    """Otro documento con la misma huella de texto, si lo hay."""
+    return db.scalar(
+        select(Document)
+        .where(Document.hash_texto_normalizado == hash_texto)
+        .where(Document.id != salvo)
+        .where(Document.state.in_(ESTADOS_CON_CONTENIDO))
+        .order_by(Document.id)
+        .limit(1)
+    )
 
 
 def marcar_error(db: Session, doc: Document, mensaje: str) -> None:

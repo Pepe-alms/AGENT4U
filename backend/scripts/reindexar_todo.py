@@ -97,6 +97,9 @@ def main(argumentos: list[str] | None = None) -> int:
                 sparse_embedder=sparse_embedder,
                 qdrant=qdrant,
                 desde_json=desde_json,
+                # Reindexar lo que ya estaba no es recibir algo nuevo: no se
+                # comparan entre si los documentos que ya existen.
+                comprobar_duplicados=False,
             )
         except Exception as e:
             # indexar_documento ya lo ha marcado como 'error' en la BD.

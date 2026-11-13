@@ -17,6 +17,7 @@ from app.db.models.document import Document
 from app.db.session import SessionLocal
 from app.rag.vectorization import borrar_por_documento, embed_texts, normalize_text
 from app.services import contenidos
+from app.services.huellas import hash_texto_normalizado
 
 
 def registrar_documento(db: Session, origen: str, nombre: str, tipo: str,
@@ -37,7 +38,8 @@ def registrar_documento(db: Session, origen: str, nombre: str, tipo: str,
 
 def indexar_documento(doc_id: int, *, file_path: str, converter, chunker,
                       dense_embedder, sparse_embedder, qdrant,
-                      desde_json: bool = False) -> int | None:
+                      desde_json: bool = False,
+                      comprobar_duplicados: bool = True) -> int | None:
     """Convierte, trocea, vectoriza y sube a Qdrant el documento `doc_id`.
 
     Marca 'indexando' al empezar y 'indexado' o 'error' al terminar. Devuelve
@@ -48,6 +50,12 @@ def indexar_documento(doc_id: int, *, file_path: str, converter, chunker,
     Guarda tambien el contenido completo (app/services/contenidos.py), y solo
     lo deja en su sitio si la indexacion termina bien. Con `desde_json`, si hay
     un DoclingDocument guardado se usa ese en vez de convertir otra vez.
+
+    Deduplicacion, nivel 2: tras convertir se calcula la huella del texto. Si
+    otro documento ya tiene ese mismo contenido, este queda 'duplicado' y no
+    se indexa (devuelve 0). `comprobar_duplicados=False` se salta la
+    comprobacion: para reindexar lo que ya estaba, o cuando el usuario ya ha
+    decidido conservarlo.
 
     Cada escritura de estado abre su propia sesion: esto corre en un hilo que
     puede durar mas que la peticion o el job que lo lanzo.
@@ -69,6 +77,13 @@ def indexar_documento(doc_id: int, *, file_path: str, converter, chunker,
         documento = contenidos.cargar_documento(doc_id) if desde_json else None
         if documento is None:
             documento = converter.convert(file_path).document
+
+        huella = hash_texto_normalizado(documento)
+        original = _guardar_huella(doc_id, huella, comprobar_duplicados)
+        if original is not None:
+            contenidos.descartar(doc_id)
+            return 0
+
         temporales = contenidos.guardar_temporales(doc_id, documento)
         chunks, records = normalize_text(
             documento=documento, chunker=chunker, file_path=file_path,
@@ -87,6 +102,24 @@ def indexar_documento(doc_id: int, *, file_path: str, converter, chunker,
 
     _marcar_estado_final(doc_id, num_chunks=len(chunks))
     return len(chunks)
+
+
+def _guardar_huella(doc_id: int, huella: str, comprobar: bool) -> int | None:
+    """Guarda la huella de texto y, si otro documento ya la tiene, marca este
+    como duplicado. Devuelve el id del original, o None si no hay."""
+    with SessionLocal() as sesion:
+        doc = sesion.get(Document, doc_id)
+        if doc is None:
+            return None
+        doc.hash_texto_normalizado = huella
+        sesion.commit()
+        if not comprobar:
+            return None
+        original = document_crud.con_mismo_texto(sesion, huella, salvo=doc_id)
+        if original is None:
+            return None
+        document_crud.marcar_duplicado(sesion, doc, original.id)
+        return original.id
 
 
 def _marcar_estado_final(doc_id: int, *, num_chunks: int | None = None,

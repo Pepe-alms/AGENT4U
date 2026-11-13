@@ -249,6 +249,9 @@ class FakeDocumento:
             for n in range(1, self.paginas + 1)
         )
 
+    def export_to_text(self) -> str:
+        return self.export_to_markdown()
+
     def iterate_items(self):
         for n in range(1, self.paginas + 1):
             yield SimpleNamespace(prov=[FakeProv(n)]), 0

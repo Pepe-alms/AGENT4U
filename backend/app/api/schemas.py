@@ -9,7 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 # --------------------------------------------------------------------------
 
 Rol = Literal["user", "assistant"]
-EstadoDocumento = Literal["en-cola", "indexando", "pendiente", "indexado", "error"]
+EstadoDocumento = Literal[
+    "en-cola", "indexando", "pendiente", "indexado", "error",
+    # Nivel 2: mismo contenido que otro documento (ver 'duplicado_de'). No se
+    # indexa: ni puntos en Qdrant ni contenido guardado.
+    "duplicado",
+]
 
 
 # --------------------------------------------------------------------------
@@ -196,6 +201,11 @@ class DocumentoOut(BaseModel):
     )
     error_message: str | None = Field(
         description="Causa del fallo. Solo tiene valor si state == 'error'."
+    )
+    duplicado_de: int | None = Field(
+        default=None,
+        description="Si state == 'duplicado': id del documento que ya tenia "
+                    "este mismo contenido.",
     )
 
 

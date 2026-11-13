@@ -22,3 +22,9 @@ class Document(Base):
     job_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     num_chunks: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Nivel 2 de deduplicacion: SHA-256 del texto extraido y normalizado
+    # (app/services/huellas.py). Mismo contenido en otro envoltorio (el mismo
+    # texto en PDF y en DOCX) da la misma huella.
+    hash_texto_normalizado: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    # Si el estado es 'duplicado': el documento que ya tenia ese contenido.
+    duplicado_de: Mapped[int | None] = mapped_column(Integer, nullable=True)
