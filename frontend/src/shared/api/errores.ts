@@ -20,13 +20,41 @@ export type TipoErrorApi =
 export class ErrorApi extends Error {
   readonly tipo: TipoErrorApi;
   readonly estado: number | undefined;
+  /**
+   * El resto del cuerpo del error, ademas del mensaje: lo que el backend
+   * manda junto a `detail` (REST) o en `extensions` (GraphQL). El 409 de
+   * "mismo fichero" trae aqui `motivo` y `duplicado_de`.
+   */
+  readonly datos: Record<string, unknown>;
 
-  constructor(mensaje: string, tipo: TipoErrorApi, estado?: number) {
+  constructor(
+    mensaje: string,
+    tipo: TipoErrorApi,
+    estado?: number,
+    datos: Record<string, unknown> = {},
+  ) {
     super(mensaje);
     this.name = 'ErrorApi';
     this.tipo = tipo;
     this.estado = estado;
+    this.datos = datos;
   }
+}
+
+/**
+ * Si el error es el rechazo del nivel 1 (exactamente el mismo fichero que un
+ * documento que ya existe), ese documento. null en cualquier otro caso.
+ */
+export function mismoFicheroQue(
+  error: unknown,
+): { id: number; name: string; state: string } | null {
+  if (!(error instanceof ErrorApi) || error.datos.motivo !== 'mismo-fichero') return null;
+  const original = error.datos.duplicado_de;
+  if (typeof original !== 'object' || original === null) return null;
+  const { id, name, state } = original as Record<string, unknown>;
+  return typeof id === 'number' && typeof name === 'string'
+    ? { id, name, state: typeof state === 'string' ? state : '' }
+    : null;
 }
 
 /**

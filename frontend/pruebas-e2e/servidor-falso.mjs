@@ -7,7 +7,7 @@
  * ninguno, y POST /preguntar devuelve SSE, no JSON.
  */
 import { createServer } from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 const PUERTO = Number(process.argv[2] ?? 8099);
 
@@ -125,6 +125,42 @@ const PASOS = [
   { nodo: 'construir', ms: 1 },
 ];
 
+/** El fichero de una subida multipart, sin las cabeceras de su parte. */
+function contenidoMultipart(req, bruto) {
+  const limite = /boundary=(.+)$/.exec(req.headers['content-type'] ?? '')?.[1];
+  const texto = bruto.toString('latin1');
+  const inicio = texto.indexOf('\r\n\r\n') + 4;
+  const fin = limite ? texto.lastIndexOf(`\r\n--${limite}`) : texto.length;
+  return Buffer.from(texto.slice(inicio, fin), 'latin1');
+}
+
+/**
+ * Los niveles 2 y 3 de la deduplicacion, que el backend decide al convertir.
+ * Aqui los decide el nombre, contra el primer documento indexado: "-mismo-
+ * contenido" es un duplicado y "-v2" una posible version nueva.
+ */
+function desenlaceDe(nombre, documentos) {
+  const original = documentos.find((d) => d.state === 'indexado');
+  if (original && nombre.includes('-mismo-contenido')) {
+    return { state: 'duplicado', duplicado_de: original.id };
+  }
+  if (original && nombre.includes('-v2')) {
+    return {
+      state: 'pendiente-decision',
+      parecido_a: original.id,
+      pct_nuevo_en_antiguo: 0.75,
+      pct_antiguo_en_nuevo: 0.9,
+    };
+  }
+  return { state: 'indexado' };
+}
+
+/** Como SQLite: un id borrado no se reutiliza. Con `length + 1`, tras borrar
+ *  un documento el siguiente heredaba el id de otro que seguia existiendo. */
+function siguienteIdDocumento(documentos) {
+  return documentos.reduce((mayor, d) => Math.max(mayor, d.id), 0) + 1;
+}
+
 function responderJson(res, codigo, cuerpo) {
   const texto = JSON.stringify(cuerpo);
   res.writeHead(codigo, {
@@ -211,10 +247,78 @@ async function manejarGraphQL(req, res, sesion) {
       });
     }
 
-    case 'trabajo':
+    case 'trabajo': {
+      // El estado se lee del documento, como hace el backend: asi un
+      // trabajo resuelto despues sigue su documento.
+      const trabajo = sesion.trabajos.get(variables.jobId);
+      if (!trabajo) return responderGraphQL(res, { trabajo: null });
+      if (trabajo.documento_id === undefined) return responderGraphQL(res, { trabajo });
+      const doc = documentos.find((d) => d.id === trabajo.documento_id);
+      if (!doc) return responderGraphQL(res, { trabajo: null });
+      const otroId = doc.state === 'duplicado' ? doc.duplicado_de : doc.parecido_a;
+      const otro = documentos.find((d) => d.id === otroId);
       return responderGraphQL(res, {
-        trabajo: sesion.trabajos.get(variables.jobId) ?? null,
+        trabajo: {
+          job_id: trabajo.job_id,
+          status: doc.state,
+          origin: doc.origin,
+          name: doc.name,
+          num_chunks: doc.num_chunks,
+          error_message: null,
+          documento_id: doc.id,
+          relacionado: otro ? { id: otro.id, name: otro.name, state: otro.state } : null,
+          pct_nuevo_en_antiguo: doc.pct_nuevo_en_antiguo ?? null,
+          pct_antiguo_en_nuevo: doc.pct_antiguo_en_nuevo ?? null,
+        },
       });
+    }
+
+    case 'resolver_documento': {
+      const doc = documentos.find((d) => d.id === variables.id);
+      if (!doc || doc.state !== 'pendiente-decision') {
+        return responderGraphQL(res, null, [
+          { message: 'No esta pendiente de decision.', extensions: { status: 409 } },
+        ]);
+      }
+      if (variables.accion === 'descartar') {
+        documentos.splice(documentos.indexOf(doc), 1);
+        return responderGraphQL(res, {
+          resolver_documento: {
+            id: doc.id,
+            accion: 'descartar',
+            status: 'descartado',
+            job_id: null,
+            reemplazado: null,
+          },
+        });
+      }
+      let reemplazado = null;
+      if (variables.accion === 'reemplazar') {
+        const antiguo = documentos.findIndex((d) => d.id === doc.parecido_a);
+        if (antiguo !== -1) {
+          reemplazado = doc.parecido_a;
+          documentos.splice(antiguo, 1);
+        }
+      }
+      Object.assign(doc, {
+        state: 'indexado',
+        num_chunks: 12,
+        parecido_a: null,
+        pct_nuevo_en_antiguo: null,
+        pct_antiguo_en_nuevo: null,
+      });
+      const jobId = randomUUID();
+      sesion.trabajos.set(jobId, { job_id: jobId, documento_id: doc.id });
+      return responderGraphQL(res, {
+        resolver_documento: {
+          id: doc.id,
+          accion: variables.accion,
+          status: 'en-cola',
+          job_id: jobId,
+          reemplazado,
+        },
+      });
+    }
 
     case 'conversaciones':
       return responderGraphQL(res, {
@@ -251,7 +355,7 @@ async function manejarGraphQL(req, res, sesion) {
       const jobId = randomUUID();
       const nombre = ruta.split('/').pop() ?? ruta;
       documentos.push({
-        id: documentos.length + 1,
+        id: siguienteIdDocumento(documentos),
         origin: ruta,
         name: nombre,
         type: variables.type,
@@ -281,7 +385,7 @@ async function manejarGraphQL(req, res, sesion) {
       }
       const jobId = randomUUID();
       documentos.push({
-        id: documentos.length + 1,
+        id: siguienteIdDocumento(documentos),
         origin: url,
         name: url,
         type: 'url',
@@ -382,32 +486,46 @@ createServer(async (req, res) => {
   }
 
   if (url === '/indexar-fichero' && method === 'POST') {
-    const cuerpo = (await leerCuerpo(req)).toString('utf8', 0, 4000);
-    const nombre = /filename="([^"]*)"/.exec(cuerpo)?.[1] ?? 'subido.pdf';
-    const ruta = `/subidas/${nombre}`;
+    const bruto = await leerCuerpo(req);
+    const cabecera = bruto.toString('utf8', 0, 4000);
+    const nombre = /filename="([^"]*)"/.exec(cabecera)?.[1] ?? 'subido.pdf';
+    // Nivel 1 de la deduplicacion: la huella es la del contenido del fichero,
+    // sin la envoltura multipart, que cambia con cada envio.
+    const huella = createHash('sha256')
+      .update(contenidoMultipart(req, bruto))
+      .digest('hex');
+    const original = documentos.find((d) => d.hash_content === huella);
+    if (original) {
+      return responderJson(res, 409, {
+        detail: `Es exactamente el mismo fichero que '${original.name}' (id ${original.id}, ${original.state}).`,
+        motivo: 'mismo-fichero',
+        duplicado_de: { id: original.id, name: original.name, state: original.state },
+      });
+    }
+    const ruta = `/subidas/${huella.slice(0, 16)}/${nombre}`;
     if (documentos.some((d) => d.origin === ruta)) {
       return responderJson(res, 409, { detail: `El documento ${ruta} ya existe.` });
     }
     const jobId = randomUUID();
+    const id = siguienteIdDocumento(documentos);
+    const desenlace = desenlaceDe(nombre, documentos);
     documentos.push({
-      id: documentos.length + 1,
+      id,
       origin: ruta,
       name: nombre,
       type: 'pdf',
       size: 1024,
       created_at: new Date().toISOString(),
-      state: 'indexado',
-      num_chunks: 12,
+      state: desenlace.state,
+      num_chunks: desenlace.state === 'indexado' ? 12 : 0,
       error_message: null,
+      hash_content: huella,
+      duplicado_de: desenlace.duplicado_de ?? null,
+      parecido_a: desenlace.parecido_a ?? null,
+      pct_nuevo_en_antiguo: desenlace.pct_nuevo_en_antiguo ?? null,
+      pct_antiguo_en_nuevo: desenlace.pct_antiguo_en_nuevo ?? null,
     });
-    sesion.trabajos.set(jobId, {
-      job_id: jobId,
-      status: 'indexado',
-      origin: ruta,
-      name: nombre,
-      num_chunks: 12,
-      error_message: null,
-    });
+    sesion.trabajos.set(jobId, { job_id: jobId, documento_id: id });
     return responderJson(res, 202, { job_id: jobId, status: 'en-cola', ruta });
   }
 

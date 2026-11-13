@@ -29,7 +29,10 @@ test('indexar un documento, preguntar y verificar la cita', async ({ page }) => 
 
   // Aparece en la cola con sus fragmentos y luego en la lista de documentos.
   await expect(page.getByText('12 frag.').first()).toBeVisible();
-  await expect(page.getByTitle('/subidas/manual-cap.pdf')).toBeVisible();
+  // La ruta lleva la carpeta de su huella: /subidas/<hash>/manual-cap.pdf.
+  await expect(
+    page.getByTitle(/^\/subidas\/[0-9a-f]{16}\/manual-cap\.pdf$/),
+  ).toBeVisible();
 
   // El panel es modal: hay que cerrarlo para volver al chat.
   await page.getByRole('button', { name: 'Cerrar' }).click();

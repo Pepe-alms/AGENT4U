@@ -2,10 +2,12 @@ import { peticion } from '@/shared/api/cliente';
 import { ErrorApi } from '@/shared/api/errores';
 import { graphql } from '@/shared/api/graphql';
 import type {
+  AccionResolver,
   ContenidoDocumento,
   Documento,
   DocumentoEliminado,
   FicheroEncolado,
+  Resolucion,
   TrabajoEncolado,
   TrabajoEstado,
 } from '@/shared/api/types';
@@ -13,6 +15,7 @@ import type {
 const QUERY_DOCUMENTOS = `{
   documentos {
     id origin name type size created_at state num_chunks error_message
+    duplicado_de parecido_a pct_nuevo_en_antiguo pct_antiguo_en_nuevo
   }
 }`;
 
@@ -165,6 +168,7 @@ const QUERY_TRABAJO = `
   query($jobId: String!) {
     trabajo(job_id: $jobId) {
       job_id status origin name num_chunks error_message
+      documento_id relacionado { id name state } pct_nuevo_en_antiguo pct_antiguo_en_nuevo
     }
   }
 `;
@@ -189,6 +193,27 @@ export async function obtenerEstadoTrabajo(
     throw new ErrorApi('Trabajo no encontrado.', 'http', 404);
   }
   return trabajo;
+}
+
+const MUTATION_RESOLVER = `
+  mutation($id: Int!, $accion: AccionResolver!) {
+    resolver_documento(id: $id, accion: $accion) { id accion status job_id reemplazado }
+  }
+`;
+
+/**
+ * mutation { resolver_documento }. Lo que el usuario decide con un documento
+ * casi igual a otro. Nunca se llama sin que el usuario lo haya elegido.
+ */
+export async function resolverDocumento(
+  id: number,
+  accion: AccionResolver,
+  opciones: { signal?: AbortSignal } = {},
+): Promise<Resolucion> {
+  const { resolver_documento: resultado } = await graphql<{
+    resolver_documento: Resolucion;
+  }>(MUTATION_RESOLVER, { id, accion }, opciones);
+  return resultado;
 }
 
 /** Qué se puede subir, por extensión. El backend no valida la lista. */

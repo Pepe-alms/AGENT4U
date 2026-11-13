@@ -70,3 +70,46 @@ describe('la URL base del backend', () => {
     expect(fetchFalso.mock.calls[0][0]).toBe('http://localhost:8000/health');
   });
 });
+
+describe('los errores conservan su cuerpo', () => {
+  it('el 409 de "mismo fichero" de una subida dice con qué documento coincide', async () => {
+    const { peticion } = await clienteCon('http://localhost:8080');
+    // Se importa despues de resetModules: ErrorApi tiene que ser la misma clase.
+    const { mismoFicheroQue } = await import('@/shared/api/errores');
+    const cuerpo = {
+      detail: "Es exactamente el mismo fichero que 'cap.pdf' (id 1, indexado).",
+      motivo: 'mismo-fichero',
+      duplicado_de: { id: 1, name: 'cap.pdf', state: 'indexado' },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(JSON.stringify(cuerpo), { status: 409 })),
+    );
+
+    const error: unknown = await peticion('/indexar-fichero', { metodo: 'POST' }).catch(
+      (e: unknown) => e,
+    );
+
+    expect(error).toMatchObject({ message: cuerpo.detail, estado: 409 });
+    expect(mismoFicheroQue(error)).toEqual({ id: 1, name: 'cap.pdf', state: 'indexado' });
+  });
+
+  it('un 409 de otro tipo no se confunde con el de mismo fichero', async () => {
+    const { peticion } = await clienteCon('http://localhost:8080');
+    const { mismoFicheroQue } = await import('@/shared/api/errores');
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ detail: 'Ya está indexado' }), { status: 409 }),
+        ),
+    );
+
+    const error: unknown = await peticion('/indexar', { metodo: 'POST' }).catch(
+      (e: unknown) => e,
+    );
+
+    expect(mismoFicheroQue(error)).toBeNull();
+  });
+});

@@ -5,9 +5,11 @@ import {
   indexarFichero,
   indexarUrl,
   obtenerEstadoTrabajo,
+  resolverDocumento,
   subirFichero,
 } from '@/shared/api/documentos';
-import { ErrorApi, mensajeDeError } from '@/shared/api/errores';
+import { ErrorApi, mensajeDeError, mismoFicheroQue } from '@/shared/api/errores';
+import type { AccionResolver } from '@/shared/api/types';
 import { useRecurso } from '@/shared/hooks/useRecurso';
 import {
   huecosLibres,
@@ -34,6 +36,12 @@ export type Ingesta = {
    */
   subir: (ficheros: File[]) => File[];
   olvidar: (id: string) => void;
+  /**
+   * La decisión del usuario sobre un documento pendiente de decisión. Sirve
+   * igual desde la cola que desde la lista: si no estaba en la cola, se
+   * añade para seguir su indexación.
+   */
+  resolver: (documentoId: number, nombre: string, accion: AccionResolver) => void;
   /** Cuántos trabajos más acepta el servidor ahora mismo. */
   huecos: number;
   /** El techo del servidor, para poder enseñar «2 de 5». */
@@ -94,6 +102,33 @@ export function useIngesta(alTerminar: () => void): Ingesta {
           });
           return;
         }
+        // Los dos desenlaces de la deduplicacion que se ven tras convertir:
+        // son finales, como indexado o error. Sin esto, el sondeo seguiria
+        // para siempre esperando un 'indexado' que no va a llegar.
+        if (estado.status === 'duplicado' && estado.documento_id !== null) {
+          timers.current.delete(id);
+          despachar({
+            tipo: 'duplicado',
+            id,
+            documentoId: estado.documento_id,
+            relacionado: estado.relacionado ?? undefined,
+          });
+          alTerminarRef.current();
+          return;
+        }
+        if (estado.status === 'pendiente-decision' && estado.documento_id !== null) {
+          timers.current.delete(id);
+          despachar({
+            tipo: 'pendiente',
+            id,
+            documentoId: estado.documento_id,
+            relacionado: estado.relacionado ?? undefined,
+            pctNuevoEnAntiguo: estado.pct_nuevo_en_antiguo,
+            pctAntiguoEnNuevo: estado.pct_antiguo_en_nuevo,
+          });
+          alTerminarRef.current();
+          return;
+        }
         if (estado.status === 'indexando') {
           despachar({ tipo: 'empezar', id });
         }
@@ -103,6 +138,22 @@ export function useIngesta(alTerminar: () => void): Ingesta {
       timers.current.set(id, setTimeout(comprobar, POLL_MS));
     };
     timers.current.set(id, setTimeout(comprobar, POLL_PRIMER_MS));
+  }, []);
+
+  /** Un fallo al mandar: el rechazo del nivel 1 se cuenta aparte. */
+  const rechazarOFallar = useCallback((id: string, error: unknown) => {
+    const original = mismoFicheroQue(error);
+    if (original) {
+      despachar({ tipo: 'rechazado', id, relacionado: original });
+      return;
+    }
+    const estado = error instanceof ErrorApi ? error.estado : undefined;
+    despachar({
+      tipo: 'fallo',
+      id,
+      mensaje: mensajeDeIngesta(estado, mensajeDeError(error)),
+    });
+    if (estado === 409) alTerminarRef.current();
   }, []);
 
   const indexar = useCallback(
@@ -124,17 +175,11 @@ export function useIngesta(alTerminar: () => void): Ingesta {
             clase === 'url' ? await indexarUrl(limpio) : await indexarFichero(limpio);
           pollear(id, resultado.job_id);
         } catch (error) {
-          const estado = error instanceof ErrorApi ? error.estado : undefined;
-          despachar({
-            tipo: 'fallo',
-            id,
-            mensaje: mensajeDeIngesta(estado, mensajeDeError(error)),
-          });
-          if (estado === 409) alTerminarRef.current();
+          rechazarOFallar(id, error);
         }
       })();
     },
-    [huecos, pollear],
+    [huecos, pollear, rechazarOFallar],
   );
 
   const subir = useCallback(
@@ -150,20 +195,54 @@ export function useIngesta(alTerminar: () => void): Ingesta {
             const resultado = await subirFichero(fichero);
             pollear(id, resultado.job_id);
           } catch (error) {
-            const estado = error instanceof ErrorApi ? error.estado : undefined;
-            despachar({
-              tipo: 'fallo',
-              id,
-              mensaje: mensajeDeIngesta(estado, mensajeDeError(error)),
-            });
-            if (estado === 409) alTerminarRef.current();
+            rechazarOFallar(id, error);
           }
         })();
       }
 
       return sobran;
     },
-    [huecos, pollear],
+    [huecos, pollear, rechazarOFallar],
+  );
+
+  // La cola actual, leida desde `resolver` sin hacerla dependencia: asi
+  // `resolver` no cambia de identidad con cada tic del sondeo.
+  const trabajosRef = useRef(trabajos);
+  useEffect(() => {
+    trabajosRef.current = trabajos;
+  });
+
+  const resolver = useCallback(
+    (documentoId: number, nombre: string, accion: AccionResolver) => {
+      let id = trabajosRef.current.find((t) => t.documentoId === documentoId)?.id;
+      if (!id) {
+        id = crypto.randomUUID();
+        despachar({ tipo: 'seguir', id, origen: nombre, documentoId });
+      }
+      const trabajo = id;
+
+      void (async () => {
+        try {
+          const resultado = await resolverDocumento(documentoId, accion);
+          if (resultado.status === 'descartado') {
+            despachar({ tipo: 'descartado', id: trabajo });
+          } else {
+            despachar({ tipo: 'reencolar', id: trabajo });
+            if (resultado.job_id) pollear(trabajo, resultado.job_id);
+          }
+          alTerminarRef.current();
+        } catch (error) {
+          const estado = error instanceof ErrorApi ? error.estado : undefined;
+          despachar({
+            tipo: 'fallo',
+            id: trabajo,
+            mensaje: mensajeDeIngesta(estado, mensajeDeError(error)),
+          });
+          alTerminarRef.current();
+        }
+      })();
+    },
+    [pollear],
   );
 
   const olvidar = useCallback((id: string) => {
@@ -175,5 +254,5 @@ export function useIngesta(alTerminar: () => void): Ingesta {
     despachar({ tipo: 'olvidar', id });
   }, []);
 
-  return { trabajos, indexar, subir, olvidar, huecos, maxEnVuelo };
+  return { trabajos, indexar, subir, olvidar, resolver, huecos, maxEnVuelo };
 }
