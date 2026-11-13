@@ -152,7 +152,7 @@ Agent4U/
 │   │   ├── routes.ts              # el mapa de rutas: de aquí salen nav, pie, migas y las pruebas
 │   │   ├── app/                   # la aplicación del agente (/app)
 │   │   ├── sitio/                 # el sitio editorial (/), con sus páginas y datos
-│   │   ├── features/              # chat, documentos, conversaciones, ajustes, comandos, salud
+│   │   ├── features/              # chat, documentos, visor de documentos, conversaciones, ajustes, comandos, salud
 │   │   └── shared/                # api (incluye el cliente GraphQL), hooks, lib, ui y tokens de estilo
 │   ├── pruebas-e2e/               # Playwright: Chromium y WebKit, con un backend+gateway falso
 │   ├── herramientas/              # comprobaciones propias del bundle de producción
@@ -254,7 +254,7 @@ APP_LLM_MODEL=gemini/gemini-flash-lite-latest
 
 ## Uso de la API
 
-Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
+Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `GET /documentos/{id}/contenido` (el texto completo que extrajo Docling), `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
 
 ### `POST /indexar`
 
@@ -460,7 +460,7 @@ git push -u origin feature/nombre-corto
 
 ### Ideas anotadas para la ingesta
 
-- **Cachear el documento parseado con `save_as_json`**: parsear es la parte cara del pipeline (el modelo de layout, ~90s por documento); trocear es barato. Guardar el `DoclingDocument` ya parseado permitiría probar otro tamaño de chunk o reindexar tras cambiar de modelo de embeddings sin repetir el parseo — de minutos a segundos por iteración.
+- **Cachear el documento parseado con `save_as_json`** — hecho: cada indexación guarda el `DoclingDocument` en JSON junto a su Markdown (`APP_CONTENIDOS_DIR`), y `scripts/reindexar_todo.py --desde-json` trocea desde ahí sin repetir el parseo, que es la parte cara (el modelo de layout, ~90 s por documento). Sirve para probar otro tamaño de chunk o cambiar de modelo de embeddings.
 - **Ajustar la configuración de `DocumentConverter`**: hoy solo se desactiva el OCR; hay más superficie de configuración disponible, por ejemplo:
 
 ```python

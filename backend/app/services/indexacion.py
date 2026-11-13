@@ -16,6 +16,7 @@ from app.db.crud import document as document_crud
 from app.db.models.document import Document
 from app.db.session import SessionLocal
 from app.rag.vectorization import borrar_por_documento, embed_texts, normalize_text
+from app.services import contenidos
 
 
 def registrar_documento(db: Session, origen: str, nombre: str, tipo: str,
@@ -35,13 +36,18 @@ def registrar_documento(db: Session, origen: str, nombre: str, tipo: str,
 
 
 def indexar_documento(doc_id: int, *, file_path: str, converter, chunker,
-                      dense_embedder, sparse_embedder, qdrant) -> int | None:
+                      dense_embedder, sparse_embedder, qdrant,
+                      desde_json: bool = False) -> int | None:
     """Convierte, trocea, vectoriza y sube a Qdrant el documento `doc_id`.
 
     Marca 'indexando' al empezar y 'indexado' o 'error' al terminar. Devuelve
     el numero de fragmentos, o None si la fila ya no existe (la borraron
     mientras esperaba). Si falla, borra lo que llegara a subir, marca el error
     y relanza la excepcion.
+
+    Guarda tambien el contenido completo (app/services/contenidos.py), y solo
+    lo deja en su sitio si la indexacion termina bien. Con `desde_json`, si hay
+    un DoclingDocument guardado se usa ese en vez de convertir otra vez.
 
     Cada escritura de estado abre su propia sesion: esto corre en un hilo que
     puede durar mas que la peticion o el job que lo lanzo.
@@ -60,16 +66,22 @@ def indexar_documento(doc_id: int, *, file_path: str, converter, chunker,
     borrar_por_documento(qdrant, doc_id)
 
     try:
+        documento = contenidos.cargar_documento(doc_id) if desde_json else None
+        if documento is None:
+            documento = converter.convert(file_path).document
+        temporales = contenidos.guardar_temporales(doc_id, documento)
         chunks, records = normalize_text(
-            file_path=file_path, converter=converter, chunker=chunker,
+            documento=documento, chunker=chunker, file_path=file_path,
             name=nombre, type=tipo, documento_id=doc_id,
         )
         embed_texts(
             chunks=chunks, dense_embedder=dense_embedder,
             sparse_embedder=sparse_embedder, qdrant=qdrant, records=records,
         )
+        contenidos.confirmar(doc_id, temporales)
     except Exception as e:
         borrar_por_documento(qdrant, doc_id)
+        contenidos.descartar(doc_id)
         _marcar_estado_final(doc_id, mensaje=str(e))
         raise
 

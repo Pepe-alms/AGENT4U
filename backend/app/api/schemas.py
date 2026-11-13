@@ -192,6 +192,26 @@ class ListaDocumentosOut(BaseModel):
     documentos: list[DocumentoOut]
 
 
+class ContenidoDocumentoOut(BaseModel):
+    """Respuesta de ``GET /documentos/{documento_id}/contenido``."""
+
+    documento: DocumentoOut
+    markdown: str = Field(
+        description=(
+            "Texto completo del documento tal como lo extrajo Docling, en "
+            "Markdown. Es lo mismo que se trocea para el RAG, sin los huecos de "
+            "los fragmentos. Cada pagina empieza con un comentario "
+            "'<!-- pagina N -->', invisible al renderizar, para poder situarse "
+            "por pagina; si no se pudieron numerar, no aparece ninguno. Viene "
+            "de documentos de terceros: hay que sanearlo antes de pintarlo."
+        ),
+    )
+    paginas: int = Field(
+        ge=0,
+        description="Paginas marcadas en el Markdown. 0 si no hay marcas.",
+    )
+
+
 class DocumentoEliminadoOut(BaseModel):
     """Respuesta de ``DELETE /documentos/{documento}``.
 

@@ -23,6 +23,14 @@ class Documento:
 
 
 @strawberry.type
+class ContenidoDocumento:
+    documento: Documento
+    # Viene de documentos de terceros: el cliente tiene que sanearlo.
+    markdown: str
+    paginas: int
+
+
+@strawberry.type
 class Trabajo:
     job_id: str
     status: str
@@ -41,6 +49,8 @@ class Fuente:
     texto: str
     score: float | None
     subconsulta: str
+    # Null en los mensajes guardados antes de que el backend lo enviara.
+    documento_id: int | None = None
 
 
 @strawberry.type

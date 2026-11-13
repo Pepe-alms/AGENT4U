@@ -2,6 +2,7 @@ import { peticion } from '@/shared/api/cliente';
 import { ErrorApi } from '@/shared/api/errores';
 import { graphql } from '@/shared/api/graphql';
 import type {
+  ContenidoDocumento,
   Documento,
   DocumentoEliminado,
   FicheroEncolado,
@@ -29,6 +30,34 @@ export async function obtenerDocumentos(
     opciones,
   );
   return documentos;
+}
+
+const QUERY_CONTENIDO = `
+  query($id: Int!) {
+    contenido_documento(id: $id) {
+      markdown paginas
+      documento { id origin name type size created_at state num_chunks error_message }
+    }
+  }
+`;
+
+/**
+ * query { contenido_documento }. Dos fallos distintos, y la pantalla explica
+ * cada uno: el documento no existe (el resolver devuelve null, que se
+ * traduce a `estado` 404) o existe pero no tiene contenido guardado (error
+ * con `estado` 409, con el motivo en el mensaje).
+ */
+export async function obtenerContenidoDocumento(
+  id: number,
+  opciones: { signal?: AbortSignal } = {},
+): Promise<ContenidoDocumento> {
+  const { contenido_documento: contenido } = await graphql<{
+    contenido_documento: ContenidoDocumento | null;
+  }>(QUERY_CONTENIDO, { id }, opciones);
+  if (contenido === null) {
+    throw new ErrorApi('Ese documento no existe.', 'http', 404);
+  }
+  return contenido;
 }
 
 const MUTATION_ELIMINAR_DOCUMENTO = `

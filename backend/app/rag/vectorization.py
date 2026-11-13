@@ -23,10 +23,15 @@ def hash_texto(texto: str) -> str:
     return hashlib.sha256(texto.encode("utf-8")).hexdigest()
 
 
-def normalize_text(file_path: str, converter, chunker, name: str, type: str,
+def normalize_text(documento, chunker, file_path: str, name: str, type: str,
                    documento_id: int):
-    converted_document = converter.convert(file_path)
-    chunks = chunker.chunk(dl_doc=converted_document.document)
+    """Trocea un DoclingDocument ya convertido.
+
+    Recibe el documento y no el fichero: convertir es la parte cara, y quien
+    llama lo necesita tambien para guardar su contenido completo, o lo carga
+    del JSON guardado sin volver a convertir.
+    """
+    chunks = chunker.chunk(dl_doc=documento)
 
     texts_to_embed = []
     records = []

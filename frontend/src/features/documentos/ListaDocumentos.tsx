@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Trash2 } from 'lucide-react';
+import { BookOpen, Trash2 } from 'lucide-react';
 
 import { eliminarDocumento } from '@/shared/api/documentos';
 import { mensajeDeError } from '@/shared/api/errores';
@@ -23,10 +23,18 @@ type Props = {
   alCambiar: () => void;
   /** Confirma al usuario lo que acaba de pasar: toast + anuncio. */
   onAvisar: (texto: string, tono?: 'exito' | 'error') => void;
+  /** Abre el visor con el contenido del documento. */
+  onLeer?: (documento: Documento) => void;
 };
 
 /** Presentacional en cuanto a la carga: la petición de la lista la hace App. */
-export function ListaDocumentos({ estado, reintentar, alCambiar, onAvisar }: Props) {
+export function ListaDocumentos({
+  estado,
+  reintentar,
+  alCambiar,
+  onAvisar,
+  onLeer,
+}: Props) {
   const [borrando, setBorrando] = useState<string | null>(null);
   const [fallo, setFallo] = useState<string | null>(null);
 
@@ -115,6 +123,16 @@ export function ListaDocumentos({ estado, reintentar, alCambiar, onAvisar }: Pro
             ) : (
               <Badge tono={TONO[documento.state]}>{documento.state}</Badge>
             )}
+            {/* Solo los indexados: los demas no tienen contenido que leer, y
+                el visor lo explicaria, pero ofrecer algo que no va a
+                funcionar es peor que no ofrecerlo. */}
+            {onLeer && documento.state === 'indexado' ? (
+              <IconButton
+                etiqueta={`Leer ${documento.name}`}
+                icono={<BookOpen size={14} />}
+                onClick={() => onLeer(documento)}
+              />
+            ) : null}
             {borrando === documento.name ? (
               <Spinner tamano="sm" etiqueta={`Borrando ${documento.name}`} />
             ) : (

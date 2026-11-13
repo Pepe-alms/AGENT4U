@@ -1,18 +1,14 @@
 import strawberry
-from graphql import GraphQLError
 from strawberry.types import Info
 
 from app.clients.port import BackendHttpError
+from app.schema.errores import error_backend
 from app.schema.types import (
     ConversacionEliminada,
     ConversacionResumen,
     DocumentoEliminado,
     TrabajoEncolado,
 )
-
-
-def _error_backend(e: BackendHttpError) -> GraphQLError:
-    return GraphQLError(e.detail or str(e), extensions={"status": e.status})
 
 
 @strawberry.type
@@ -25,7 +21,7 @@ class Mutation:
         try:
             data = await client.indexar(file_path, type, size)
         except BackendHttpError as e:
-            raise _error_backend(e)
+            raise error_backend(e)
         return TrabajoEncolado(**data)
 
     @strawberry.mutation
@@ -36,7 +32,7 @@ class Mutation:
         try:
             data = await client.indexar_url(url, size)
         except BackendHttpError as e:
-            raise _error_backend(e)
+            raise error_backend(e)
         return TrabajoEncolado(**data)
 
     @strawberry.mutation
@@ -45,7 +41,7 @@ class Mutation:
         try:
             data = await client.eliminar_documento(nombre)
         except BackendHttpError as e:
-            raise _error_backend(e)
+            raise error_backend(e)
         return DocumentoEliminado(**data)
 
     @strawberry.mutation
@@ -54,7 +50,7 @@ class Mutation:
         try:
             data = await client.eliminar_conversacion(id)
         except BackendHttpError as e:
-            raise _error_backend(e)
+            raise error_backend(e)
         return ConversacionEliminada(**data)
 
     @strawberry.mutation
@@ -65,5 +61,5 @@ class Mutation:
         try:
             data = await client.renombrar_conversacion(id, titulo)
         except BackendHttpError as e:
-            raise _error_backend(e)
+            raise error_backend(e)
         return ConversacionResumen(**data)

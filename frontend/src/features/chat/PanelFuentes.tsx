@@ -1,6 +1,14 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
 
-import { FileCode, FileText, FileType, Globe, Search, Quote } from 'lucide-react';
+import {
+  BookOpen,
+  FileCode,
+  FileText,
+  FileType,
+  Globe,
+  Search,
+  Quote,
+} from 'lucide-react';
 
 import type { Fuente } from '@/shared/api/types';
 
@@ -11,6 +19,8 @@ type Props = {
   /** La cita bajo el raton: su tarjeta se ilumina, sin mover el scroll. */
   citaApuntada: number | null;
   onApuntarCita: (numero: number | null) => void;
+  /** Abre el documento de la fuente, situado en su seccion. */
+  onVerEnDocumento?: (fuente: Fuente) => void;
 };
 
 /** El icono sale de la extension, que es lo unico que manda el backend. */
@@ -37,6 +47,7 @@ export function PanelFuentes({
   citaActiva,
   citaApuntada,
   onApuntarCita,
+  onVerEnDocumento,
 }: Props) {
   const lista = useRef<HTMLUListElement>(null);
 
@@ -185,6 +196,19 @@ export function PanelFuentes({
                 {/* Con multiconsulta, la pregunta que encontro el fragmento no
                     es la que escribio el usuario. Enseñarlo es la mitad de la
                     trazabilidad de un RAG agentico. */}
+                {/* Sin documento_id no hay a donde ir: fragmentos indexados
+                    antes de que existiera, o mensajes antiguos. */}
+                {onVerEnDocumento && fuente.documento_id != null ? (
+                  <button
+                    type="button"
+                    onClick={() => onVerEnDocumento(fuente)}
+                    className="inline-flex items-center gap-1.5 self-start rounded-full text-[0.75rem] font-medium text-suave underline-offset-2 transition-colors hover:text-texto hover:underline"
+                  >
+                    <BookOpen size={12} aria-hidden="true" />
+                    Ver en el documento
+                  </button>
+                ) : null}
+
                 {fuente.subconsulta ? (
                   <p className="flex items-start gap-1.5 text-[0.625rem] text-tenue">
                     <Search size={10} className="mt-0.5 shrink-0" aria-hidden="true" />

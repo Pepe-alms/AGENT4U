@@ -31,7 +31,7 @@ const QUERY_CONVERSACION = `
       id titulo creada_en actualizada_en
       mensajes {
         id rol contenido creado_en
-        fuentes { nombre origen headings paginas texto score subconsulta }
+        fuentes { nombre origen headings paginas texto score subconsulta documento_id }
       }
     }
   }

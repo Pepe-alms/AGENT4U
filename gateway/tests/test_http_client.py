@@ -275,3 +275,35 @@ async def test_salud_qdrant_200():
     res = await _hacer_cliente(handler).salud_qdrant()
     assert res["status"] == "ok"
     assert res["coleccion"] == "Agent4U"
+
+
+# ── obtener_contenido_documento ─────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_obtener_contenido_documento_200():
+    cuerpo = {"documento": DOCUMENTO, "markdown": "# CAP", "paginas": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/documentos/1/contenido"
+        return httpx.Response(200, json=cuerpo)
+
+    assert await _hacer_cliente(handler).obtener_contenido_documento(1) == cuerpo
+
+
+@pytest.mark.asyncio
+async def test_obtener_contenido_documento_404_devuelve_none():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"detail": "No existe"})
+
+    assert await _hacer_cliente(handler).obtener_contenido_documento(9) is None
+
+
+@pytest.mark.asyncio
+async def test_obtener_contenido_documento_409_lanza_error():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(409, json={"detail": "No tiene contenido guardado"})
+
+    with pytest.raises(BackendHttpError) as excinfo:
+        await _hacer_cliente(handler).obtener_contenido_documento(1)
+    assert excinfo.value.status == 409

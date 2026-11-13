@@ -59,6 +59,8 @@ const FUENTE = {
   // Sin acotar y puede ser negativo, como el del reordenador real.
   score: 2.41,
   subconsulta: 'garantías del teorema CAP',
+  // El documento del que sale: el visor lo abre en su seccion y pagina.
+  documento_id: 1,
 };
 
 const FUENTE_SECUNDARIA = {
@@ -72,6 +74,45 @@ const FUENTE_SECUNDARIA = {
   score: 0.87,
   subconsulta: 'consistencia eventual',
 };
+
+/**
+ * Un documento grande, del tamaño de un BOE largo: 500 paginas y ~1,3 MB de
+ * Markdown, con las marcas `<!-- pagina N -->` que guarda el backend. Sirve
+ * para medir que el visor sigue fluido y para probar el salto desde FUENTE,
+ * que apunta a la seccion "Teorema CAP" de la pagina 163. "Disposiciones
+ * generales" se repite, como en los documentos de verdad. Y lleva un intento
+ * de XSS, que el visor tiene que neutralizar.
+ */
+const PAGINAS_DOCUMENTO = 500;
+const PARRAFO =
+  'El presente artículo regula las condiciones de aplicación en todo el territorio, ' +
+  'sin perjuicio de lo dispuesto en las normas autonómicas y en los convenios vigentes. ';
+
+function documentoGrande() {
+  const paginas = [];
+  for (let n = 1; n <= PAGINAS_DOCUMENTO; n++) {
+    const trozos = [`<!-- pagina ${n} -->`];
+    if (n === 1) trozos.push('# Manual de sistemas distribuidos');
+    if (n === 10 || n === 300) trozos.push('## Disposiciones generales');
+    if (n === 160) trozos.push('# Replicación');
+    if (n === 163) {
+      trozos.push(
+        '## Teorema CAP',
+        'El teorema CAP establece que un sistema distribuido no puede garantizar ' +
+          'simultáneamente consistencia, disponibilidad y tolerancia a particiones.',
+        '<img src="x" onerror="window.__xss = true"> <script>window.__xss = true</script>',
+      );
+    }
+    if (n % 2 === 0 && n !== 10 && n !== 300 && n !== 160)
+      trozos.push(`## Artículo ${n / 2}`);
+    trozos.push(PARRAFO.repeat(12));
+    if (n % 10 === 0) trozos.push('| Campo | Valor |\n|---|---|\n| Página | ' + n + ' |');
+    paginas.push(trozos.join('\n\n'));
+  }
+  return paginas.join('\n\n');
+}
+
+const MARKDOWN_GRANDE = documentoGrande();
 
 /* Los mismos nodos del grafo real, con tiempos del mismo orden de magnitud:
    el de buscar es el que de verdad se nota. */
@@ -135,6 +176,40 @@ async function manejarGraphQL(req, res, sesion) {
 
     case 'documentos':
       return responderGraphQL(res, { documentos });
+
+    case 'contenido_documento': {
+      // 1: el documento grande. 2: existe, pero se indexo antes de que se
+      // guardara el contenido (409). Cualquier otro: no existe (null).
+      if (variables.id === 2) {
+        return responderGraphQL(res, null, [
+          {
+            message:
+              'El documento 2 no tiene contenido guardado: se indexo antes de que se ' +
+              'guardara el contenido; generalo con scripts/generar_contenido.py.',
+            extensions: { status: 409 },
+          },
+        ]);
+      }
+      if (variables.id !== 1) return responderGraphQL(res, { contenido_documento: null });
+      const documento = documentos.find((d) => d.id === 1) ?? {
+        id: 1,
+        origin: '/subidas/manual-cap.pdf',
+        name: 'manual-cap.pdf',
+        type: 'pdf',
+        size: null,
+        created_at: new Date().toISOString(),
+        state: 'indexado',
+        num_chunks: 12,
+        error_message: null,
+      };
+      return responderGraphQL(res, {
+        contenido_documento: {
+          documento,
+          markdown: MARKDOWN_GRANDE,
+          paginas: PAGINAS_DOCUMENTO,
+        },
+      });
+    }
 
     case 'trabajo':
       return responderGraphQL(res, {

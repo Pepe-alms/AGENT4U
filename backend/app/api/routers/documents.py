@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Annotated
 from sqlalchemy.orm import Session
 
-from app.api.schemas import DocumentoEliminadoOut, ErrorOut, ListaDocumentosOut
-from app.core.exceptions import NombreAmbiguo
+from app.api.schemas import ContenidoDocumentoOut, DocumentoEliminadoOut, ErrorOut, ListaDocumentosOut
+from app.core.exceptions import DocumentoNoEncontrado, NombreAmbiguo, SinContenidoGuardado
+from app.services import contenidos
 from app.db.session import get_db
 from app.services import document_service
 
@@ -29,6 +30,28 @@ def listar(db: Annotated[Session, Depends(get_db)]):
         raise HTTPException(status_code=404, detail="No se encontraron documentos.")
 
     return {"documentos": documentos}
+
+
+@router.get(
+    "/documentos/{documento_id}/contenido",
+    response_model=ContenidoDocumentoOut,
+    summary="Leer el contenido completo de un documento",
+    description="El Markdown que extrajo Docling al indexarlo y los datos "
+                "basicos del documento. Aqui el parametro es el ID, no el "
+                "nombre. 404 si el documento no existe; 409 si existe pero no "
+                "tiene contenido guardado (indexado antes de que se guardara, "
+                "todavia en cola o con la indexacion fallida).",
+    responses={404: {"model": ErrorOut, "description": "El documento no existe."},
+               409: {"model": ErrorOut, "description": "El documento existe pero no tiene contenido guardado."}}
+)
+def contenido(documento_id: int, db: Annotated[Session, Depends(get_db)]):
+    try:
+        doc, markdown = document_service.obtener_contenido(db, documento_id)
+    except DocumentoNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except SinContenidoGuardado as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return {"documento": doc, "markdown": markdown, "paginas": contenidos.contar_paginas(markdown)}
 
 
 @router.delete(

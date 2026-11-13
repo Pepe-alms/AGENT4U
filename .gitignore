@@ -4,6 +4,8 @@
 agent4u.db*
 # Ficheros que sube POST /indexar-fichero (APP_UPLOAD_DIR).
 /backend/uploads/
+# Contenido completo de cada documento (Markdown y JSON de Docling).
+/backend/contenidos/
 __pycache__/
 *.pyc
 .DS_Store

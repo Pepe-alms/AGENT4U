@@ -1,0 +1,34 @@
+/*
+ * El texto de un documento usa la misma prosa que las respuestas: que lo que
+ * se lee aqui se parezca a lo que se lee en el chat.
+ */
+.contenido {
+  composes: prosa from '../chat/Respuesta.module.css';
+}
+
+/*
+ * Cada seccion se salta el layout y el pintado mientras esta fuera de la
+ * vista, que es lo que permite tener cientos de paginas en el DOM sin que el
+ * scroll se resienta. La altura reservada la estima el componente por la
+ * longitud del texto (`contain-intrinsic-size` en linea); esta es solo la de
+ * respaldo.
+ */
+.seccion {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 32rem;
+  scroll-margin-block-start: 1.5rem;
+}
+
+/* Las tablas de un BOE no caben en 70ch: se desplazan solas, sin romper la
+   columna de lectura. */
+.contenido :global(table) {
+  display: block;
+  overflow-x: auto;
+}
+
+/* La seccion de la que viene la fuente. Una linea, no un relleno: es una
+   indicacion de donde mirar, no el fragmento exacto. */
+.destino {
+  border-inline-start: 2px solid var(--txt);
+  padding-inline-start: 1rem;
+}
