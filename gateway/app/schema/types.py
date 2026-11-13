@@ -40,6 +40,13 @@ class ContenidoDocumento:
 
 
 @strawberry.type
+class DocumentoRelacionado:
+    id: int
+    name: str
+    state: str
+
+
+@strawberry.type
 class Trabajo:
     job_id: str
     status: str
@@ -47,6 +54,11 @@ class Trabajo:
     name: str
     num_chunks: int
     error_message: str | None
+    documento_id: int | None = None
+    # 'duplicado': el original. 'pendiente-decision': el parecido.
+    relacionado: DocumentoRelacionado | None = None
+    pct_nuevo_en_antiguo: float | None = None
+    pct_antiguo_en_nuevo: float | None = None
 
 
 @strawberry.type

@@ -370,6 +370,15 @@ class TrabajoEstadoOut(BaseModel):
         default=None,
         description="Mensaje de error, solo si status es 'error'.",
     )
+    documento_id: int = Field(description="El documento de este trabajo.")
+    relacionado: DocumentoCoincidenteOut | None = Field(
+        default=None,
+        description="Con status 'duplicado', el documento que ya tenia ese "
+                    "contenido; con 'pendiente-decision', el indexado con el que "
+                    "se parece. null en el resto, o si ya no existe.",
+    )
+    pct_nuevo_en_antiguo: float | None = Field(default=None, description="Solo con 'pendiente-decision'.")
+    pct_antiguo_en_nuevo: float | None = Field(default=None, description="Solo con 'pendiente-decision'.")
 
 
 # --------------------------------------------------------------------------
