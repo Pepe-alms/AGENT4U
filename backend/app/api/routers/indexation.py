@@ -25,7 +25,7 @@ from app.db.models.document import Document
 from app.db.session import get_db
 from app.services.cola_port import ColaIndexacion
 from app.services.huellas import hash_fichero
-from app.services.subidas import borrar_fichero_subido
+from app.services.subidas import PREFIJO_PARCIAL, SUFIJO_PARCIAL, borrar_fichero_subido
 
 router = APIRouter(tags=["indexacion"])
 
@@ -220,6 +220,41 @@ async def indexar_url(
     return resultado
 
 
+async def _recibir_en_parcial(fichero: UploadFile, carpeta: Path, limite: int) -> tuple[Path, str, int]:
+    """Escribe la subida en un temporal mientras calcula su SHA-256.
+
+    El temporal va en la misma carpeta para que el rename final sea atomico, y
+    con un nombre que solo puede ser de esto (`.subiendo-*.parcial`): asi la
+    limpieza al arrancar sabe que puede borrarlo. Si algo sale mal, incluida
+    la cancelacion de la peticion, el temporal se borra antes de propagar.
+    """
+    parcial = carpeta / f"{PREFIJO_PARCIAL}{uuid.uuid4().hex}{SUFIJO_PARCIAL}"
+    huella = hashlib.sha256()
+    escritos = 0
+    try:
+        with parcial.open("wb") as salida:
+            while trozo := await fichero.read(TROZO_BYTES):
+                escritos += len(trozo)
+                if escritos > limite:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"El fichero supera el limite de {limite} bytes.",
+                    )
+                huella.update(trozo)
+                salida.write(trozo)
+        if escritos == 0:
+            raise HTTPException(status_code=400, detail="El fichero esta vacio.")
+    except OSError as e:
+        parcial.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
+    except BaseException:
+        # BaseException y no Exception: la cancelacion de la tarea llega como
+        # asyncio.CancelledError, que no hereda de Exception.
+        parcial.unlink(missing_ok=True)
+        raise
+    return parcial, huella.hexdigest(), escritos
+
+
 @router.post(
     "/indexar-fichero",
     response_model=FicheroEncoladoOut,
@@ -252,55 +287,33 @@ async def indexar_fichero(
     # Solo para validar el nombre: la ruta definitiva depende del contenido.
     nombre = _ruta_segura(fichero.filename, carpeta).name
 
-    # Se escribe en un temporal mientras se calcula el hash, en la misma
-    # carpeta para que el rename final sea atomico.
-    parcial = carpeta / f".subiendo-{uuid.uuid4().hex}.parcial"
-    huella = hashlib.sha256()
-    escritos = 0
+    parcial, hash_content, escritos = await _recibir_en_parcial(
+        fichero, carpeta, settings.upload_max_bytes,
+    )
+
+    # Desde aqui hasta el rename, cualquier salida (un rechazo, la cola llena,
+    # un fallo o la cancelacion de la peticion) borra el temporal: el
+    # `finally` corre tambien con CancelledError. Lo que no cubre, que maten
+    # el proceso de golpe, lo limpia limpiar_parciales() al arrancar la API.
+    movido = False
     try:
-        with parcial.open("wb") as salida:
-            while trozo := await fichero.read(TROZO_BYTES):
-                escritos += len(trozo)
-                if escritos > settings.upload_max_bytes:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=(
-                            f"El fichero supera el limite de "
-                            f"{settings.upload_max_bytes} bytes."
-                        ),
-                    )
-                huella.update(trozo)
-                salida.write(trozo)
+        rechazo, en_error = _mismo_fichero(db, hash_content)
+        if rechazo is not None:
+            return rechazo
 
-        if escritos == 0:
-            raise HTTPException(status_code=400, detail="El fichero esta vacio.")
-    except HTTPException:
-        parcial.unlink(missing_ok=True)
-        raise
-    except OSError as e:
-        parcial.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
-
-    hash_content = huella.hexdigest()
-    rechazo, en_error = _mismo_fichero(db, hash_content)
-    if rechazo is not None:
-        parcial.unlink(missing_ok=True)
-        return rechazo
-
-    cola: ColaIndexacion = request.app.state.cola
-    try:
+        cola: ColaIndexacion = request.app.state.cola
         await _comprobar_cupo(cola)
-    except HTTPException:
-        parcial.unlink(missing_ok=True)
-        raise
 
-    destino = carpeta / hash_content[:16] / nombre
-    try:
-        destino.parent.mkdir(exist_ok=True)
-        os.replace(parcial, destino)
-    except OSError as e:
-        parcial.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
+        destino = carpeta / hash_content[:16] / nombre
+        try:
+            destino.parent.mkdir(exist_ok=True)
+            os.replace(parcial, destino)
+        except OSError as e:
+            raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
+        movido = True
+    finally:
+        if not movido:
+            parcial.unlink(missing_ok=True)
 
     extension = destino.suffix.lstrip(".").lower() or "txt"
 

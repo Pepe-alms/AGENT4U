@@ -16,6 +16,11 @@ from app.db.models.document import Document
 
 logger = logging.getLogger(__name__)
 
+# El temporal de una subida a medias: `.subiendo-<uuid>.parcial`, en la raiz
+# de la carpeta de subidas. Solo lo escribe POST /indexar-fichero.
+PREFIJO_PARCIAL = ".subiendo-"
+SUFIJO_PARCIAL = ".parcial"
+
 
 def _dentro_de_subidas(ruta: Path) -> bool:
     """Si la ruta, ya resuelta, cae dentro de la carpeta de subidas.
@@ -55,3 +60,26 @@ def borrar_fichero_subido(db: Session, origen: str, salvo: int | None = None) ->
     if _dentro_de_subidas(carpeta_huella) and not any(carpeta_huella.iterdir()):
         carpeta_huella.rmdir()
     return True
+
+
+def limpiar_parciales() -> int:
+    """Borra los temporales de subidas que se quedaron a medias.
+
+    Se llama al arrancar la API, cuando ninguna subida puede estar en marcha:
+    un temporal que siga ahi es de una peticion que murio con el proceso
+    anterior. Solo toca ficheros `.subiendo-*.parcial` de la raiz de la
+    carpeta de subidas, nada mas. Devuelve cuantos borro.
+    """
+    carpeta = Path(get_settings().upload_dir)
+    if not carpeta.is_dir():
+        return 0
+    borrados = 0
+    for ruta in carpeta.glob(f"{PREFIJO_PARCIAL}*{SUFIJO_PARCIAL}"):
+        # is_file sin seguir enlaces: un enlace con ese nombre se borra a si
+        # mismo, nunca lo que hay al otro lado.
+        if ruta.is_symlink() or ruta.is_file():
+            ruta.unlink(missing_ok=True)
+            borrados += 1
+    if borrados:
+        logger.warning("Borrados %d temporales de subidas a medias en %s", borrados, carpeta)
+    return borrados
