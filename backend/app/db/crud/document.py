@@ -27,12 +27,18 @@ def marcar_error(db: Session, doc: Document, mensaje: str) -> None:
 
 def crear_documento_encolado(db: Session, origen: str, nombre: str,
                              tipo: str, tamano: int | None,
-                             job_id: str) -> Document:
+                             job_id: str, hash_content: str | None = None) -> Document:
     doc = Document(origin=origen, name=nombre, type=tipo,
-                   size=tamano, state="en-cola", job_id=job_id)
+                   size=tamano, state="en-cola", job_id=job_id,
+                   hash_content=hash_content)
     db.add(doc)
     db.commit()
     return doc
+
+
+def por_hash_content(db: Session, hash_content: str) -> Document | None:
+    """El documento con esos mismos bytes, si lo hay."""
+    return db.scalar(select(Document).where(Document.hash_content == hash_content).limit(1))
 
 
 def obtener_por_job_id(db: Session, job_id: str) -> Document | None:

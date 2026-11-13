@@ -258,7 +258,7 @@ Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagg
 
 ### `POST /indexar`
 
-Encola la indexación de un fichero que ya está en disco. Espera una ruta **accesible por el proceso del worker**; para subir el fichero desde el cliente está `POST /indexar-fichero`.
+Encola la indexación de un fichero que ya está en disco. Espera una ruta **accesible por la API, que calcula su SHA-256 antes de encolar, y por el worker**; para subir el fichero desde el cliente está `POST /indexar-fichero`.
 
 ```bash
 curl -X POST http://localhost:8000/indexar \
@@ -269,7 +269,7 @@ curl -X POST http://localhost:8000/indexar \
       }'
 ```
 
-Responde `202` en cuanto el trabajo está en la cola (`409` si esa ruta ya está indexada, `429` si la cola está llena):
+Responde `202` en cuanto el trabajo está en la cola (`409` si esa ruta ya está indexada o si es exactamente el mismo fichero que otro documento, `429` si la cola está llena):
 
 ```json
 { "job_id": "3f2b…", "status": "en-cola" }

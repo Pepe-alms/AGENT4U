@@ -23,6 +23,23 @@ class ErrorOut(BaseModel):
     )
 
 
+class DocumentoCoincidenteOut(BaseModel):
+    id: int
+    name: str
+    state: str
+
+
+class ErrorMismoFicheroOut(ErrorOut):
+    """409 de ``POST /indexar`` y ``POST /indexar-fichero`` cuando el fichero es
+    exactamente el mismo (mismo SHA-256) que el de un documento que ya existe,
+    se llame como se llame. No se ha encolado nada."""
+
+    motivo: Literal["mismo-fichero"] = "mismo-fichero"
+    duplicado_de: DocumentoCoincidenteOut = Field(
+        description="El documento que ya tiene ese fichero."
+    )
+
+
 # --------------------------------------------------------------------------
 # Peticiones
 # --------------------------------------------------------------------------
