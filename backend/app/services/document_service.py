@@ -47,10 +47,6 @@ def eliminar_documento(db: Session, qdrant, documento_id: int) -> Document | Non
     return doc
 
 
-class FalloAlReemplazar(Exception):
-    """Qdrant no pudo borrar el documento antiguo: no se toca nada."""
-
-
 async def resolver_pendiente(db: Session, qdrant, cola, documento_id: int, accion: str) -> dict:
     """La decision del usuario sobre un documento pendiente de decision.
 
@@ -71,19 +67,17 @@ async def resolver_pendiente(db: Session, qdrant, cola, documento_id: int, accio
         contenidos.borrar(documento_id)
         return {"id": documento_id, "accion": accion, "status": "descartado"}
 
-    reemplazado = None
-    if accion == "reemplazar" and doc.parecido_a is not None:
-        antiguo = doc.parecido_a
-        # Si el antiguo ya no esta, no hay nada que reemplazar: se indexa sin mas.
-        if db.get(Document, antiguo) is not None:
-            if eliminar_documento(db, qdrant, antiguo) is None:
-                raise FalloAlReemplazar(
-                    f"Qdrant no pudo borrar el documento {antiguo}; no se ha tocado nada."
-                )
-            reemplazado = antiguo
+    # Con 'reemplazar' el antiguo NO se borra aqui: lo borra el worker cuando
+    # el nuevo ha quedado indexado. Si el encolado o la indexacion fallan, el
+    # antiguo sigue intacto y el nuevo queda en error. Si el antiguo ya no
+    # existe, no hay nada que reemplazar: se indexa sin mas.
+    reemplaza = None
+    if accion == "reemplazar" and doc.parecido_a is not None and db.get(Document, doc.parecido_a):
+        reemplaza = doc.parecido_a
 
     job_id = str(uuid.uuid4())
     document_crud.volver_a_encolar(db, doc, job_id)
-    await cola.encolar(job_id, file_path=doc.origin, type=doc.type, size=doc.size, resolucion=True)
+    await cola.encolar(job_id, file_path=doc.origin, type=doc.type, size=doc.size,
+                       resolucion=True, reemplaza=reemplaza)
     return {"id": documento_id, "accion": accion, "status": "en-cola",
-            "job_id": job_id, "reemplazado": reemplazado}
+            "job_id": job_id, "reemplaza": reemplaza}

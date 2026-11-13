@@ -288,15 +288,15 @@ async function manejarGraphQL(req, res, sesion) {
             accion: 'descartar',
             status: 'descartado',
             job_id: null,
-            reemplazado: null,
+            reemplaza: null,
           },
         });
       }
-      let reemplazado = null;
+      let reemplaza = null;
       if (variables.accion === 'reemplazar') {
         const antiguo = documentos.findIndex((d) => d.id === doc.parecido_a);
         if (antiguo !== -1) {
-          reemplazado = doc.parecido_a;
+          reemplaza = doc.parecido_a;
           documentos.splice(antiguo, 1);
         }
       }
@@ -315,7 +315,7 @@ async function manejarGraphQL(req, res, sesion) {
           accion: variables.accion,
           status: 'en-cola',
           job_id: jobId,
-          reemplazado,
+          reemplaza,
         },
       });
     }

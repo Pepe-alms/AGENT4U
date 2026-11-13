@@ -197,7 +197,7 @@ export async function obtenerEstadoTrabajo(
 
 const MUTATION_RESOLVER = `
   mutation($id: Int!, $accion: AccionResolver!) {
-    resolver_documento(id: $id, accion: $accion) { id accion status job_id reemplazado }
+    resolver_documento(id: $id, accion: $accion) { id accion status job_id reemplaza }
   }
 `;
 

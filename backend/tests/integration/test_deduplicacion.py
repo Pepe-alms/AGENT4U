@@ -328,7 +328,7 @@ async def resolver_y_ejecutar(db, qdrant, pendiente, accion, chunker, dense_embe
         ctx = {"converter": pendiente.convertidor, "chunker": chunker, "dense_embedder": dense_embedder,
                "sparse_embedder": sparse_embedder, "qdrant": qdrant}
         await indexar_job(ctx, trabajo["job_id"], trabajo["file_path"], trabajo["type"], trabajo["size"],
-                          resolucion=trabajo["resolucion"])
+                          resolucion=trabajo["resolucion"], reemplaza=trabajo["reemplaza"])
     return resultado
 
 
@@ -338,7 +338,7 @@ async def test_reemplazar_borra_el_antiguo_e_indexa_el_nuevo_sin_volver_a_conver
     resultado = await resolver_y_ejecutar(db, qdrant_real, pendiente, "reemplazar", chunker, dense_embedder, sparse_embedder)
 
     assert resultado["status"] == "en-cola"
-    assert resultado["reemplazado"] == pendiente.antiguo
+    assert resultado["reemplaza"] == pendiente.antiguo
     filas = {d.id: d for d in documentos_frescos()}
     assert pendiente.antiguo not in filas
     assert filas[pendiente.nuevo].state == "indexado"
@@ -349,12 +349,48 @@ async def test_reemplazar_borra_el_antiguo_e_indexa_el_nuevo_sin_volver_a_conver
     assert pendiente.convertidor.convertidos == []
 
 
+async def test_al_reemplazar_el_antiguo_no_se_toca_hasta_que_el_nuevo_queda_indexado(
+    db, qdrant_real, pendiente, chunker, dense_embedder, sparse_embedder, documentos_frescos,
+):
+    """Al resolver no se borra nada: el antiguo sigue indexado mientras el
+    nuevo espera en la cola."""
+    from app.services import document_service
+    from app.services.cola_port import ColaEnMemoria
+
+    await document_service.resolver_pendiente(db, qdrant_real, ColaEnMemoria(), pendiente.nuevo, "reemplazar")
+
+    assert {d.id: d.state for d in documentos_frescos()}[pendiente.antiguo] == "indexado"
+    assert puntos_de(qdrant_real, pendiente.antiguo) == 10
+
+
+async def test_si_falla_la_indexacion_del_nuevo_el_antiguo_sigue_intacto(
+    db, qdrant_real, pendiente, chunker, dense_embedder, sparse_embedder, documentos_frescos,
+    monkeypatch,
+):
+    import app.services.indexacion as indexacion
+
+    def falla(**_kwargs):
+        raise RuntimeError("se cayo a mitad de vectorizar")
+
+    monkeypatch.setattr(indexacion, "embed_texts", falla)
+
+    with pytest.raises(RuntimeError):
+        await resolver_y_ejecutar(db, qdrant_real, pendiente, "reemplazar", chunker, dense_embedder, sparse_embedder)
+
+    filas = {d.id: d for d in documentos_frescos()}
+    assert filas[pendiente.antiguo].state == "indexado"
+    assert puntos_de(qdrant_real, pendiente.antiguo) == 10
+    assert contenidos.leer_markdown(pendiente.antiguo) is not None
+    assert filas[pendiente.nuevo].state == "error"
+    assert puntos_de(qdrant_real, pendiente.nuevo) == 0
+
+
 async def test_conservar_ambos_indexa_el_nuevo_y_deja_el_antiguo(
     db, qdrant_real, pendiente, chunker, dense_embedder, sparse_embedder, documentos_frescos,
 ):
     resultado = await resolver_y_ejecutar(db, qdrant_real, pendiente, "conservar", chunker, dense_embedder, sparse_embedder)
 
-    assert resultado["reemplazado"] is None
+    assert resultado["reemplaza"] is None
     filas = {d.id: d.state for d in documentos_frescos()}
     assert filas == {pendiente.antiguo: "indexado", pendiente.nuevo: "indexado"}
     assert puntos_de(qdrant_real, pendiente.antiguo) == 10

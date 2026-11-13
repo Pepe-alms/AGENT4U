@@ -170,22 +170,22 @@ def _con_pendiente(fake_client):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("accion, status, reemplazado", [
+@pytest.mark.parametrize("accion, status, reemplaza", [
     ("reemplazar", "en-cola", 1),
     ("conservar", "en-cola", None),
     ("descartar", "descartado", None),
 ])
-async def test_resolver_documento_con_cada_accion(fake_client, accion, status, reemplazado):
+async def test_resolver_documento_con_cada_accion(fake_client, accion, status, reemplaza):
     _con_pendiente(fake_client)
 
     result = await schema.execute(
-        f"mutation {{ resolver_documento(id: 2, accion: {accion}) {{ id accion status reemplazado }} }}",
+        f"mutation {{ resolver_documento(id: 2, accion: {accion}) {{ id accion status reemplaza }} }}",
         context_value={"client": fake_client},
     )
 
     assert result.errors is None
     assert result.data["resolver_documento"] == {
-        "id": 2, "accion": accion, "status": status, "reemplazado": reemplazado,
+        "id": 2, "accion": accion, "status": status, "reemplaza": reemplaza,
     }
 
 

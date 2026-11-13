@@ -262,8 +262,8 @@ class ResolverRequest(BaseModel):
 
     accion: Literal["reemplazar", "conservar", "descartar"] = Field(
         description=(
-            "'reemplazar': se borra el documento antiguo ('parecido_a') y se "
-            "indexa este. 'conservar': se indexa este y se quedan los dos. "
+            "'reemplazar': se indexa este y, cuando ha quedado indexado, se "
+            "borra el antiguo ('parecido_a'); si falla, el antiguo sigue. 'conservar': se indexa este y se quedan los dos. "
             "'descartar': se elimina este. Ninguna vuelve a convertir con "
             "Docling: se usa el documento que se guardo al dejarlo pendiente."
         ),
@@ -280,8 +280,10 @@ class ResolucionOut(BaseModel):
                     "'descartado' si se ha eliminado."
     )
     job_id: str | None = Field(default=None, description="Solo si status == 'en-cola'.")
-    reemplazado: int | None = Field(
-        default=None, description="Con 'reemplazar': id del documento antiguo, ya borrado."
+    reemplaza: int | None = Field(
+        default=None,
+        description="Con 'reemplazar': id del documento antiguo, que se borrara "
+                    "cuando este quede indexado. Si la indexacion falla, no se borra.",
     )
 
 

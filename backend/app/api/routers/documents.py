@@ -68,13 +68,13 @@ def contenido(documento_id: int, db: Annotated[Session, Depends(get_db)]):
     response_model=ResolucionOut,
     summary="Decidir que hacer con un documento casi igual a otro",
     description="Solo para documentos en estado 'pendiente-decision' (nivel 3 "
-                "de deduplicacion). 'reemplazar' borra el antiguo y encola este; "
+                "de deduplicacion). 'reemplazar' encola este y borra el antiguo "
+                "solo cuando este ha quedado indexado; "
                 "'conservar' encola este y se quedan los dos; 'descartar' "
                 "elimina este. Ninguna convierte otra vez con Docling.",
     responses={404: {"model": ErrorOut, "description": "El documento no existe."},
                409: {"model": ErrorOut, "description": "No esta pendiente de decision."},
-               429: {"model": ErrorOut, "description": "La cola esta llena."},
-               502: {"model": ErrorOut, "description": "Qdrant no pudo borrar el antiguo; no se ha tocado nada."}}
+               429: {"model": ErrorOut, "description": "La cola esta llena."}}
 )
 async def resolver(
     documento_id: int,
@@ -92,8 +92,6 @@ async def resolver(
         raise HTTPException(status_code=404, detail=str(e))
     except SinDecisionPendiente as e:
         raise HTTPException(status_code=409, detail=str(e))
-    except document_service.FalloAlReemplazar as e:
-        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.delete(

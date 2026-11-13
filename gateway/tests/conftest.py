@@ -73,9 +73,9 @@ class FakeBackendClient:
             raise BackendHttpError(409, f"El documento {id} no esta pendiente de decision.")
         if accion == "descartar":
             self.documentos.remove(documento)
-            return {"id": id, "accion": accion, "status": "descartado", "job_id": None, "reemplazado": None}
-        reemplazado = documento["parecido_a"] if accion == "reemplazar" else None
-        return {"id": id, "accion": accion, "status": "en-cola", "job_id": "fake-job-3", "reemplazado": reemplazado}
+            return {"id": id, "accion": accion, "status": "descartado", "job_id": None, "reemplaza": None}
+        reemplaza = documento["parecido_a"] if accion == "reemplazar" else None
+        return {"id": id, "accion": accion, "status": "en-cola", "job_id": "fake-job-3", "reemplaza": reemplaza}
 
     async def obtener_contenido_documento(self, id: int) -> dict | None:
         for d in self.documentos:

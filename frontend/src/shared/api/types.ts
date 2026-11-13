@@ -83,8 +83,11 @@ export type Resolucion = {
   /** 'en-cola' (se indexa: sondear `job_id`) o 'descartado' (eliminado). */
   status: 'en-cola' | 'descartado';
   job_id: string | null;
-  /** Con 'reemplazar': el antiguo, ya borrado. */
-  reemplazado: number | null;
+  /**
+   * Con 'reemplazar': el antiguo. Se borra cuando este quede indexado, no
+   * antes: si la indexación falla, el antiguo sigue.
+   */
+  reemplaza: number | null;
 };
 
 export type Documento = {

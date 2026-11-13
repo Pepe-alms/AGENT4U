@@ -128,7 +128,8 @@ class Resolucion:
     # 'en-cola' (sondear trabajo(job_id)) o 'descartado'.
     status: str
     job_id: str | None = None
-    reemplazado: int | None = None
+    # Con 'reemplazar': el antiguo, que se borra cuando este quede indexado.
+    reemplaza: int | None = None
 
 
 @strawberry.type

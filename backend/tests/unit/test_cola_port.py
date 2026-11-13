@@ -54,4 +54,5 @@ async def test_encolar_guarda_los_parametros():
         "type": "pdf",
         "size": 42,
         "resolucion": False,
+        "reemplaza": None,
     }
