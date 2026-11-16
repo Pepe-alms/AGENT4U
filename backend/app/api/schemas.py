@@ -9,7 +9,15 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 # --------------------------------------------------------------------------
 
 Rol = Literal["user", "assistant"]
-EstadoDocumento = Literal["en-cola", "indexando", "pendiente", "indexado", "error"]
+EstadoDocumento = Literal[
+    "en-cola", "indexando", "pendiente", "indexado", "error",
+    # Nivel 2: mismo contenido que otro documento (ver 'duplicado_de'). No se
+    # indexa: ni puntos en Qdrant ni contenido guardado.
+    "duplicado",
+    # Nivel 3: casi igual que otro (ver 'parecido_a' y los porcentajes). No se
+    # indexa hasta que el usuario decide con POST /documentos/{id}/resolver.
+    "pendiente-decision",
+]
 
 
 # --------------------------------------------------------------------------
@@ -20,6 +28,23 @@ class ErrorOut(BaseModel):
     detail: str = Field(
         description="Mensaje legible que explica por que fallo la peticion.",
         examples=["Conversación no encontrada"],
+    )
+
+
+class DocumentoCoincidenteOut(BaseModel):
+    id: int
+    name: str
+    state: str
+
+
+class ErrorMismoFicheroOut(ErrorOut):
+    """409 de ``POST /indexar`` y ``POST /indexar-fichero`` cuando el fichero es
+    exactamente el mismo (mismo SHA-256) que el de un documento que ya existe,
+    se llame como se llame. No se ha encolado nada."""
+
+    motivo: Literal["mismo-fichero"] = "mismo-fichero"
+    duplicado_de: DocumentoCoincidenteOut = Field(
+        description="El documento que ya tiene ese fichero."
     )
 
 
@@ -163,8 +188,8 @@ class DocumentoOut(BaseModel):
         examples=["/docs/manual.pdf"],
     )
     name: str = Field(
-        description="Nombre del fichero, derivado de 'origin'. Es la clave que "
-                    "usa DELETE /documentos/{documento}.",
+        description="Nombre del fichero, derivado de 'origin'. No es unico: "
+                    "dos ficheros distintos pueden llamarse igual.",
         examples=["manual.pdf"],
     )
     type: str = Field(description="Etiqueta de formato.", examples=["pdf"])
@@ -179,6 +204,26 @@ class DocumentoOut(BaseModel):
     )
     error_message: str | None = Field(
         description="Causa del fallo. Solo tiene valor si state == 'error'."
+    )
+    duplicado_de: int | None = Field(
+        default=None,
+        description="Si state == 'duplicado': id del documento que ya tenia "
+                    "este mismo contenido.",
+    )
+    parecido_a: int | None = Field(
+        default=None,
+        description="Si state == 'pendiente-decision': id del documento "
+                    "indexado con el que mas fragmentos comparte.",
+    )
+    pct_nuevo_en_antiguo: float | None = Field(
+        default=None, ge=0, le=1,
+        description="Proporcion (0 a 1) de los fragmentos de este documento "
+                    "que ya estan en 'parecido_a'.",
+    )
+    pct_antiguo_en_nuevo: float | None = Field(
+        default=None, ge=0, le=1,
+        description="Proporcion (0 a 1) de los fragmentos de 'parecido_a' que "
+                    "estan en este documento.",
     )
 
 
@@ -212,8 +257,38 @@ class ContenidoDocumentoOut(BaseModel):
     )
 
 
+class ResolverRequest(BaseModel):
+    """Cuerpo de ``POST /documentos/{documento_id}/resolver``."""
+
+    accion: Literal["reemplazar", "conservar", "descartar"] = Field(
+        description=(
+            "'reemplazar': se indexa este y, cuando ha quedado indexado, se "
+            "borra el antiguo ('parecido_a'); si falla, el antiguo sigue. 'conservar': se indexa este y se quedan los dos. "
+            "'descartar': se elimina este. Ninguna vuelve a convertir con "
+            "Docling: se usa el documento que se guardo al dejarlo pendiente."
+        ),
+    )
+
+
+class ResolucionOut(BaseModel):
+    """Respuesta de ``POST /documentos/{documento_id}/resolver``."""
+
+    id: int = Field(description="El documento que estaba pendiente.")
+    accion: Literal["reemplazar", "conservar", "descartar"]
+    status: Literal["en-cola", "descartado"] = Field(
+        description="'en-cola' si se va a indexar (sondear GET /trabajos/{job_id}), "
+                    "'descartado' si se ha eliminado."
+    )
+    job_id: str | None = Field(default=None, description="Solo si status == 'en-cola'.")
+    reemplaza: int | None = Field(
+        default=None,
+        description="Con 'reemplazar': id del documento antiguo, que se borrara "
+                    "cuando este quede indexado. Si la indexacion falla, no se borra.",
+    )
+
+
 class DocumentoEliminadoOut(BaseModel):
-    """Respuesta de ``DELETE /documentos/{documento}``.
+    """Respuesta de ``DELETE /documentos/{documento_id}``.
 
     Hay dos desenlaces con codigo 200 y hay que distinguirlos por 'status':
     'eliminado' (borrado de Qdrant y de la base de datos) y 'fallo en el
@@ -223,6 +298,7 @@ class DocumentoEliminadoOut(BaseModel):
     status: Literal["eliminado", "fallo en el borrado"] = Field(
         description="Desenlace del borrado."
     )
+    id: int = Field(description="Id del documento sobre el que se actuo.", examples=[3])
     documento: str = Field(
         description="Nombre del documento sobre el que se actuo.",
         examples=["manual.pdf"],
@@ -296,6 +372,15 @@ class TrabajoEstadoOut(BaseModel):
         default=None,
         description="Mensaje de error, solo si status es 'error'.",
     )
+    documento_id: int = Field(description="El documento de este trabajo.")
+    relacionado: DocumentoCoincidenteOut | None = Field(
+        default=None,
+        description="Con status 'duplicado', el documento que ya tenia ese "
+                    "contenido; con 'pendiente-decision', el indexado con el que "
+                    "se parece. null en el resto, o si ya no existe.",
+    )
+    pct_nuevo_en_antiguo: float | None = Field(default=None, description="Solo con 'pendiente-decision'.")
+    pct_antiguo_en_nuevo: float | None = Field(default=None, description="Solo con 'pendiente-decision'.")
 
 
 # --------------------------------------------------------------------------
@@ -317,7 +402,7 @@ class SaludQdrantOut(BaseModel):
 
     OJO: siempre responde 200, incluso cuando Qdrant esta caido. Hay que mirar
     el campo 'status', no el codigo HTTP, igual que en
-    ``DELETE /documentos/{documento}``. El motivo es que un fallo de Qdrant no
+    ``DELETE /documentos/{documento_id}``. El motivo es que un fallo de Qdrant no
     es un fallo de este endpoint: el backend ha respondido correctamente que su
     dependencia no esta disponible, y asi el cliente puede distinguir
     "backend caido" de "backend vivo con Qdrant caido".

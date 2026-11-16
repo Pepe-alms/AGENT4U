@@ -1,13 +1,36 @@
+import type { DocumentoRelacionado } from '@/shared/api/types';
+
 /** Un intento de indexar algo, con su propio desenlace. */
 export type Trabajo = {
   id: string;
   /** La ruta en el servidor o la URL, tal cual se envió. */
   origen: string;
   clase: 'fichero' | 'url' | 'subida';
-  fase: 'en-cola' | 'indexando' | 'hecho' | 'error';
+  /**
+   * Además de bien o mal, los tres desenlaces de la deduplicación:
+   * - 'rechazado': exactamente el mismo fichero que otro; ni se encoló.
+   * - 'duplicado': el mismo contenido que otro; no se indexó.
+   * - 'pendiente': casi igual que otro; espera a que el usuario decida.
+   * - 'descartado': el usuario decidió no quedárselo.
+   */
+  fase:
+    | 'en-cola'
+    | 'indexando'
+    | 'hecho'
+    | 'error'
+    | 'rechazado'
+    | 'duplicado'
+    | 'pendiente'
+    | 'descartado';
   /** Fragmentos generados. Solo cuando la fase es 'hecho'. */
   fragmentos?: number;
   mensaje?: string;
+  /** El documento que se creó, cuando ya se sabe. Hace falta para resolver. */
+  documentoId?: number;
+  /** El otro documento del desenlace: el original o el parecido. */
+  relacionado?: DocumentoRelacionado;
+  pctNuevoEnAntiguo?: number | null;
+  pctAntiguoEnNuevo?: number | null;
 };
 
 /**
@@ -28,6 +51,26 @@ export type AccionIngesta =
   | { tipo: 'empezar'; id: string }
   | { tipo: 'hecho'; id: string; fragmentos: number }
   | { tipo: 'fallo'; id: string; mensaje: string }
+  | { tipo: 'rechazado'; id: string; relacionado: DocumentoRelacionado }
+  | {
+      tipo: 'duplicado';
+      id: string;
+      documentoId: number;
+      relacionado?: DocumentoRelacionado;
+    }
+  | {
+      tipo: 'pendiente';
+      id: string;
+      documentoId: number;
+      relacionado?: DocumentoRelacionado;
+      pctNuevoEnAntiguo: number | null;
+      pctAntiguoEnNuevo: number | null;
+    }
+  /** Resuelto con 'reemplazar' o 'conservar': vuelve a la cola para indexarse. */
+  | { tipo: 'reencolar'; id: string }
+  | { tipo: 'descartado'; id: string }
+  /** Un pendiente que se resuelve desde la lista y no estaba en la cola. */
+  | { tipo: 'seguir'; id: string; origen: string; documentoId: number }
   | { tipo: 'olvidar'; id: string };
 
 function cambiar(trabajos: Trabajo[], id: string, cambio: Partial<Trabajo>): Trabajo[] {
@@ -56,6 +99,40 @@ export function reducirIngesta(trabajos: Trabajo[], accion: AccionIngesta): Trab
       });
     case 'fallo':
       return cambiar(trabajos, accion.id, { fase: 'error', mensaje: accion.mensaje });
+    case 'rechazado':
+      return cambiar(trabajos, accion.id, {
+        fase: 'rechazado',
+        relacionado: accion.relacionado,
+      });
+    case 'duplicado':
+      return cambiar(trabajos, accion.id, {
+        fase: 'duplicado',
+        documentoId: accion.documentoId,
+        relacionado: accion.relacionado,
+      });
+    case 'pendiente':
+      return cambiar(trabajos, accion.id, {
+        fase: 'pendiente',
+        documentoId: accion.documentoId,
+        relacionado: accion.relacionado,
+        pctNuevoEnAntiguo: accion.pctNuevoEnAntiguo,
+        pctAntiguoEnNuevo: accion.pctAntiguoEnNuevo,
+      });
+    case 'reencolar':
+      return cambiar(trabajos, accion.id, { fase: 'en-cola', mensaje: undefined });
+    case 'descartado':
+      return cambiar(trabajos, accion.id, { fase: 'descartado' });
+    case 'seguir':
+      return [
+        ...trabajos,
+        {
+          id: accion.id,
+          origen: accion.origen,
+          clase: 'subida',
+          fase: 'en-cola',
+          documentoId: accion.documentoId,
+        },
+      ];
     case 'olvidar':
       return trabajos.filter((t) => t.id !== accion.id);
   }

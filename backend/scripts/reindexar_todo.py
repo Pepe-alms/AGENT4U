@@ -62,9 +62,14 @@ def main(argumentos: list[str] | None = None) -> int:
     # Ids, origenes y nombres de una vez: indexar_documento abre sus propias
     # sesiones, y no conviene tener esta abierta durante horas.
     with SessionLocal() as db:
+        # Los duplicados y los pendientes de decision no se indexaron a
+        # proposito: reindexarlos (sin comprobar duplicados) los colaria en el
+        # indice sin que el usuario haya decidido nada.
         documentos = [
             (d.id, d.origin, d.name)
-            for d in db.query(Document).order_by(Document.id)
+            for d in db.query(Document)
+            .filter(Document.state.notin_(("duplicado", "pendiente-decision")))
+            .order_by(Document.id)
         ]
 
     if not documentos:
@@ -97,6 +102,9 @@ def main(argumentos: list[str] | None = None) -> int:
                 sparse_embedder=sparse_embedder,
                 qdrant=qdrant,
                 desde_json=desde_json,
+                # Reindexar lo que ya estaba no es recibir algo nuevo: no se
+                # comparan entre si los documentos que ya existen.
+                comprobar_duplicados=False,
             )
         except Exception as e:
             # indexar_documento ya lo ha marcado como 'error' en la BD.

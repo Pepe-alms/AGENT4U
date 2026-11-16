@@ -9,6 +9,7 @@ from app.schema.types import (
     ConversacionDetalle,
     ConversacionResumen,
     Documento,
+    DocumentoRelacionado,
     Fuente,
     Mensaje,
     Salud,
@@ -65,7 +66,11 @@ class Query:
         data = await client.obtener_trabajo(job_id)
         if data is None:
             return None
-        return Trabajo(**data)
+        relacionado = data.get("relacionado")
+        return Trabajo(**{
+            **data,
+            "relacionado": DocumentoRelacionado(**relacionado) if relacionado else None,
+        })
 
     @strawberry.field
     async def conversaciones(self, info: Info) -> list[ConversacionResumen]:

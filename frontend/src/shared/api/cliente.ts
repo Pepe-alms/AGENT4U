@@ -99,7 +99,8 @@ export async function peticionCruda(
   }
 
   if (!respuesta.ok) {
-    throw new ErrorApi(await mensajeHttp(respuesta), 'http', respuesta.status);
+    const { mensaje, datos } = await errorHttp(respuesta);
+    throw new ErrorApi(mensaje, 'http', respuesta.status, datos);
   }
 
   return respuesta;
@@ -127,9 +128,14 @@ export async function peticion<T>(
  * suele ser tecnico o inutil, asi que se sustituye por un mensaje propio: al
  * usuario le sirve mas saber que el fallo es del servidor que leer el volcado.
  */
-async function mensajeHttp(respuesta: Response): Promise<string> {
+async function errorHttp(
+  respuesta: Response,
+): Promise<{ mensaje: string; datos: Record<string, unknown> }> {
   if (respuesta.status >= 500) {
-    return `El servidor ha fallado al procesar la petición (${respuesta.status}).`;
+    return {
+      mensaje: `El servidor ha fallado al procesar la petición (${respuesta.status}).`,
+      datos: {},
+    };
   }
 
   try {
@@ -140,10 +146,13 @@ async function mensajeHttp(respuesta: Response): Promise<string> {
       'detail' in cuerpo &&
       typeof cuerpo.detail === 'string'
     ) {
-      return cuerpo.detail;
+      // El resto del cuerpo viaja en `datos`: el 409 de "mismo fichero" dice
+      // ahi con que documento coincide.
+      const { detail, ...datos } = cuerpo as Record<string, unknown> & { detail: string };
+      return { mensaje: detail, datos };
     }
   } catch {
     // Sin cuerpo util: se cae al mensaje generico de abajo.
   }
-  return `${MENSAJES.http} (${respuesta.status})`;
+  return { mensaje: `${MENSAJES.http} (${respuesta.status})`, datos: {} };
 }

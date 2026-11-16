@@ -53,4 +53,6 @@ async def test_encolar_guarda_los_parametros():
         "file_path": "/docs/x.pdf",
         "type": "pdf",
         "size": 42,
+        "resolucion": False,
+        "reemplaza": None,
     }

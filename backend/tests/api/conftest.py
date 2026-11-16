@@ -74,3 +74,18 @@ def carpeta_subidas(tmp_path, monkeypatch):
     carpeta = tmp_path / "uploads"
     monkeypatch.setattr(get_settings(), "upload_dir", str(carpeta))
     return carpeta
+
+
+@pytest.fixture
+def fichero_local(tmp_path):
+    """Un fichero que existe de verdad: POST /indexar calcula su hash antes de
+    encolar, y una ruta inventada ya no vale."""
+    ruta = tmp_path / "docs" / "manual.pdf"
+    ruta.parent.mkdir()
+    ruta.write_bytes(b"%PDF-1.4 manual de prueba")
+    return ruta
+
+
+@pytest.fixture
+def cuerpo_indexar(fichero_local):
+    return {"file_path": str(fichero_local), "name": "manual.pdf", "type": "pdf", "size": 10}

@@ -10,6 +10,7 @@ from app.rag.modelos import crear_cross_encoder, crear_embedder_denso, crear_emb
 ## SQL
 
 from app.db.migrar import migrar
+from app.services.subidas import limpiar_parciales
 
 ## Cola de indexacion
 
@@ -35,6 +36,8 @@ async def lifespan(app: FastAPI):
 
     # Antes que nada que toque la base: deja el esquema al dia.
     migrar()
+    # Los temporales de subidas que murieron con el proceso anterior.
+    limpiar_parciales()
 
     app.state.cola = ColaArq(settings.redis_url)
 

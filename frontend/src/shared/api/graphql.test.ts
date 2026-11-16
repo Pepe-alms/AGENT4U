@@ -112,3 +112,33 @@ describe('graphql', () => {
     });
   });
 });
+
+describe('los errores de GraphQL conservan sus extensions', () => {
+  it('el motivo y el documento coincidente llegan al ErrorApi', async () => {
+    const { graphql } = await clienteCon('http://localhost:8080');
+    const { mismoFicheroQue } = await import('@/shared/api/errores');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        respuestaJson({
+          data: null,
+          errors: [
+            {
+              message: 'Mismo fichero',
+              extensions: {
+                status: 409,
+                motivo: 'mismo-fichero',
+                duplicado_de: { id: 3, name: 'a.pdf', state: 'indexado' },
+              },
+            },
+          ],
+        }),
+      ),
+    );
+
+    const error: unknown = await graphql('mutation { indexar }').catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ estado: 409 });
+    expect(mismoFicheroQue(error)).toEqual({ id: 3, name: 'a.pdf', state: 'indexado' });
+  });
+});

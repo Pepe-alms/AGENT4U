@@ -29,6 +29,7 @@ function montar(huecos: number) {
     indexar,
     subir,
     olvidar: vi.fn(),
+    resolver: vi.fn(),
     huecos,
     maxEnVuelo: MAX,
   };

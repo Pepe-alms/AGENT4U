@@ -7,9 +7,11 @@ import {
   type FormEvent,
 } from 'react';
 
+import { DecisionPendiente } from '@/features/documentos/DecisionPendiente';
 import { repartir } from '@/features/documentos/ingesta';
 import type { Ingesta } from '@/features/documentos/useIngesta';
 import { EXTENSIONES, extensionAdmitida, TAMANO_MAXIMO } from '@/shared/api/documentos';
+import type { DocumentoRelacionado } from '@/shared/api/types';
 import { Badge, Button, IconButton, Input, Spinner } from '@/shared/ui';
 import { clases } from '@/shared/ui/clases';
 
@@ -31,7 +33,14 @@ function plural(n: number): string {
   return `${n} ${n === 1 ? 'fichero' : 'ficheros'}`;
 }
 
-export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
+export function FormularioIngesta({
+  ingesta,
+  onAbrirDocumento,
+}: {
+  ingesta: Ingesta;
+  /** Abre un documento en el visor: el original de un rechazo o un duplicado. */
+  onAbrirDocumento?: (id: number) => void;
+}) {
   const [modo, setModo] = useState<Modo>('url');
   const [valor, setValor] = useState('');
   const [arrastrando, setArrastrando] = useState(false);
@@ -237,6 +246,10 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
                 'flex flex-col gap-1 rounded-m border border-borde bg-superficie/60 p-2.5',
                 trabajo.fase === 'error' && 'border-error-borde',
                 trabajo.fase === 'hecho' && 'border-exito-borde',
+                (trabajo.fase === 'rechazado' ||
+                  trabajo.fase === 'duplicado' ||
+                  trabajo.fase === 'pendiente') &&
+                  'border-aviso-borde',
               )}
             >
               {/* bdi evita que `direction: rtl`, que está ahí para recortar las
@@ -265,7 +278,43 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
                 </span>
               ) : null}
 
-              {trabajo.fase === 'hecho' || trabajo.fase === 'error' ? (
+              {trabajo.fase === 'rechazado' ? (
+                <AvisoOriginal
+                  texto="Ya lo tienes: es exactamente el mismo fichero que"
+                  coda="No se ha indexado."
+                  original={trabajo.relacionado}
+                  onAbrir={onAbrirDocumento}
+                />
+              ) : null}
+              {trabajo.fase === 'duplicado' ? (
+                <AvisoOriginal
+                  texto="No indexado: tiene el mismo contenido que"
+                  original={trabajo.relacionado}
+                  onAbrir={onAbrirDocumento}
+                />
+              ) : null}
+              {trabajo.fase === 'pendiente' && trabajo.documentoId !== undefined ? (
+                <DecisionPendiente
+                  antiguo={trabajo.relacionado}
+                  pctNuevoEnAntiguo={trabajo.pctNuevoEnAntiguo}
+                  pctAntiguoEnNuevo={trabajo.pctAntiguoEnNuevo}
+                  onAbrir={onAbrirDocumento}
+                  onResolver={(accion) =>
+                    ingesta.resolver(trabajo.documentoId!, trabajo.origen, accion)
+                  }
+                />
+              ) : null}
+              {trabajo.fase === 'descartado' ? (
+                <span className={'text-[0.6875rem] text-tenue'}>
+                  Descartado. El documento antiguo sigue como estaba.
+                </span>
+              ) : null}
+
+              {trabajo.fase === 'hecho' ||
+              trabajo.fase === 'error' ||
+              trabajo.fase === 'rechazado' ||
+              trabajo.fase === 'duplicado' ||
+              trabajo.fase === 'descartado' ? (
                 <IconButton
                   etiqueta={`Quitar ${trabajo.origen} de la lista`}
                   icono={ICONO_QUITAR}
@@ -277,5 +326,40 @@ export function FormularioIngesta({ ingesta }: { ingesta: Ingesta }) {
         </ul>
       ) : null}
     </form>
+  );
+}
+
+/** Un desenlace que remite a otro documento: el original de un rechazo o de
+ *  un duplicado. Se puede abrir si esta indexado (tiene contenido). */
+function AvisoOriginal({
+  texto,
+  coda,
+  original,
+  onAbrir,
+}: {
+  texto: string;
+  coda?: string;
+  original: DocumentoRelacionado | undefined;
+  onAbrir: ((id: number) => void) | undefined;
+}) {
+  return (
+    <p
+      className={'flex flex-wrap items-center gap-x-2 text-[0.6875rem] text-suave'}
+      role="status"
+    >
+      <span>
+        {texto} <span className="font-mono">{original?.name ?? 'otro documento'}</span>.
+        {coda ? ` ${coda}` : null}
+      </span>
+      {original && onAbrir && original.state === 'indexado' ? (
+        <button
+          type="button"
+          onClick={() => onAbrir(original.id)}
+          className="font-medium underline-offset-2 hover:text-texto hover:underline"
+        >
+          Abrir {original.name}
+        </button>
+      ) : null}
+    </p>
   );
 }

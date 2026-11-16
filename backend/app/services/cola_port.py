@@ -13,8 +13,14 @@ from typing import Protocol, runtime_checkable
 @runtime_checkable
 class ColaIndexacion(Protocol):
     async def encolar(self, job_id: str, *, file_path: str, type: str,
-                      size: int | None) -> None:
-        """Mete un trabajo en la cola. No espera a que se procese."""
+                      size: int | None, resolucion: bool = False,
+                      reemplaza: int | None = None) -> None:
+        """Mete un trabajo en la cola. No espera a que se procese.
+
+        `resolucion`: el usuario ya decidio indexar un documento que estaba
+        pendiente de decision; se indexa desde su JSON y sin comprobar
+        duplicados. `reemplaza`: el documento que se borra cuando este quede
+        indexado (y solo entonces)."""
         ...
 
     async def en_vuelo(self) -> int:
@@ -38,12 +44,15 @@ class ColaEnMemoria:
         self._terminados: set[str] = set()
 
     async def encolar(self, job_id: str, *, file_path: str, type: str,
-                      size: int | None) -> None:
+                      size: int | None, resolucion: bool = False,
+                      reemplaza: int | None = None) -> None:
         self.trabajos.append({
             "job_id": job_id,
             "file_path": file_path,
             "type": type,
             "size": size,
+            "resolucion": resolucion,
+            "reemplaza": reemplaza,
         })
 
     async def en_vuelo(self) -> int:

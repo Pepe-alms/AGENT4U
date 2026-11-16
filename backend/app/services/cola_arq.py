@@ -22,11 +22,14 @@ class ColaArq:
         return self._pool
 
     async def encolar(self, job_id: str, *, file_path: str, type: str,
-                      size: int | None) -> None:
+                      size: int | None, resolucion: bool = False,
+                      reemplaza: int | None = None) -> None:
         pool = await self._get_pool()
         await pool.enqueue_job(
             "indexar_job",
             job_id, file_path, type, size,
+            resolucion=resolucion,
+            reemplaza=reemplaza,
             _job_id=f"idx:{job_id}",
         )
 

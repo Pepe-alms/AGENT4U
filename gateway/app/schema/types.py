@@ -1,3 +1,5 @@
+import enum
+
 import strawberry
 
 
@@ -20,6 +22,13 @@ class Documento:
     state: str
     num_chunks: int
     error_message: str | None
+    # Deduplicacion. 'duplicado': duplicado_de es el original (mismo contenido).
+    # 'pendiente-decision': parecido_a es el indexado con el que se parece, y
+    # los dos porcentajes (0 a 1) cuanto se solapan en cada sentido.
+    duplicado_de: int | None = None
+    parecido_a: int | None = None
+    pct_nuevo_en_antiguo: float | None = None
+    pct_antiguo_en_nuevo: float | None = None
 
 
 @strawberry.type
@@ -31,6 +40,13 @@ class ContenidoDocumento:
 
 
 @strawberry.type
+class DocumentoRelacionado:
+    id: int
+    name: str
+    state: str
+
+
+@strawberry.type
 class Trabajo:
     job_id: str
     status: str
@@ -38,6 +54,11 @@ class Trabajo:
     name: str
     num_chunks: int
     error_message: str | None
+    documento_id: int | None = None
+    # 'duplicado': el original. 'pendiente-decision': el parecido.
+    relacionado: DocumentoRelacionado | None = None
+    pct_nuevo_en_antiguo: float | None = None
+    pct_antiguo_en_nuevo: float | None = None
 
 
 @strawberry.type
@@ -93,6 +114,24 @@ class Salud:
     qdrant: SaludQdrant
 
 
+@strawberry.enum
+class AccionResolver(enum.Enum):
+    reemplazar = "reemplazar"
+    conservar = "conservar"
+    descartar = "descartar"
+
+
+@strawberry.type
+class Resolucion:
+    id: int
+    accion: str
+    # 'en-cola' (sondear trabajo(job_id)) o 'descartado'.
+    status: str
+    job_id: str | None = None
+    # Con 'reemplazar': el antiguo, que se borra cuando este quede indexado.
+    reemplaza: int | None = None
+
+
 @strawberry.type
 class TrabajoEncolado:
     job_id: str
@@ -102,6 +141,7 @@ class TrabajoEncolado:
 @strawberry.type
 class DocumentoEliminado:
     status: str
+    id: int
     documento: str
 
 

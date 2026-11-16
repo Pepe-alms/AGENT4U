@@ -107,6 +107,9 @@ def nunca_la_base_de_datos_real(monkeypatch, engine, session_factory, tmp_path):
     # Ni la carpeta de contenidos del proyecto (backend/contenidos).
     from app.core.config import get_settings
     monkeypatch.setattr(get_settings(), "contenidos_dir", str(tmp_path / "contenidos"))
+    # Ni la de subidas (backend/uploads): desde que borrar un documento borra
+    # su fichero subido, un test con la carpeta real podria borrar uno de verdad.
+    monkeypatch.setattr(get_settings(), "upload_dir", str(tmp_path / "uploads"))
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +174,28 @@ class FakeQdrant:
             raise RuntimeError("Qdrant no responde")
         self.borrados.append(collection_name)
         self.filtros_borrado.append(points_selector)
+
+    def scroll(self, collection_name: str, scroll_filter=None, limit: int = 10,
+               offset=None, with_payload=True, with_vectors=False):
+        """Lo justo para los filtros por payload que usa el backend: `must` y
+        `must_not` con MatchValue y MatchAny. Sin paginar."""
+        def cumple(condicion, payload):
+            valor = payload.get(condicion.key)
+            emparejar = condicion.match
+            if hasattr(emparejar, "any"):
+                return valor in emparejar.any
+            return valor == emparejar.value
+
+        puntos = []
+        for punto in self.puntos:
+            payload = punto.payload
+            if scroll_filter is not None:
+                if not all(cumple(c, payload) for c in (scroll_filter.must or [])):
+                    continue
+                if any(cumple(c, payload) for c in (scroll_filter.must_not or [])):
+                    continue
+            puntos.append(SimpleNamespace(id=punto.id, payload=payload))
+        return puntos, None
 
 
 @pytest.fixture
@@ -248,6 +273,9 @@ class FakeDocumento:
             f"# Pagina {n}\n\nTexto de {self.origen}, pagina {n}."
             for n in range(1, self.paginas + 1)
         )
+
+    def export_to_text(self) -> str:
+        return self.export_to_markdown()
 
     def iterate_items(self):
         for n in range(1, self.paginas + 1):

@@ -103,3 +103,18 @@ def test_desde_json_no_convierte_los_documentos_que_lo_tienen_guardado(db, entor
     assert reindexar.main(["--desde-json"]) == 0
 
     assert convertidos == ["/docs/b.pdf"]
+
+
+def test_no_reindexa_duplicados_ni_pendientes_de_decision(db, entorno, documentos_frescos):
+    """No se indexaron a proposito: reindexar no debe colarlos en el indice."""
+    indexado = document_crud.crear_documento(db, "/docs/a.pdf", "a.pdf", "pdf", 1)
+    duplicado = document_crud.crear_documento(db, "/docs/a.docx", "a.docx", "docx", 1)
+    document_crud.marcar_duplicado(db, duplicado, indexado.id)
+    pendiente = document_crud.crear_documento(db, "/docs/a-v2.pdf", "a-v2.pdf", "pdf", 1)
+    document_crud.marcar_pendiente_decision(db, pendiente, indexado.id, 0.9, 0.9)
+
+    reindexar.main([])
+
+    assert {d.name: d.state for d in documentos_frescos()} == {
+        "a.pdf": "indexado", "a.docx": "duplicado", "a-v2.pdf": "pendiente-decision",
+    }

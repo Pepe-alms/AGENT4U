@@ -37,10 +37,13 @@ def crear_doc(db, origen="/docs/manual.pdf", nombre="manual.pdf"):
 
 def indexar(doc_id, qdrant, converter, chunker, dense_embedder, sparse_embedder,
             origen="/docs/manual.pdf"):
+    # Sin deduplicacion: estos tests indexan a proposito documentos con los
+    # mismos fragmentos para probar la identidad de los puntos. La
+    # deduplicacion tiene sus propios tests (test_deduplicacion.py).
     return indexar_documento(
         doc_id, file_path=origen, converter=converter, chunker=chunker,
         dense_embedder=dense_embedder, sparse_embedder=sparse_embedder,
-        qdrant=qdrant,
+        qdrant=qdrant, comprobar_duplicados=False,
     )
 
 

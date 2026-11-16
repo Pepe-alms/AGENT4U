@@ -1,10 +1,13 @@
 from sqlalchemy.orm import Session
 
 from app.db.crud import document as document_crud
-from app.core.exceptions import DocumentoNoEncontrado, NombreAmbiguo, SinContenidoGuardado
+import uuid
+
+from app.core.exceptions import DocumentoNoEncontrado, SinContenidoGuardado, SinDecisionPendiente
 from app.db.models.document import Document
 from app.rag.vectorization import borrar_por_documento
 from app.services import contenidos
+from app.services.subidas import borrar_fichero_subido
 
 
 def listar_documentos(db: Session):
@@ -26,24 +29,62 @@ def obtener_contenido(db: Session, documento_id: int) -> tuple[Document, str]:
     return doc, markdown
 
 
-def eliminar_documento(db: Session, qdrant, nombre: str) -> bool | None:
-    """Borra los vectores del documento y despues su fila.
+def eliminar_documento(db: Session, qdrant, documento_id: int) -> Document | None | bool:
+    """Borra los vectores del documento y despues su fila y su contenido.
 
-    Devuelve False si no hay documento con ese nombre y None si Qdrant no pudo
-    borrar (la fila se conserva para no dejar vectores huerfanos). Lanza
-    NombreAmbiguo si hay mas de uno: se borra por documento_id, y el nombre
-    tiene que señalar uno solo.
+    Por id y no por nombre: el nombre no es unico (dos ficheros distintos
+    pueden llamarse igual). Devuelve False si no existe, None si Qdrant no pudo
+    borrar (la fila se conserva para no dejar vectores huerfanos) y el
+    documento borrado si todo fue bien.
     """
-    docs = document_crud.documentos_por_nombre(db, nombre)
-    if not docs:
+    doc = db.get(Document, documento_id)
+    if doc is None:
         return False
-    if len(docs) > 1:
-        raise NombreAmbiguo(nombre, len(docs))
-
-    doc = docs[0]
     doc_id = doc.id
+    origen = doc.origin
     if not borrar_por_documento(qdrant, doc_id):
         return None
     document_crud.eliminar_documento(db, doc)
     contenidos.borrar(doc_id)
-    return True
+    # Lo ultimo: solo con la fila ya borrada, y solo si es una subida.
+    borrar_fichero_subido(db, origen, salvo=doc_id)
+    return doc
+
+
+async def resolver_pendiente(db: Session, qdrant, cola, documento_id: int, accion: str) -> dict:
+    """La decision del usuario sobre un documento pendiente de decision.
+
+    Nunca se llama sola: es lo que hace POST /documentos/{id}/resolver cuando
+    el usuario elige. 'conservar' y 'reemplazar' lo encolan para indexarlo
+    desde el DoclingDocument guardado (sin Docling y sin volver a comprobar
+    duplicados); 'descartar' lo elimina.
+    """
+    doc = db.get(Document, documento_id)
+    if doc is None:
+        raise DocumentoNoEncontrado(documento_id)
+    if doc.state != "pendiente-decision":
+        raise SinDecisionPendiente(documento_id, doc.state)
+
+    if accion == "descartar":
+        # No tiene puntos en Qdrant: la fila, el JSON guardado y, si es una
+        # subida, su fichero.
+        origen = doc.origin
+        document_crud.eliminar_documento(db, doc)
+        contenidos.borrar(documento_id)
+        borrar_fichero_subido(db, origen, salvo=documento_id)
+        return {"id": documento_id, "accion": accion, "status": "descartado"}
+
+    # Con 'reemplazar' el antiguo NO se borra aqui: lo borra el worker cuando
+    # el nuevo ha quedado indexado. Si el encolado o la indexacion fallan, el
+    # antiguo sigue intacto y el nuevo queda en error. Si el antiguo ya no
+    # existe, no hay nada que reemplazar: se indexa sin mas.
+    reemplaza = None
+    if accion == "reemplazar" and doc.parecido_a is not None and db.get(Document, doc.parecido_a):
+        reemplaza = doc.parecido_a
+
+    job_id = str(uuid.uuid4())
+    document_crud.volver_a_encolar(db, doc, job_id)
+    await cola.encolar(job_id, file_path=doc.origin, type=doc.type, size=doc.size,
+                       resolucion=True, reemplaza=reemplaza)
+    return {"id": documento_id, "accion": accion, "status": "en-cola",
+            "job_id": job_id, "reemplaza": reemplaza}

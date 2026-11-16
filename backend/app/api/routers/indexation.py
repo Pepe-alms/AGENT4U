@@ -2,11 +2,16 @@ import os
 import uuid
 from pathlib import Path
 
+import hashlib
+
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse
 from typing import Annotated
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
+    ErrorMismoFicheroOut,
     ErrorOut,
     FicheroEncoladoOut,
     IndexRequest,
@@ -16,8 +21,11 @@ from app.api.schemas import (
 from app.core.config import get_settings
 from app.core.exceptions import DocumentoYaExiste
 from app.db.crud import document as document_crud
+from app.db.models.document import Document
 from app.db.session import get_db
 from app.services.cola_port import ColaIndexacion
+from app.services.huellas import hash_fichero
+from app.services.subidas import PREFIJO_PARCIAL, SUFIJO_PARCIAL, borrar_fichero_subido
 
 router = APIRouter(tags=["indexacion"])
 
@@ -25,6 +33,19 @@ REINTENTAR_EN = 120
 
 RESPUESTAS_COMUNES = {
     409: {"model": ErrorOut, "description": "Documento ya existe."},
+}
+
+RESPUESTAS_FICHERO = {
+    409: {
+        "model": ErrorMismoFicheroOut,
+        "description": (
+            "Ya hay un documento con esa ruta, o con exactamente el mismo "
+            "fichero (mismo SHA-256, se llame como se llame). En el segundo "
+            "caso 'motivo' es 'mismo-fichero' y 'duplicado_de' dice cual. Si "
+            "el unico documento con ese fichero esta en error, no se rechaza: "
+            "se reintenta sobre ese mismo documento (202)."
+        ),
+    },
     429: {
         "model": ErrorOut,
         "description": (
@@ -48,9 +69,54 @@ async def _comprobar_cupo(cola: ColaIndexacion) -> None:
         )
 
 
+def _mismo_fichero(db: Session, huella: str) -> tuple[JSONResponse | None, Document | None]:
+    """El nivel 1 al recibir un fichero.
+
+    Devuelve (409, None) si ya hay un documento con esos mismos bytes, y
+    (None, documento) si el unico que los tiene esta en error: entonces no se
+    rechaza, se reintenta sobre ese mismo documento. (None, None) si es nuevo.
+    """
+    original = document_crud.por_hash_content(db, huella)
+    if original is None:
+        return None, None
+    if original.state == "error":
+        return None, original
+    cuerpo = ErrorMismoFicheroOut(
+        detail=(
+            f"Es exactamente el mismo fichero que '{original.name}' "
+            f"(id {original.id}, {original.state}). No se ha indexado."
+        ),
+        duplicado_de={"id": original.id, "name": original.name, "state": original.state},
+    )
+    return JSONResponse(status_code=409, content=cuerpo.model_dump()), None
+
+
+async def _reintentar_trabajo(
+    cola: ColaIndexacion, db: Session, doc: Document, *,
+    file_path: str, size: int | None, hash_content: str,
+) -> dict:
+    """Vuelve a indexar un documento que acabo en error con este mismo fichero."""
+    job_id = str(uuid.uuid4())
+    origen_anterior = doc.origin
+    try:
+        document_crud.reintentar(
+            db, doc, origen=file_path, nombre=os.path.basename(file_path),
+            job_id=job_id, hash_content=hash_content,
+        )
+    except Exception:
+        db.rollback()
+        raise DocumentoYaExiste(file_path)
+    # Si ahora apunta a otro fichero, el anterior se queda sin dueño: se
+    # borra si es una subida (los de POST /indexar por ruta no se tocan).
+    if origen_anterior != file_path:
+        borrar_fichero_subido(db, origen_anterior)
+    await cola.encolar(job_id, file_path=file_path, type=doc.type, size=size)
+    return {"job_id": job_id, "status": "en-cola"}
+
+
 async def _encolar_trabajo(
     cola: ColaIndexacion, db: Session, *,
-    file_path: str, tipo: str, size: int | None,
+    file_path: str, tipo: str, size: int | None, hash_content: str | None = None,
 ) -> dict:
     """Crea la fila en la BD, encola el trabajo, y devuelve la respuesta 202."""
     job_id = str(uuid.uuid4())
@@ -59,7 +125,7 @@ async def _encolar_trabajo(
     try:
         document_crud.crear_documento_encolado(
             db, origen=file_path, nombre=nombre, tipo=tipo,
-            tamano=size, job_id=job_id,
+            tamano=size, job_id=job_id, hash_content=hash_content,
         )
     except Exception:
         db.rollback()
@@ -87,7 +153,11 @@ def _ruta_segura(nombre_cliente: str | None, carpeta: Path) -> Path:
     response_model=TrabajoEncoladoOut,
     status_code=202,
     summary="Encolar la indexacion de un fichero local",
-    responses=RESPUESTAS_COMUNES,
+    responses={
+        **RESPUESTAS_COMUNES,
+        **RESPUESTAS_FICHERO,
+        400: {"model": ErrorOut, "description": "El fichero no existe o no se puede leer."},
+    },
 )
 async def indexar(
     body: IndexRequest,
@@ -97,11 +167,27 @@ async def indexar(
     cola: ColaIndexacion = request.app.state.cola
     await _comprobar_cupo(cola)
 
+    # El hash se calcula aqui, antes de encolar: un fichero repetido se
+    # rechaza sin ocupar la cola ni gastar minutos de Docling.
     try:
-        resultado = await _encolar_trabajo(
-            cola, db,
-            file_path=body.file_path, tipo=body.type, size=body.size,
-        )
+        huella = await run_in_threadpool(hash_fichero, body.file_path)
+    except OSError as e:
+        raise HTTPException(status_code=400, detail=f"No se puede leer '{body.file_path}': {e.strerror or e}")
+    rechazo, en_error = _mismo_fichero(db, huella)
+    if rechazo is not None:
+        return rechazo
+
+    try:
+        if en_error is not None:
+            resultado = await _reintentar_trabajo(
+                cola, db, en_error, file_path=body.file_path, size=body.size, hash_content=huella,
+            )
+        else:
+            resultado = await _encolar_trabajo(
+                cola, db,
+                file_path=body.file_path, tipo=body.type, size=body.size,
+                hash_content=huella,
+            )
     except DocumentoYaExiste as e:
         raise HTTPException(status_code=409, detail=str(e))
 
@@ -134,6 +220,41 @@ async def indexar_url(
     return resultado
 
 
+async def _recibir_en_parcial(fichero: UploadFile, carpeta: Path, limite: int) -> tuple[Path, str, int]:
+    """Escribe la subida en un temporal mientras calcula su SHA-256.
+
+    El temporal va en la misma carpeta para que el rename final sea atomico, y
+    con un nombre que solo puede ser de esto (`.subiendo-*.parcial`): asi la
+    limpieza al arrancar sabe que puede borrarlo. Si algo sale mal, incluida
+    la cancelacion de la peticion, el temporal se borra antes de propagar.
+    """
+    parcial = carpeta / f"{PREFIJO_PARCIAL}{uuid.uuid4().hex}{SUFIJO_PARCIAL}"
+    huella = hashlib.sha256()
+    escritos = 0
+    try:
+        with parcial.open("wb") as salida:
+            while trozo := await fichero.read(TROZO_BYTES):
+                escritos += len(trozo)
+                if escritos > limite:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"El fichero supera el limite de {limite} bytes.",
+                    )
+                huella.update(trozo)
+                salida.write(trozo)
+        if escritos == 0:
+            raise HTTPException(status_code=400, detail="El fichero esta vacio.")
+    except OSError as e:
+        parcial.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
+    except BaseException:
+        # BaseException y no Exception: la cancelacion de la tarea llega como
+        # asyncio.CancelledError, que no hereda de Exception.
+        parcial.unlink(missing_ok=True)
+        raise
+    return parcial, huella.hexdigest(), escritos
+
+
 @router.post(
     "/indexar-fichero",
     response_model=FicheroEncoladoOut,
@@ -141,6 +262,7 @@ async def indexar_url(
     summary="Subir un fichero y encolar su indexacion",
     responses={
         **RESPUESTAS_COMUNES,
+        **RESPUESTAS_FICHERO,
         400: {"model": ErrorOut, "description": "Nombre de fichero no valido o fichero vacio."},
         413: {"model": ErrorOut, "description": "El fichero supera APP_UPLOAD_MAX_BYTES."},
     },
@@ -150,55 +272,62 @@ async def indexar_fichero(
     db: Annotated[Session, Depends(get_db)],
     fichero: Annotated[UploadFile, File(description="Fichero a indexar.")],
 ):
+    """Guarda el fichero en `uploads/<huella>/<nombre>` y lo encola.
+
+    La carpeta sale de los primeros 16 caracteres del SHA-256: dos ficheros
+    distintos con el mismo nombre no chocan, y nunca se pisa el fichero de
+    otro documento. Antes se escribia en `uploads/<nombre>` ANTES de
+    comprobar nada, y subir otro `manual.pdf` sobrescribia el del documento
+    que ya existia aunque la peticion acabara en 409.
+    """
     settings = get_settings()
     carpeta = Path(settings.upload_dir)
     carpeta.mkdir(parents=True, exist_ok=True)
 
-    destino = _ruta_segura(fichero.filename, carpeta)
+    # Solo para validar el nombre: la ruta definitiva depende del contenido.
+    nombre = _ruta_segura(fichero.filename, carpeta).name
 
-    parcial = destino.with_name(destino.name + ".parcial")
+    parcial, hash_content, escritos = await _recibir_en_parcial(
+        fichero, carpeta, settings.upload_max_bytes,
+    )
 
-    escritos = 0
+    # Desde aqui hasta el rename, cualquier salida (un rechazo, la cola llena,
+    # un fallo o la cancelacion de la peticion) borra el temporal: el
+    # `finally` corre tambien con CancelledError. Lo que no cubre, que maten
+    # el proceso de golpe, lo limpia limpiar_parciales() al arrancar la API.
+    movido = False
     try:
-        with parcial.open("wb") as salida:
-            while trozo := await fichero.read(TROZO_BYTES):
-                escritos += len(trozo)
-                if escritos > settings.upload_max_bytes:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=(
-                            f"El fichero supera el limite de "
-                            f"{settings.upload_max_bytes} bytes."
-                        ),
-                    )
-                salida.write(trozo)
+        rechazo, en_error = _mismo_fichero(db, hash_content)
+        if rechazo is not None:
+            return rechazo
 
-        if escritos == 0:
-            raise HTTPException(status_code=400, detail="El fichero esta vacio.")
+        cola: ColaIndexacion = request.app.state.cola
+        await _comprobar_cupo(cola)
 
-        os.replace(parcial, destino)
-    except HTTPException:
-        parcial.unlink(missing_ok=True)
-        raise
-    except OSError as e:
-        parcial.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
+        destino = carpeta / hash_content[:16] / nombre
+        try:
+            destino.parent.mkdir(exist_ok=True)
+            os.replace(parcial, destino)
+        except OSError as e:
+            raise HTTPException(status_code=500, detail=f"No se pudo guardar el fichero: {e}")
+        movido = True
+    finally:
+        if not movido:
+            parcial.unlink(missing_ok=True)
 
     extension = destino.suffix.lstrip(".").lower() or "txt"
 
-    cola: ColaIndexacion = request.app.state.cola
-
     try:
-        await _comprobar_cupo(cola)
-    except HTTPException:
-        destino.unlink(missing_ok=True)
-        raise
-
-    try:
-        resultado = await _encolar_trabajo(
-            cola, db,
-            file_path=str(destino), tipo=extension, size=escritos,
-        )
+        if en_error is not None:
+            resultado = await _reintentar_trabajo(
+                cola, db, en_error, file_path=str(destino), size=escritos, hash_content=hash_content,
+            )
+        else:
+            resultado = await _encolar_trabajo(
+                cola, db,
+                file_path=str(destino), tipo=extension, size=escritos,
+                hash_content=hash_content,
+            )
     except DocumentoYaExiste as e:
         raise HTTPException(status_code=409, detail=str(e))
 

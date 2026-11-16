@@ -90,6 +90,16 @@ def guardar_temporales(doc_id: int, documento) -> Temporales:
     return temporales
 
 
+def guardar_pendiente(doc_id: int, documento) -> None:
+    """Solo el DoclingDocument, sin Markdown: un documento pendiente de
+    decision no se lee en el visor (no esta indexado), pero al resolverlo se
+    indexa desde aqui sin volver a convertir con Docling."""
+    descartar(doc_id)
+    temporal = ruta_json(doc_id).with_suffix(".json.tmp")
+    documento.save_as_json(temporal)
+    os.replace(temporal, ruta_json(doc_id))
+
+
 def confirmar(doc_id: int, temporales: Temporales) -> None:
     """Pone los temporales en su sitio. `os.replace` es atomico: quien lea en
     ese momento ve el fichero viejo o el nuevo, nunca uno a medias."""

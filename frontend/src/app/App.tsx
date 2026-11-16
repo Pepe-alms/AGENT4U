@@ -25,7 +25,7 @@ import { useAtajo } from '@/shared/hooks/useAtajo';
 import { useRecurso } from '@/shared/hooks/useRecurso';
 import { formatearFecha } from '@/shared/lib/fechas';
 import { rutaDocumento } from '@/routes';
-import type { Documento, Fuente } from '@/shared/api/types';
+import type { AccionResolver, Documento, Fuente } from '@/shared/api/types';
 import { NOMBRE_TEMA, SIGUIENTE_TEMA } from '@/shared/lib/tema';
 import { Anuncios } from '@/shared/ui/Anuncios';
 import { useAvisos } from '@/shared/hooks/useAvisos';
@@ -112,12 +112,21 @@ export function App() {
     if (!visor) setPaletaAbierta(true);
   }, [visor]);
 
-  const leerDocumento = useCallback(
-    (documento: Documento) => {
+  const abrirDocumento = useCallback(
+    (id: number) => {
       shell.current?.cerrarPaneles();
-      void navegar(rutaDocumento(documento.id));
+      void navegar(rutaDocumento(id));
     },
     [navegar],
+  );
+  const leerDocumento = useCallback(
+    (documento: Documento) => abrirDocumento(documento.id),
+    [abrirDocumento],
+  );
+  const resolverDocumento = useCallback(
+    (documento: Documento, accion: AccionResolver) =>
+      ingesta.resolver(documento.id, documento.name, accion),
+    [ingesta],
   );
 
   /** Desde una fuente: el visor se abre en la seccion y la pagina del fragmento. */
@@ -295,13 +304,15 @@ export function App() {
           }
           documentos={
             <div className="flex flex-col gap-4 p-4">
-              <FormularioIngesta ingesta={ingesta} />
+              <FormularioIngesta ingesta={ingesta} onAbrirDocumento={abrirDocumento} />
               <ListaDocumentos
                 estado={documentos.estado}
                 reintentar={documentos.reintentar}
                 alCambiar={documentos.reintentar}
                 onAvisar={notificar}
                 onLeer={leerDocumento}
+                onAbrirDocumento={abrirDocumento}
+                onResolver={resolverDocumento}
               />
             </div>
           }

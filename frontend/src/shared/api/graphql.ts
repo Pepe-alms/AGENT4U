@@ -3,7 +3,7 @@ import { ErrorApi, MENSAJES } from '@/shared/api/errores';
 
 type ErrorGraphQL = {
   message: string;
-  extensions?: { status?: number };
+  extensions?: { status?: number } & Record<string, unknown>;
 };
 
 type RespuestaGraphQL<T> = {
@@ -33,7 +33,8 @@ export async function graphql<T>(
 
   const [error] = respuesta.errors ?? [];
   if (error) {
-    throw new ErrorApi(error.message, 'http', error.extensions?.status);
+    const { status, ...datos } = error.extensions ?? {};
+    throw new ErrorApi(error.message, 'http', status, datos);
   }
 
   if (respuesta.data === null || respuesta.data === undefined) {

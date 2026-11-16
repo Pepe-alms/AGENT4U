@@ -4,26 +4,21 @@ class DocumentoYaExiste(Exception):
         super().__init__(f"El origen '{origen}' ya está indexado")
 
 
-class NombreAmbiguo(Exception):
-    """Hay varios documentos con ese nombre y no se sabe cual se quiere.
-
-    DELETE /documentos/{nombre} recibe el nombre, que no es unico (lo unico es
-    el origen). Antes se borraban los vectores de todos los que se llamaban
-    asi; ahora no se borra nada hasta que el nombre señale uno solo.
-    """
-
-    def __init__(self, nombre: str, cuantos: int):
-        self.nombre = nombre
-        self.cuantos = cuantos
-        super().__init__(
-            f"Hay {cuantos} documentos llamados '{nombre}'; no se borra ninguno."
-        )
-
-
 class DocumentoNoEncontrado(Exception):
     def __init__(self, documento_id: int):
         self.documento_id = documento_id
         super().__init__(f"No existe ningun documento con id {documento_id}.")
+
+
+class SinDecisionPendiente(Exception):
+    """Se pidio resolver un documento que no esta pendiente de decision."""
+
+    def __init__(self, documento_id: int, estado: str):
+        self.documento_id = documento_id
+        self.estado = estado
+        super().__init__(
+            f"El documento {documento_id} no esta pendiente de decision (esta '{estado}')."
+        )
 
 
 class SinContenidoGuardado(Exception):
@@ -38,6 +33,8 @@ class SinContenidoGuardado(Exception):
         "en-cola": "todavia esta en cola para indexarse",
         "indexando": "se esta indexando ahora mismo",
         "error": "su indexacion fallo",
+        "duplicado": "tiene el mismo contenido que otro documento y no se indexo",
+        "pendiente-decision": "se parece mucho a otro documento y espera a que decidas que hacer",
     }
 
     def __init__(self, documento_id: int, estado: str):

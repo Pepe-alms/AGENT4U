@@ -57,12 +57,43 @@ export type ConversacionEliminada = {
 };
 
 export type EstadoDocumento =
-  'en-cola' | 'indexando' | 'pendiente' | 'indexado' | 'error';
+  | 'en-cola'
+  | 'indexando'
+  | 'pendiente'
+  | 'indexado'
+  | 'error'
+  /** Mismo contenido que otro (`duplicado_de`). No se indexa. */
+  | 'duplicado'
+  /** Casi igual que otro (`parecido_a`). Espera a que el usuario decida. */
+  | 'pendiente-decision';
+
+/** El otro documento de un desenlace de deduplicacion. */
+export type DocumentoRelacionado = {
+  id: number;
+  name: string;
+  state: string;
+};
+
+/** Lo que se puede hacer con un documento pendiente de decision. */
+export type AccionResolver = 'reemplazar' | 'conservar' | 'descartar';
+
+export type Resolucion = {
+  id: number;
+  accion: AccionResolver;
+  /** 'en-cola' (se indexa: sondear `job_id`) o 'descartado' (eliminado). */
+  status: 'en-cola' | 'descartado';
+  job_id: string | null;
+  /**
+   * Con 'reemplazar': el antiguo. Se borra cuando este quede indexado, no
+   * antes: si la indexación falla, el antiguo sigue.
+   */
+  reemplaza: number | null;
+};
 
 export type Documento = {
   id: number;
   origin: string;
-  /** Es la clave que usa DELETE /documentos/{documento}, no el id. */
+  /** No es unico: dos ficheros distintos pueden llamarse igual. */
   name: string;
   type: string;
   size: number | null;
@@ -70,6 +101,14 @@ export type Documento = {
   state: EstadoDocumento;
   num_chunks: number;
   error_message: string | null;
+  /** Con 'duplicado': el documento que ya tenia este contenido. */
+  duplicado_de?: number | null;
+  /** Con 'pendiente-decision': el indexado con el que se parece. */
+  parecido_a?: number | null;
+  /** 0 a 1: cuanto de este documento esta en `parecido_a`. */
+  pct_nuevo_en_antiguo?: number | null;
+  /** 0 a 1: cuanto de `parecido_a` esta en este documento. */
+  pct_antiguo_en_nuevo?: number | null;
 };
 
 /** query { contenido_documento }: lo que extrajo Docling al indexarlo. */
@@ -88,6 +127,8 @@ export type ContenidoDocumento = {
 export type DocumentoEliminado = {
   /** Dos desenlaces con HTTP 200: hay que mirar este campo, no el codigo. */
   status: 'eliminado' | 'fallo en el borrado';
+  id: number;
+  /** El nombre del documento borrado, para el aviso. */
   documento: string;
 };
 
@@ -107,6 +148,11 @@ export type TrabajoEstado = {
   name: string;
   num_chunks: number;
   error_message: string | null;
+  documento_id: number | null;
+  /** Con 'duplicado', el original; con 'pendiente-decision', el parecido. */
+  relacionado: DocumentoRelacionado | null;
+  pct_nuevo_en_antiguo: number | null;
+  pct_antiguo_en_nuevo: number | null;
 };
 
 /* --- Eventos del stream de POST /preguntar --- */

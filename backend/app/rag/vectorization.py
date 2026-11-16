@@ -183,3 +183,62 @@ def borrar_por_documento(qdrant, documento_id: int) -> bool:
     except Exception as e:
         print(f"Error al borrar el documento {documento_id}: {e}")
         return False
+
+
+# Cuantos hashes van en cada filtro MatchAny: un documento grande tiene miles
+# de fragmentos, y un unico filtro con todos seria un cuerpo HTTP enorme.
+LOTE_HASHES = 500
+
+
+def _recorrer(qdrant, filtro, campos: list[str]):
+    """Todos los puntos que cumplen `filtro`, sin vectores, pagina a pagina."""
+    desplazamiento = None
+    while True:
+        puntos, desplazamiento = qdrant.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=filtro,
+            limit=1000,
+            offset=desplazamiento,
+            with_payload=campos,
+            with_vectors=False,
+        )
+        yield from puntos
+        if desplazamiento is None:
+            return
+
+
+def solapes_por_documento(qdrant, hashes: set[str], salvo: int) -> dict[int, tuple[int, int]]:
+    """Con que documentos indexados comparte fragmentos un conjunto de hashes.
+
+    Devuelve {documento_id: (fragmentos en comun, fragmentos distintos de ese
+    documento)}, con lo que quien llama calcula la proporcion en los dos
+    sentidos. Compara por `hash_texto` (SHA-256 del texto crudo de cada
+    fragmento), que tiene indice de payload. `salvo` es el propio documento.
+    Los puntos indexados antes de que existiera hash_texto no cuentan.
+    """
+    if not hashes or not qdrant.collection_exists(collection_name=COLLECTION_NAME):
+        return {}
+
+    comunes: dict[int, set[str]] = {}
+    lista = sorted(hashes)
+    for inicio in range(0, len(lista), LOTE_HASHES):
+        filtro = models.Filter(
+            must=[models.FieldCondition(
+                key="hash_texto", match=models.MatchAny(any=lista[inicio:inicio + LOTE_HASHES]),
+            )],
+            must_not=[models.FieldCondition(key="documento_id", match=models.MatchValue(value=salvo))],
+        )
+        for punto in _recorrer(qdrant, filtro, ["documento_id", "hash_texto"]):
+            otro = punto.payload.get("documento_id")
+            if otro is not None:
+                comunes.setdefault(otro, set()).add(punto.payload["hash_texto"])
+
+    resultado = {}
+    for otro, compartidos in comunes.items():
+        filtro = models.Filter(must=[
+            models.FieldCondition(key="documento_id", match=models.MatchValue(value=otro)),
+        ])
+        suyos = {p.payload.get("hash_texto") for p in _recorrer(qdrant, filtro, ["hash_texto"])}
+        suyos.discard(None)
+        resultado[otro] = (len(compartidos), len(suyos))
+    return resultado

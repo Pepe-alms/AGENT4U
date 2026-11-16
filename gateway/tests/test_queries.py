@@ -212,3 +212,43 @@ async def test_las_fuentes_de_un_mensaje_traen_documento_id_si_lo_hay(fake_clien
     assert result.errors is None
     mensajes = result.data["conversacion"]["mensajes"]
     assert [m["fuentes"][0]["documento_id"] for m in mensajes] == [3, None]
+
+
+@pytest.mark.asyncio
+async def test_documentos_traen_los_campos_de_deduplicacion(fake_client):
+    fake_client.documentos.append({
+        **fake_client.documentos[0], "id": 2, "name": "cap-v2.pdf", "state": "pendiente-decision",
+        "parecido_a": 1, "pct_nuevo_en_antiguo": 0.8, "pct_antiguo_en_nuevo": 0.95, "duplicado_de": None,
+    })
+
+    result = await schema.execute(
+        "{ documentos { id state duplicado_de parecido_a pct_nuevo_en_antiguo pct_antiguo_en_nuevo } }",
+        context_value={"client": fake_client},
+    )
+
+    assert result.errors is None
+    assert result.data["documentos"][1] == {
+        "id": 2, "state": "pendiente-decision", "duplicado_de": None,
+        "parecido_a": 1, "pct_nuevo_en_antiguo": 0.8, "pct_antiguo_en_nuevo": 0.95,
+    }
+
+
+@pytest.mark.asyncio
+async def test_trabajo_pendiente_trae_su_documento_y_el_relacionado(fake_client):
+    fake_client.trabajos["pend-1"] = {
+        "job_id": "pend-1", "status": "pendiente-decision", "origin": "/docs/v2.pdf", "name": "v2.pdf",
+        "num_chunks": 0, "error_message": None, "documento_id": 7,
+        "relacionado": {"id": 1, "name": "cap.pdf", "state": "indexado"},
+        "pct_nuevo_en_antiguo": 0.75, "pct_antiguo_en_nuevo": 0.9,
+    }
+
+    result = await schema.execute(
+        '{ trabajo(job_id: "pend-1") { documento_id relacionado { id name } pct_nuevo_en_antiguo pct_antiguo_en_nuevo } }',
+        context_value={"client": fake_client},
+    )
+
+    assert result.errors is None
+    assert result.data["trabajo"] == {
+        "documento_id": 7, "relacionado": {"id": 1, "name": "cap.pdf"},
+        "pct_nuevo_en_antiguo": 0.75, "pct_antiguo_en_nuevo": 0.9,
+    }

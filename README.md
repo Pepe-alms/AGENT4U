@@ -254,11 +254,11 @@ APP_LLM_MODEL=gemini/gemini-flash-lite-latest
 
 ## Uso de la API
 
-Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `GET /documentos/{id}/contenido` (el texto completo que extrajo Docling), `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
+Con el servidor arrancado, FastAPI expone el contrato completo en `/docs` (Swagger UI) y `/redoc`. Además de los dos que se describen aquí hay `POST /indexar-url`, `POST /indexar-fichero` (subida `multipart`), `GET /trabajos/{job_id}`, `GET`/`DELETE /documentos`, `GET /documentos/{id}/contenido` (el texto completo que extrajo Docling), `POST /documentos/{id}/resolver` (qué hacer con un documento casi igual a otro), `/conversaciones`, `GET /ajustes` y `/health`. El frontend no llama a estos endpoints directamente: pasa por el gateway.
 
 ### `POST /indexar`
 
-Encola la indexación de un fichero que ya está en disco. Espera una ruta **accesible por el proceso del worker**; para subir el fichero desde el cliente está `POST /indexar-fichero`.
+Encola la indexación de un fichero que ya está en disco. Espera una ruta **accesible por la API, que calcula su SHA-256 antes de encolar, y por el worker**; para subir el fichero desde el cliente está `POST /indexar-fichero`.
 
 ```bash
 curl -X POST http://localhost:8000/indexar \
@@ -269,7 +269,7 @@ curl -X POST http://localhost:8000/indexar \
       }'
 ```
 
-Responde `202` en cuanto el trabajo está en la cola (`409` si esa ruta ya está indexada, `429` si la cola está llena):
+Responde `202` en cuanto el trabajo está en la cola (`409` si esa ruta ya está indexada o si es exactamente el mismo fichero que otro documento, `429` si la cola está llena):
 
 ```json
 { "job_id": "3f2b…", "status": "en-cola" }

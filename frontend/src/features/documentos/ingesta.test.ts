@@ -131,3 +131,68 @@ describe('el cupo de indexaciones en vuelo', () => {
     expect(mensajeDeIngesta(429, 'generico')).not.toBe('generico');
   });
 });
+
+describe('los desenlaces de la deduplicación', () => {
+  const encolar: AccionIngesta = {
+    tipo: 'encolar',
+    id: 't1',
+    origen: 'v2.pdf',
+    clase: 'subida',
+  };
+  const antiguo = { id: 1, name: 'v1.pdf', state: 'indexado' };
+
+  it('un rechazo por mismo fichero guarda el original y no ocupa hueco', () => {
+    const t = aplicar([encolar, { tipo: 'rechazado', id: 't1', relacionado: antiguo }]);
+
+    expect(t[0]).toMatchObject({ fase: 'rechazado', relacionado: antiguo });
+    expect(enVuelo(t)).toBe(0);
+  });
+
+  it('un pendiente guarda su documento, el parecido y los dos porcentajes', () => {
+    const t = aplicar([
+      encolar,
+      {
+        tipo: 'pendiente',
+        id: 't1',
+        documentoId: 7,
+        relacionado: antiguo,
+        pctNuevoEnAntiguo: 0.75,
+        pctAntiguoEnNuevo: 0.9,
+      },
+    ]);
+
+    expect(t[0]).toMatchObject({
+      fase: 'pendiente',
+      documentoId: 7,
+      relacionado: antiguo,
+      pctNuevoEnAntiguo: 0.75,
+      pctAntiguoEnNuevo: 0.9,
+    });
+    expect(enVuelo(t)).toBe(0);
+  });
+
+  it('al resolverlo vuelve a la cola, y ocupa hueco otra vez', () => {
+    const t = aplicar([
+      encolar,
+      {
+        tipo: 'pendiente',
+        id: 't1',
+        documentoId: 7,
+        pctNuevoEnAntiguo: 1,
+        pctAntiguoEnNuevo: 1,
+      },
+      { tipo: 'reencolar', id: 't1' },
+    ]);
+
+    expect(t[0]!.fase).toBe('en-cola');
+    expect(enVuelo(t)).toBe(1);
+  });
+
+  it('un pendiente resuelto desde la lista entra en la cola para seguirlo', () => {
+    const t = aplicar([{ tipo: 'seguir', id: 't2', origen: 'v2.pdf', documentoId: 7 }]);
+
+    expect(t).toEqual([
+      { id: 't2', origen: 'v2.pdf', clase: 'subida', fase: 'en-cola', documentoId: 7 },
+    ]);
+  });
+});
